@@ -13,7 +13,6 @@ class ComposeLibraryPlugin : Plugin<Project> {
 
         versionCatalog.addDependency(
             "implementation" to "koin-compose",
-            "implementation" to "koin-compose-navigation3",
             "implementation" to "compose-ui-tooling",
             "implementation" to "compose-runtime",
             "implementation" to "compose-foundation",
@@ -21,7 +20,6 @@ class ComposeLibraryPlugin : Plugin<Project> {
             "implementation" to "compose-ui",
             "implementation" to "compose-components-resources",
             "implementation" to "compose-ui-tooling-preview",
-            "implementation" to "navigation3-ui",
             "implementation" to "kolor",
         )
     }
