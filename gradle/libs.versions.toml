@@ -1,0 +1,75 @@
+[versions]
+cmp = "1.11.1"
+kotlin = "2.4.10"
+kotlinx-coroutines = "1.11.0"
+material3 = "1.11.0-alpha07"
+appdirs = "1.5.0"
+sqldelight = "2.3.2"
+serialization-json = "1.11.0"
+koin = "4.2.2"
+koin-plugin = "1.1.0"
+nav3 = "1.1.1"
+filekit = "0.14.2"
+kotlinx-datetime = "0.7.1"
+detekt = "2.0.0-alpha.6"
+kolor = "5.0.0"
+junit = "4.9"
+mockk = "1.14.11"
+nucleus = "2.4.1"
+jediterm = "3.9"
+
+[libraries]
+#koin
+koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
+koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin" }
+koin-compose-navigation3 = { module = "io.insert-koin:koin-compose-navigation3", version.ref = "koin" }
+#compose
+compose-ui-tooling = { module = "org.jetbrains.compose.ui:ui-tooling", version.ref = "cmp" }
+compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "cmp" }
+compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "cmp" }
+compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
+compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "cmp" }
+compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "cmp" }
+compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "cmp" }
+navigation3-ui = { module = "org.jetbrains.androidx.navigation3:navigation3-ui", version.ref = "nav3" }
+kolor = { module = "com.materialkolor:material-kolor", version.ref = "kolor" }
+#kotlin
+coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
+coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
+kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+junit = { group = "junit", name = "junit", version.ref = "junit" }
+mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
+kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
+kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization-json" }
+#sqldelight
+sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight"}
+sqldelight-desktop = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight"}
+kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinx-coroutines" }
+#filekit
+filekit-core = { module = "io.github.vinceglb:filekit-core", version.ref = "filekit" }
+filekit-dialogs = { module = "io.github.vinceglb:filekit-dialogs", version.ref = "filekit" }
+#nucleus
+nucleus-application = { module = "dev.nucleusframework:nucleus.nucleus-application", version.ref = "nucleus" }
+nucleus-tao = { module = "dev.nucleusframework:nucleus.decorated-window-tao", version.ref = "nucleus" }
+nucleus-material3 = { module = "dev.nucleusframework:nucleus.decorated-window-material3", version.ref = "nucleus" }
+
+appdirs = { module ="net.harawata:appdirs", version.ref = "appdirs"}
+jediterm = { module = "org.jetbrains.jediterm:jediterm-ui", version.ref = "jediterm" }
+
+#Gradle plugin artifacts (consumed by build-logic convention plugins)
+kotlin-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
+kotlin-serialization-plugin = { module = "org.jetbrains.kotlin:kotlin-serialization", version.ref = "kotlin" }
+kotlin-compose-plugin = { module = "org.jetbrains.kotlin:compose-compiler-gradle-plugin", version.ref = "kotlin" }
+compose-multiplatform-plugin = { module = "org.jetbrains.compose:org.jetbrains.compose.gradle.plugin", version.ref = "cmp" }
+detekt-plugin = { module = "dev.detekt:detekt-gradle-plugin", version.ref = "detekt" }
+koin-plugin = { module = "io.insert-koin:koin-compiler-gradle-plugin", version.ref = "koin-plugin" }
+
+[plugins]
+#convention plugins (defined in build-logic)
+project-root = { id = "project.root" }
+project-compose-library = { id = "project.compose.library" }
+project-kotlin-library = { id = "project.kotlin.library" }
+#
+kotlinJvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
+nucleus = { id = "dev.nucleusframework", version.ref = "nucleus" }
