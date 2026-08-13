@@ -27,7 +27,7 @@ fun main() {
             WindowScaffold(
                 titleBar = { TitleBar() },
             ) { ip ->
-                val currentTab by Tabs.currentTab.collectAsStateWithLifecycle(VaultTab)
+                val currentTab by Tabs.currentTab.collectAsStateWithLifecycle(initialTab)
                 currentTab.content(Modifier.fillMaxSize().padding(ip))
             }
         }

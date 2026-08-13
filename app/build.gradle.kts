@@ -10,6 +10,7 @@ plugins {
 dependencies {
     implementation(projects.core.composeUtils)
     implementation(projects.core.ui)
+    implementation(projects.core.model)
     implementation(projects.feature.vault.impl)
     implementation(projects.feature.settings.impl)
     implementation(projects.feature.terminal.impl)
