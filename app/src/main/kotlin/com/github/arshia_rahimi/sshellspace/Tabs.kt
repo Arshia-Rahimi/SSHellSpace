@@ -1,6 +1,5 @@
 package com.github.arshia_rahimi.sshellspace
 
-import androidx.compose.runtime.Composable
 import com.github.arshia_rahimi.core.ui.Tab
 import com.github.arshia_rahimi.core.ui.TabId
 import com.github.arshia_rahimi.sshellspace.feature.settings.SettingsTab
@@ -12,43 +11,18 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 
 object Tabs {
+    private val _currentTabId = MutableStateFlow(VaultTab.id)
+    val currentTabId = _currentTabId.asStateFlow()
+
     private val tabOrder: MutableStateFlow<List<TabId>> = MutableStateFlow(listOf("id", "id2"))
-
-    private val _tabs: MutableStateFlow<List<Tab>> = MutableStateFlow(listOf(
-        object : Tab {
-            override val id: TabId
-                get() = "id"
-            override val title: String
-                @Composable get() = "Creatable"
-
-            @Composable
-            override fun content() {
-                TODO("Not yet implemented")
-            }
-        },
-        object : Tab {
-            override val id: TabId
-                get() = "id2"
-            override val title: String
-                @Composable get() = "Creatable 2"
-
-            @Composable
-            override fun content() {
-                TODO("Not yet implemented")
-            }
-        },
-    ))
+    private val _tabs: MutableStateFlow<List<Tab>> = MutableStateFlow(emptyList())
 
     val fixedTabs: List<Tab> = listOf(SettingsTab, VaultTab)
-
     val tabs: Flow<List<Tab>> = _tabs.combine(tabOrder) { tabs, tabOrder ->
         tabOrder.map { tabId ->
             tabs.find { it.id == tabId }!!
         }
     }
-
-    private val _currentTabId = MutableStateFlow(VaultTab.id)
-    val currentTabId = _currentTabId.asStateFlow()
 
     fun setCurrentTab(id: TabId) {
         _currentTabId.update { id }
