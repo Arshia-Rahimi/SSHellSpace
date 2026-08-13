@@ -1,6 +1,7 @@
 package com.github.arshia_rahimi.sshellspace.feature.settings
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import com.github.arshia_rahimi.core.compose_utils.asString
 import com.github.arshia_rahimi.core.ui.Tab
 import sshellspace.feature.settings.impl.generated.resources.Res
@@ -13,5 +14,5 @@ object SettingsTab: Tab {
         @Composable get() = Res.string.settings.asString()
 
     @Composable
-    override fun content() = SettingsTabContent()
+    override fun content(modifier: Modifier) = SettingsTabContent(modifier)
 }

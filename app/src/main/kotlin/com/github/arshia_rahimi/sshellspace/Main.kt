@@ -1,11 +1,18 @@
 package com.github.arshia_rahimi.sshellspace
 
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.arshia_rahimi.core.compose_utils.asString
 import com.github.arshia_rahimi.sshellspace.di.initKoin
-import com.github.arshia_rahimi.sshellspace.ui.AppTitleBar
+import com.github.arshia_rahimi.sshellspace.feature.vault.impl.VaultTab
+import com.github.arshia_rahimi.sshellspace.ui.TitleBar
 import dev.nucleusframework.application.DecoratedWindow
 import dev.nucleusframework.application.NucleusBackend
 import dev.nucleusframework.application.nucleusApplication
+import dev.nucleusframework.window.WindowScaffold
 import sshellspace.app.generated.resources.Res
 import sshellspace.app.generated.resources.title
 
@@ -17,8 +24,12 @@ fun main() {
             onCloseRequest = ::exitApplication,
             title = Res.string.title.asString(),
         ) {
-            AppTitleBar()
-
+            WindowScaffold(
+                titleBar = { TitleBar() },
+            ) { ip ->
+                val currentTab by Tabs.currentTab.collectAsStateWithLifecycle(VaultTab)
+                currentTab.content(Modifier.fillMaxSize().padding(ip))
+            }
         }
     }
 }

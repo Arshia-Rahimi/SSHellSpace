@@ -29,6 +29,7 @@ fun <T, K: Any> ReorderableTabRow(
     onSelected: (K) -> Unit,
     onMove: (key: K, to: Int) -> Unit,
     modifier: Modifier = Modifier,
+    tabModifier: Modifier = Modifier,
     tab: @Composable (item: T, isSelected: Boolean, isFixed: Boolean) -> Unit,
 ) {
     val listState = rememberLazyListState()
@@ -46,7 +47,7 @@ fun <T, K: Any> ReorderableTabRow(
             key = { it.getKey() },
         ) { item ->
             Box(
-                modifier = Modifier.clickable { onSelected(item.getKey()) }
+                modifier = tabModifier.clickable { onSelected(item.getKey()) }
             ) {
                 tab(item, item.getKey() == selectedKey, true)
             }
@@ -59,7 +60,7 @@ fun <T, K: Any> ReorderableTabRow(
             val isDragging = draggingIndex == index
 
             Box(
-                modifier = Modifier
+                modifier = tabModifier
                     .then(
                         if (isDragging) {
                             Modifier.graphicsLayer {
