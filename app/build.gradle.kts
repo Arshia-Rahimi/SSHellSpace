@@ -7,6 +7,8 @@ plugins {
 }
 
 dependencies {
+    implementation(projects.core.composeUtils)
+    //
     implementation(compose.desktop.currentOs)
     implementation(libs.kotlinx.coroutines.swing)
     implementation(libs.compose.ui.tooling.preview)
@@ -17,7 +19,7 @@ dependencies {
 }
 
 nucleus.application {
-    mainClass = "com.github.arshia_rahimi.sshellspace.MainKt"
+    mainClass = "com.github.arshia_rahimi.sshellspace.app.MainKt"
 
     graalvm {
         isEnabled = true

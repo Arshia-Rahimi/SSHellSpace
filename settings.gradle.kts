@@ -35,3 +35,13 @@ plugins {
 enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 
 include(":app")
+
+// feature
+include(":feature:vault")
+include(":feature:terminal")
+include(":feature:settings")
+
+// core
+include(":core:compose-utils")
+include(":core:data")
+include(":core:model")
