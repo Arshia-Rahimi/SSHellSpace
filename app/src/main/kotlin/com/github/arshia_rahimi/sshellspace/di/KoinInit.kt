@@ -1,4 +1,4 @@
-package com.github.arshia_rahimi.sshellspace.app.di
+package com.github.arshia_rahimi.sshellspace.di
 
 import org.koin.core.context.startKoin
 

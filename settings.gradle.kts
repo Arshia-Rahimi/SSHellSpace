@@ -37,11 +37,16 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 include(":app")
 
 // feature
-include(":feature:vault")
-include(":feature:terminal")
-include(":feature:settings")
+include(":feature:vault:api")
+include(":feature:vault:impl")
+include(":feature:terminal:api")
+include(":feature:terminal:impl")
+include(":feature:settings:api")
+include(":feature:settings:impl")
 
 // core
 include(":core:compose-utils")
 include(":core:data")
 include(":core:model")
+include(":core:database")
+include(":core:ui")

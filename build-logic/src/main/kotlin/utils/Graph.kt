@@ -26,7 +26,6 @@ private class Graph(
     private val plugins: MutableMap<Project, PluginType> = mutableMapOf(),
     private val seen: MutableSet<String> = mutableSetOf(),
 ) {
-
     private val ignoredProjects = root.providers.gradleProperty("graph.ignoredProjects")
         .map { it.split(",").toSet() }
         .orElse(emptySet())
