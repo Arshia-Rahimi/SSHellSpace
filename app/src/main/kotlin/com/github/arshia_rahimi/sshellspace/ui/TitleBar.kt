@@ -31,8 +31,7 @@ import sshellspace.app.generated.resources.new_tab
 @Composable
 fun DecoratedWindowScope.TitleBar() {
     val tabManager = koinInject<TabManager>()
-    val tabs by tabManager.tabs.collectAsStateWithLifecycle(emptyList())
-    val currentTabId by tabManager.currentTabId.collectAsStateWithLifecycle()
+    val tabsState by tabManager.tabsState.collectAsStateWithLifecycle()
 
     Row(
         modifier = Modifier
@@ -44,13 +43,13 @@ fun DecoratedWindowScope.TitleBar() {
         WindowControls()
 
         ReorderableTabRow(
-            fixedTabs = tabManager.fixedTabs,
-            tabs = tabs,
+            fixedTabs = tabsState.fixedTabs,
+            tabs = tabsState.tabs,
             getKey = { id },
             onSelected = { tabManager.setCurrentTab(it) },
-            selectedKey = currentTabId,
+            selectedKey = tabsState.currentTabId,
             tabModifier = Modifier.noWindowDrag(),
-            onMove = { tabId, to -> tabManager.moveTab(tabId, to) },
+            onMove = { from, to -> tabManager.moveTab(from, to) },
         ) { tab, isSelected, isFixed ->
             Row {
                 val title by tab.component.title.collectAsStateWithLifecycle()

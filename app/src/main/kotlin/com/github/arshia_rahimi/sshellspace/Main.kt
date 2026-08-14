@@ -29,8 +29,8 @@ fun main() {
                     titleBar = { TitleBar() },
                 ) { ip ->
                     val tabManager = koinInject<TabManager>()
-                    val currentTab by tabManager.currentTab.collectAsStateWithLifecycle(tabManager.initialTab)
-                    currentTab.component.content(Modifier.fillMaxSize().padding(ip))
+                    val tabsState by tabManager.tabsState.collectAsStateWithLifecycle()
+                    tabsState.currentTab.component.content(Modifier.fillMaxSize().padding(ip))
                 }
             }
         }

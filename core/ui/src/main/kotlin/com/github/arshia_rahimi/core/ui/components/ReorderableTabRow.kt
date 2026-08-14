@@ -21,13 +21,13 @@ import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.launch
 
 @Composable
-fun <T, K: Any> ReorderableTabRow(
+fun <T, K : Any> ReorderableTabRow(
     fixedTabs: List<T>,
     tabs: List<T>,
     getKey: T.() -> K,
     selectedKey: K,
     onSelected: (K) -> Unit,
-    onMove: (key: K, to: Int) -> Unit,
+    onMove: (key: Int, to: Int) -> Unit,
     modifier: Modifier = Modifier,
     tabModifier: Modifier = Modifier,
     tab: @Composable (item: T, isSelected: Boolean, isFixed: Boolean) -> Unit,
@@ -108,8 +108,8 @@ fun <T, K: Any> ReorderableTabRow(
 
                                 val draggedCenter =
                                     currentInfo.offset +
-                                        currentInfo.size / 2 +
-                                        dragOffset
+                                            currentInfo.size / 2 +
+                                            dragOffset
 
                                 // Find an item whose center we crossed.
                                 val target = visibleItems
@@ -122,17 +122,17 @@ fun <T, K: Any> ReorderableTabRow(
 
                                         if (dragOffset > 0) {
                                             draggedCenter > center &&
-                                                info.index > currentIndex
+                                                    info.index > currentIndex
                                         } else {
                                             draggedCenter < center &&
-                                                info.index < currentIndex
+                                                    info.index < currentIndex
                                         }
                                     }
 
                                 if (target != null) {
                                     val to = target.index
 
-                                    onMove(item.getKey(), to)
+                                    onMove(currentIndex, to)
 
                                     draggingIndex = to
 
