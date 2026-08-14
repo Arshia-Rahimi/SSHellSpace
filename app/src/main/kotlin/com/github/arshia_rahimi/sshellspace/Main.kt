@@ -6,8 +6,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.arshia_rahimi.core.compose_utils.asString
-import com.github.arshia_rahimi.sshellspace.di.initKoin
-import com.github.arshia_rahimi.sshellspace.feature.vault.impl.VaultTab
+import com.github.arshia_rahimi.sshellspace.ui.AppTheme
 import com.github.arshia_rahimi.sshellspace.ui.TitleBar
 import dev.nucleusframework.application.DecoratedWindow
 import dev.nucleusframework.application.NucleusBackend
@@ -24,11 +23,13 @@ fun main() {
             onCloseRequest = ::exitApplication,
             title = Res.string.title.asString(),
         ) {
-            WindowScaffold(
-                titleBar = { TitleBar() },
-            ) { ip ->
-                val currentTab by Tabs.currentTab.collectAsStateWithLifecycle(initialTab)
-                currentTab.content(Modifier.fillMaxSize().padding(ip))
+            AppTheme {
+                WindowScaffold(
+                    titleBar = { TitleBar() },
+                ) { ip ->
+                    val currentTab by Tabs.currentTab.collectAsStateWithLifecycle(initialTab)
+                    currentTab.content(Modifier.fillMaxSize().padding(ip))
+                }
             }
         }
     }

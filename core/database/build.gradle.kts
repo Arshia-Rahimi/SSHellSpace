@@ -5,15 +5,17 @@ plugins {
 
 dependencies {
     implementation(projects.core.model)
+    implementation(projects.core.common)
     //
     implementation(libs.sqldelight.coroutines)
     implementation(libs.sqldelight.desktop)
+    implementation(libs.appdirs)
 }
 
 sqldelight {
     databases {
         create("SSHellSpaceDatabase") {
-            packageName.set("com.github.arshia_rahimi.core.database")
+            packageName.set("com.github.arshia_rahimi.core.database.generated")
         }
     }
 }
