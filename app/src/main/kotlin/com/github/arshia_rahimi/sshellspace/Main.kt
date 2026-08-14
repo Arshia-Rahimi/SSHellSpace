@@ -12,6 +12,7 @@ import dev.nucleusframework.application.DecoratedWindow
 import dev.nucleusframework.application.NucleusBackend
 import dev.nucleusframework.application.nucleusApplication
 import dev.nucleusframework.window.WindowScaffold
+import org.koin.compose.koinInject
 import sshellspace.app.generated.resources.Res
 import sshellspace.app.generated.resources.title
 
@@ -27,8 +28,9 @@ fun main() {
                 WindowScaffold(
                     titleBar = { TitleBar() },
                 ) { ip ->
-                    val currentTab by Tabs.currentTab.collectAsStateWithLifecycle(initialTab)
-                    currentTab.content(Modifier.fillMaxSize().padding(ip))
+                    val tabManager = koinInject<TabManager>()
+                    val currentTab by tabManager.currentTab.collectAsStateWithLifecycle(tabManager.initialTab)
+                    currentTab.component.content(Modifier.fillMaxSize().padding(ip))
                 }
             }
         }

@@ -43,6 +43,7 @@ include(":feature:terminal:api")
 include(":feature:terminal:impl")
 include(":feature:settings:api")
 include(":feature:settings:impl")
+include("feature:newtab:impl")
 
 // core
 include(":core:compose-utils")
@@ -50,5 +51,4 @@ include(":core:data")
 include(":core:model")
 include(":core:database")
 include(":core:ui")
-
 include("core:common")

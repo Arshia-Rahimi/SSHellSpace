@@ -16,11 +16,13 @@ junit = "4.9"
 mockk = "1.14.11"
 nucleus = "2.4.1"
 jediterm = "3.9"
+compose-icons = "2.2.1"
 
 [libraries]
 #koin
 koin-core = { module = "io.insert-koin:koin-core", version.ref = "koin" }
 koin-compose = { module = "io.insert-koin:koin-compose", version.ref = "koin" }
+koin-annotations = { module = "io.insert-koin:koin-annotations", version.ref = "koin" }
 #compose
 compose-ui-tooling = { module = "org.jetbrains.compose.ui:ui-tooling", version.ref = "cmp" }
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "cmp" }
@@ -30,6 +32,7 @@ compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "cmp" }
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "cmp" }
 compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "cmp" }
 kolor = { module = "com.materialkolor:material-kolor", version.ref = "kolor" }
+compose-icons = { module = "com.composables:icons-radix-cmp", version.ref = "compose-icons" }
 #kotlin
 coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }

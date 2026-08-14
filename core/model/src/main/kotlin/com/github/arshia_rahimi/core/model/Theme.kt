@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class Theme(
     val darkModeConfig: DarkModeConfig = DarkModeConfig.SYSTEM_DEFAULT,
-    val primary: Color = Color(0xFF0000FF),
+    val primary: Color = Color(0xFFFF0000),
     val secondary: Color? = null,
     val tertiary: Color? = null,
     val neutral: Color? = null,

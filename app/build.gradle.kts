@@ -16,6 +16,7 @@ dependencies {
     implementation(projects.feature.vault.impl)
     implementation(projects.feature.settings.impl)
     implementation(projects.feature.terminal.impl)
+    implementation(projects.feature.newtab.impl)
     //
     implementation(compose.desktop.currentOs)
     implementation(libs.compose.ui.tooling.preview)

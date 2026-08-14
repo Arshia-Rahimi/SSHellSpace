@@ -1,4 +1,4 @@
-package com.github.arshia_rahimi.sshellspace.feature.vault.impl
+package com.github.arshia_rahimi.sshellspace.feature.terminal
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -7,10 +7,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 
 @Composable
-fun VaultTabContent(modifier: Modifier) {
+fun SettingsTabContent(modifier: Modifier) {
     Column(
         modifier = modifier.fillMaxSize(),
     ) {
-        Text("vault tab")
+        Text("settings tab")
     }
 }

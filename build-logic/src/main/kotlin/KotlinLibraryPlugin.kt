@@ -20,6 +20,7 @@ class KotlinLibraryPlugin : Plugin<Project> {
         versionCatalog.addDependency(
             "implementation" to "coroutines-core",
             "implementation" to "koin-core",
+            "implementation" to "koin-annotations",
             "implementation" to "kotlinx-serialization-json",
             "implementation" to "kotlinx-datetime",
             "implementation" to "kotlinx-coroutines-swing",

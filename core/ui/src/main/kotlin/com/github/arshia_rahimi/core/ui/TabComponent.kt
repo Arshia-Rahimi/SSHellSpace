@@ -3,11 +3,12 @@ package com.github.arshia_rahimi.core.ui
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.painter.Painter
-import com.github.arshia_rahimi.core.model.Tab
+import kotlinx.coroutines.flow.StateFlow
+import org.jetbrains.compose.resources.StringResource
 
-interface TabComponent: Tab {
-    val title: String @Composable get
-    val icon: Painter? @Composable get
+interface TabComponent {
+    val title: StateFlow<StringResource>
+    val icon: StateFlow<Painter?>
 
     @Composable
     fun content(modifier: Modifier)
