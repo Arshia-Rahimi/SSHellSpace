@@ -3,6 +3,7 @@ package com.github.arshia_rahimi.sshellspace.ui
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -61,7 +62,7 @@ fun DecoratedWindowScope.TitleBar() {
             tabs = tabsState.tabs,
             tabsOrder = tabsState.tabsOrder,
             getKey = { id },
-            onSelected = { println(it); tabManager.setCurrentTab(it) },
+            onSelected = { tabManager.setCurrentTab(it) },
             selectedKey = tabsState.currentTabId,
             tabModifier = Modifier.noWindowDrag(),
             onTabsReordered = { from, to -> tabManager.moveTab(from, to) },
@@ -83,13 +84,18 @@ fun DecoratedWindowScope.TitleBar() {
                 )
             },
             trailingIcon = { modifier ->
-                IconButton(
-                    onClick = { tabManager.createNewTab() },
-                    imageVector = Icons.Plus,
-                    contentDescription = Res.string.new_tab.asString(),
-                    modifier = modifier.clip(CircleShape),
-                    contentColor = MaterialTheme.colorScheme.onBackground,
-                )
+                Box(
+                    modifier = modifier.fillMaxHeight()
+                        .background(color = MaterialTheme.colorScheme.background)
+                ) {
+                    IconButton(
+                        onClick = { tabManager.createNewTab() },
+                        imageVector = Icons.Plus,
+                        contentDescription = Res.string.new_tab.asString(),
+                        modifier = Modifier.clip(CircleShape),
+                        contentColor = MaterialTheme.colorScheme.onBackground,
+                    )
+                }
             },
         )
     }

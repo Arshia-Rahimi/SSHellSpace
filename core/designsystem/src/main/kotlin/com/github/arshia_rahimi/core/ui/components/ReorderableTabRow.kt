@@ -1,5 +1,6 @@
 package com.github.arshia_rahimi.core.ui.components
 
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,9 +10,6 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
@@ -42,17 +40,6 @@ fun <T, K : Any> ReorderableTabRow(
         val to = tabs.first { it.getKey() == to.key }.getKey()
         onTabsReordered(from, to)
     }
-    val canScroll by remember {
-        derivedStateOf {
-            val info = listState.layoutInfo
-            info.totalItemsCount > 0 &&
-                    (info.visibleItemsInfo.firstOrNull()?.index != 0 ||
-                            info.visibleItemsInfo.lastOrNull()?.index != info.totalItemsCount - 1 ||
-                            (info.visibleItemsInfo.firstOrNull()?.offset ?: 0) < info.beforeContentPadding ||
-                            (info.visibleItemsInfo.lastOrNull()?.let { it.offset + it.size } ?: 0) >
-                            info.viewportEndOffset - info.afterContentPadding)
-        }
-    }
 
     Row(
         modifier = modifier.fillMaxWidth(),
@@ -71,13 +58,21 @@ fun <T, K : Any> ReorderableTabRow(
 
         LazyRow(
             state = listState,
-            modifier = lazyRowModifier,
-            reverseLayout = false,
+            modifier = lazyRowModifier.weight(1f),
+            reverseLayout = true,
             horizontalArrangement = Arrangement.spacedBy(gap, Alignment.Start),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            stickyHeader(key = "new-tab") {
+                trailingIcon(
+                    Modifier.animateItem(
+                        placementSpec = tween(),
+                    )
+                )
+            }
+
             items(
-                items = tabsOrder,
+                items = tabsOrder.reversed(),
                 key = { it },
             ) { tabId ->
                 ReorderableItem(
@@ -87,7 +82,12 @@ fun <T, K : Any> ReorderableTabRow(
                     tab(
                         Modifier
                             .clickable { onSelected(tabId) }
-                            .animateItem().draggableHandle(),
+                            .animateItem(
+                                fadeInSpec = tween(),
+                                fadeOutSpec = tween(),
+                                placementSpec = tween(),
+                            )
+                            .draggableHandle(),
                         tabs.find { it.getKey() == tabId }!!,
                         tabId == selectedKey,
                         false,
@@ -95,16 +95,6 @@ fun <T, K : Any> ReorderableTabRow(
                 }
 
             }
-
-            if (!canScroll) {
-                item(key = "new-tab") {
-                    trailingIcon(Modifier.animateItem())
-                }
-            }
-        }
-
-        if (canScroll) {
-            trailingIcon(Modifier)
         }
     }
 }
