@@ -12,9 +12,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import sh.calvin.reorderable.ReorderableItem
+import sh.calvin.reorderable.ReorderableLazyCollectionDefaults.ScrollThreshold
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @Composable
@@ -35,7 +37,10 @@ fun <T, K : Any> ReorderableTabRow(
     tab: @Composable (modifier: Modifier, item: T, isSelected: Boolean, isFixed: Boolean) -> Unit,
 ) {
     val listState = rememberLazyListState()
-    val reorderableLazyListState = rememberReorderableLazyListState(listState) { from, to ->
+    val reorderableLazyListState = rememberReorderableLazyListState(
+        lazyListState = listState,
+        scrollThreshold = 40.dp,
+    ) { from, to ->
         val from = tabs.first { it.getKey() == from.key }.getKey()
         val to = tabs.first { it.getKey() == to.key }.getKey()
         onTabsReordered(from, to)
@@ -82,12 +87,12 @@ fun <T, K : Any> ReorderableTabRow(
                     tab(
                         Modifier
                             .clickable { onSelected(tabId) }
+                            .draggableHandle()
                             .animateItem(
                                 fadeInSpec = tween(),
                                 fadeOutSpec = tween(),
                                 placementSpec = tween(),
-                            )
-                            .draggableHandle(),
+                            ),
                         tabs.find { it.getKey() == tabId }!!,
                         tabId == selectedKey,
                         false,
