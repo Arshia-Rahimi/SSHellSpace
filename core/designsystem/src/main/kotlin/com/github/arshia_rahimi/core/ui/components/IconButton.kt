@@ -1,8 +1,8 @@
 package com.github.arshia_rahimi.core.ui.components
 
-import androidx.compose.foundation.background
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -15,12 +15,22 @@ fun IconButton(
     imageVector: ImageVector,
     modifier: Modifier = Modifier,
     contentDescription: String? = null,
+    containerColor: Color = Color.Unspecified,
+    contentColor: Color = LocalContentColor.current,
+    disabledContainerColor: Color = Color.Unspecified,
+    disabledContentColor: Color = contentColor.copy(alpha = 0.38f),
     tint: Color = MaterialTheme.colorScheme.onPrimary,
     onClick: () -> Unit,
 ) {
     IconButton(
         onClick = onClick,
-        modifier = modifier.background(MaterialTheme.colorScheme.primary),
+        colors = IconButtonDefaults.iconButtonColors(
+            containerColor = containerColor,
+            disabledContainerColor = disabledContainerColor,
+            disabledContentColor = disabledContentColor,
+            contentColor = contentColor,
+        ),
+        modifier = modifier,
     ) {
         Icon(
             imageVector = imageVector,

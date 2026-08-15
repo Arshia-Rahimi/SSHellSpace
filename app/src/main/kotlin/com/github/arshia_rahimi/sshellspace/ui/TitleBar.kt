@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
@@ -57,46 +56,48 @@ fun DecoratedWindowScope.TitleBar() {
         WindowControls()
 
         ReorderableTabRow(
+            gap = 4.dp,
             fixedTabs = tabsState.fixedTabs,
             tabs = tabsState.tabs,
+            tabsOrder = tabsState.tabsOrder,
             getKey = { id },
-            onSelected = { tabManager.setCurrentTab(it) },
+            onSelected = { println(it); tabManager.setCurrentTab(it) },
             selectedKey = tabsState.currentTabId,
             tabModifier = Modifier.noWindowDrag(),
             onMove = { from, to -> tabManager.moveTab(from, to) },
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(
-                space = 8.dp,
-                alignment = Alignment.Start,
-            ),
             separator = {
                 VerticalDivider(
                     modifier = Modifier.padding(vertical = 4.dp)
                 )
             },
-        ) { tab, isSelected, isFixed ->
-            val title by tab.component.title.collectAsStateWithLifecycle()
-            Tab(
-                title = title.asString(),
-                isSelected = isSelected,
-                isFixed = isFixed,
-                closeIcon = Icons.Cross,
-                closeIconDescription = Res.string.close_tab.asString(),
-                onCloseTab = { tabManager.closeTab(tab.id) },
-            )
-        }
-
-        IconButton(
-            onClick = { tabManager.createNewTab() },
-            imageVector = Icons.Plus,
-            contentDescription = Res.string.new_tab.asString(),
-            modifier = Modifier.clip(CircleShape),
+            tab = { modifier, tab, isSelected, isFixed ->
+                val title by tab.component.title.collectAsStateWithLifecycle()
+                Tab(
+                    title = title.asString(),
+                    isSelected = isSelected,
+                    isFixed = isFixed,
+                    closeIcon = Icons.Cross,
+                    closeIconDescription = Res.string.close_tab.asString(),
+                    onCloseTab = { tabManager.closeTab(tab.id) },
+                    modifier = modifier,
+                )
+            },
+            trailingIcon = { modifier ->
+                IconButton(
+                    onClick = { tabManager.createNewTab() },
+                    imageVector = Icons.Plus,
+                    contentDescription = Res.string.new_tab.asString(),
+                    modifier = modifier.clip(CircleShape),
+                    contentColor = MaterialTheme.colorScheme.onBackground,
+                )
+            },
         )
     }
 }
 
 @Composable
 fun Tab(
+    modifier: Modifier,
     title: String,
     isSelected: Boolean,
     isFixed: Boolean,
@@ -105,10 +106,10 @@ fun Tab(
     onCloseTab: () -> Unit,
 ) {
     Row(
-        modifier = Modifier.fillMaxHeight()
+        modifier = modifier.fillMaxHeight()
             .clip(RoundedCornerShape(12.dp))
             .background(MaterialTheme.colorScheme.primary)
-            .padding(horizontal = 8.dp, vertical = 0.dp),
+            .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {

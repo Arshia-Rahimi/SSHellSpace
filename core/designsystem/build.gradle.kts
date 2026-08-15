@@ -4,4 +4,5 @@ plugins {
 
 dependencies {
     implementation(libs.compose.icons)
+    implementation(libs.reorderable)
 }

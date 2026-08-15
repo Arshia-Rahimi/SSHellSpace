@@ -34,6 +34,7 @@ val TabModule = module {
     //
     single<VaultTabComponent>() bind TabComponent::class
     single<SettingsTabComponent>() bind TabComponent::class
-    factory<NewTabComponent>() bind TabComponent::class
     factory<TerminalTabComponent>() bind TabComponent::class
+    factory<NewTabComponent>()
+    factory<() -> TabComponent> { { get<NewTabComponent>() } }
 }

@@ -18,10 +18,11 @@ typealias TabId = String
 data class TabsState(
     val fixedTabs: List<Tab>,
     val tabs: List<Tab> = emptyList(),
+    val tabsOrder: List<TabId> = emptyList(),
     val currentTabId: TabId,
 ) {
     val tabsSequence: Sequence<Tab>
-        get() = tabs.asSequence().plus(fixedTabs.asSequence())
+        get() = tabs.asSequence() + fixedTabs.asSequence()
 
     val currentTab: Tab
         get() = tabsSequence.first { it.id == currentTabId }
@@ -33,7 +34,7 @@ class TabManager(
     val newTabFactory: NewTabFactory,
 ) {
     private val _tabsState = MutableStateFlow(
-        TabsState(listOf(settingsTab, vaultTab), emptyList(), vaultTab.id)
+        TabsState(listOf(settingsTab, vaultTab), emptyList(), emptyList(), vaultTab.id)
     )
     val tabsState = _tabsState.asStateFlow()
 
@@ -42,6 +43,7 @@ class TabManager(
             val newTab = newTabFactory.create()
             it.copy(
                 tabs = it.tabs + newTab,
+                tabsOrder = it.tabsOrder + newTab.id,
                 currentTabId = newTab.id,
             )
         }
@@ -72,6 +74,7 @@ class TabManager(
 
             state.copy(
                 tabs = newTabs,
+                tabsOrder = state.tabsOrder - tabId,
                 currentTabId = newCurrentTabId,
             )
         }
@@ -79,10 +82,10 @@ class TabManager(
 
     fun moveTab(from: Int, to: Int) {
         _tabsState.update { state ->
-            val tabs = state.tabs.toMutableList()
-            val tab = tabs.removeAt(from)
-            tabs.add(to.coerceIn(0, tabs.size), tab)
-            state.copy(tabs = tabs)
+            val tabsOrder = state.tabsOrder.toMutableList()
+            val tabId = tabsOrder.removeAt(from)
+            tabsOrder.add(to.coerceIn(0, tabsOrder.size), tabId)
+            state.copy(tabsOrder = tabsOrder)
         }
     }
 }

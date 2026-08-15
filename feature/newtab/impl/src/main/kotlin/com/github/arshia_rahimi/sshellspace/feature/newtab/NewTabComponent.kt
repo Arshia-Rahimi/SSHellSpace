@@ -9,7 +9,6 @@ import org.koin.core.annotation.Named
 import sshellspace.feature.newtab.impl.generated.resources.Res
 import sshellspace.feature.newtab.impl.generated.resources.new_tab
 
-@Named("New")
 class NewTabComponent: TabComponent {
     override val title = MutableStateFlow(Res.string.new_tab)
     override val icon = MutableStateFlow(null)

@@ -23,7 +23,6 @@ dependencies {
     implementation(libs.nucleus.application)
     implementation(libs.nucleus.tao)
     implementation(libs.nucleus.material3)
-    implementation(libs.jediterm)
 }
 
 nucleus.application {
