@@ -21,7 +21,6 @@ class ComposeLibraryPlugin : Plugin<Project> {
             "implementation" to "compose-components-resources",
             "implementation" to "compose-ui-tooling-preview",
             "implementation" to "kolor",
-            "implementation" to "compose-icons",
         )
     }
 }

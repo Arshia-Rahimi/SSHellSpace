@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
@@ -14,9 +13,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.composables.icons.radix.Plus
-import com.composables.icons.radix.Radix
 import com.github.arshia_rahimi.core.compose_utils.asString
+import com.github.arshia_rahimi.core.ui.Icons
 import com.github.arshia_rahimi.core.ui.components.ReorderableTabRow
 import com.github.arshia_rahimi.sshellspace.TabManager
 import dev.nucleusframework.window.DecoratedWindowScope
@@ -25,6 +23,7 @@ import dev.nucleusframework.window.noWindowDrag
 import dev.nucleusframework.window.windowDragArea
 import org.koin.compose.koinInject
 import sshellspace.app.generated.resources.Res
+import sshellspace.app.generated.resources.close_tab
 import sshellspace.app.generated.resources.new_tab
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -56,10 +55,10 @@ fun DecoratedWindowScope.TitleBar() {
                 Text(title.asString())
 
                 if (isSelected && !isFixed) {
-                    Button(
+                    IconButton(
                         onClick = { tabManager.closeTab(tab.id) },
                     ) {
-                        Text("close")
+                        Icon(Icons.Cross, Res.string.close_tab.asString())
                     }
                 }
             }
@@ -68,7 +67,7 @@ fun DecoratedWindowScope.TitleBar() {
         IconButton(
             onClick = { tabManager.createNewTab() },
         ) {
-            Icon(Radix.Plus, Res.string.new_tab.asString())
+            Icon(Icons.Plus, Res.string.new_tab.asString())
         }
     }
 }

@@ -8,8 +8,8 @@ plugins {
 }
 
 dependencies {
-    implementation(projects.core.composeUtils)
-    implementation(projects.core.ui)
+    implementation(projects.core.composeutils)
+    implementation(projects.core.designsystem)
     implementation(projects.core.model)
     implementation(projects.core.database)
     implementation(projects.core.data)

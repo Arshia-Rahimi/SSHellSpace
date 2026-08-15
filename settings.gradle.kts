@@ -46,9 +46,9 @@ include(":feature:settings:impl")
 include("feature:newtab:impl")
 
 // core
-include(":core:compose-utils")
+include(":core:composeutils")
 include(":core:data")
 include(":core:model")
 include(":core:database")
-include(":core:ui")
+include(":core:designsystem")
 include("core:common")

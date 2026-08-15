@@ -3,5 +3,5 @@ plugins {
 }
 
 dependencies {
-    api(projects.core.model)
+    implementation(libs.compose.icons)
 }
