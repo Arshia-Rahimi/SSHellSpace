@@ -64,7 +64,7 @@ fun DecoratedWindowScope.TitleBar() {
             onSelected = { println(it); tabManager.setCurrentTab(it) },
             selectedKey = tabsState.currentTabId,
             tabModifier = Modifier.noWindowDrag(),
-            onMove = { from, to -> tabManager.moveTab(from, to) },
+            onTabsReordered = { from, to -> tabManager.moveTab(from, to) },
             separator = {
                 VerticalDivider(
                     modifier = Modifier.padding(vertical = 4.dp)

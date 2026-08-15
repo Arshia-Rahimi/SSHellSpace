@@ -9,6 +9,9 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
@@ -24,7 +27,7 @@ fun <T, K : Any> ReorderableTabRow(
     getKey: T.() -> K,
     selectedKey: K,
     onSelected: (K) -> Unit,
-    onMove: (key: Int, to: Int) -> Unit,
+    onTabsReordered: (key: K, to: K) -> Unit,
     modifier: Modifier = Modifier,
     lazyRowModifier: Modifier = Modifier,
     gap: Dp = 0.dp,
@@ -35,7 +38,20 @@ fun <T, K : Any> ReorderableTabRow(
 ) {
     val listState = rememberLazyListState()
     val reorderableLazyListState = rememberReorderableLazyListState(listState) { from, to ->
-        onMove(from.index - 1, to.index - 1)
+        val from = tabs.first { it.getKey() == from.key }.getKey()
+        val to = tabs.first { it.getKey() == to.key }.getKey()
+        onTabsReordered(from, to)
+    }
+    val canScroll by remember {
+        derivedStateOf {
+            val info = listState.layoutInfo
+            info.totalItemsCount > 0 &&
+                    (info.visibleItemsInfo.firstOrNull()?.index != 0 ||
+                            info.visibleItemsInfo.lastOrNull()?.index != info.totalItemsCount - 1 ||
+                            (info.visibleItemsInfo.firstOrNull()?.offset ?: 0) < info.beforeContentPadding ||
+                            (info.visibleItemsInfo.lastOrNull()?.let { it.offset + it.size } ?: 0) >
+                            info.viewportEndOffset - info.afterContentPadding)
+        }
     }
 
     Row(
@@ -56,28 +72,39 @@ fun <T, K : Any> ReorderableTabRow(
         LazyRow(
             state = listState,
             modifier = lazyRowModifier,
-            reverseLayout = true,
+            reverseLayout = false,
             horizontalArrangement = Arrangement.spacedBy(gap, Alignment.Start),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            stickyHeader(key = "new-tab") {
-                trailingIcon(Modifier.animateItem())
-            }
-
             items(
-                items = tabsOrder.reversed(),
+                items = tabsOrder,
                 key = { it },
             ) { tabId ->
                 ReorderableItem(
-                    modifier = tabModifier
-                        .clickable { onSelected(tabId) },
                     state = reorderableLazyListState,
                     key = tabId,
                 ) {
-                    tab(Modifier.draggableHandle(), tabs.find { it.getKey() == tabId }!!, tabId == selectedKey, false)
+                    tab(
+                        Modifier
+                            .clickable { onSelected(tabId) }
+                            .animateItem().draggableHandle(),
+                        tabs.find { it.getKey() == tabId }!!,
+                        tabId == selectedKey,
+                        false,
+                    )
                 }
 
             }
+
+            if (!canScroll) {
+                item(key = "new-tab") {
+                    trailingIcon(Modifier.animateItem())
+                }
+            }
+        }
+
+        if (canScroll) {
+            trailingIcon(Modifier)
         }
     }
 }

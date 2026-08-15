@@ -80,11 +80,12 @@ class TabManager(
         }
     }
 
-    fun moveTab(from: Int, to: Int) {
+    fun moveTab(from: TabId, to: TabId) {
         _tabsState.update { state ->
             val tabsOrder = state.tabsOrder.toMutableList()
-            val tabId = tabsOrder.removeAt(from)
-            tabsOrder.add(to.coerceIn(0, tabsOrder.size), tabId)
+            tabsOrder.removeAll { it == from }
+            val toIndex = tabsOrder.indexOfFirst { it == to }
+            tabsOrder.add(toIndex.coerceIn(0, tabsOrder.size), from)
             state.copy(tabsOrder = tabsOrder)
         }
     }
