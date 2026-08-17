@@ -8,23 +8,23 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-interface Tab {
+interface Tab<C: TabComponent> {
     val id: TabId
-    var component: TabComponent
+    var component: C
 }
 
 typealias TabId = String
 
 data class TabsState(
-    val fixedTabs: List<Tab>,
-    val tabs: List<Tab> = emptyList(),
+    val fixedTabs: List<Tab<*>>,
+    val tabs: List<Tab<*>> = emptyList(),
     val tabsOrder: List<TabId> = emptyList(),
     val currentTabId: TabId,
 ) {
-    val tabsSequence: Sequence<Tab>
+    val tabsSequence: Sequence<Tab<*>>
         get() = tabs.asSequence() + fixedTabs.asSequence()
 
-    val currentTab: Tab
+    val currentTab: Tab<*>
         get() = tabsSequence.first { it.id == currentTabId }
 }
 

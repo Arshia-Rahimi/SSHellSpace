@@ -12,11 +12,9 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import sh.calvin.reorderable.ReorderableItem
-import sh.calvin.reorderable.ReorderableLazyCollectionDefaults.ScrollThreshold
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @Composable
@@ -83,7 +81,7 @@ fun <T, K : Any> ReorderableTabRow(
                 ReorderableItem(
                     state = reorderableLazyListState,
                     key = tabId,
-                ) {
+                ) { isDragging ->
                     tab(
                         Modifier
                             .clickable { onSelected(tabId) }
@@ -91,7 +89,7 @@ fun <T, K : Any> ReorderableTabRow(
                             .animateItem(
                                 fadeInSpec = tween(),
                                 fadeOutSpec = tween(),
-                                placementSpec = tween(),
+                                placementSpec = if(isDragging) null else tween(),
                             ),
                         tabs.find { it.getKey() == tabId }!!,
                         tabId == selectedKey,

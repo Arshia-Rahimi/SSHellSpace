@@ -1,17 +1,17 @@
 package com.github.arshia_rahimi.sshellspace.tabs
 
-import com.github.arshia_rahimi.core.ui.TabComponent
 import com.github.arshia_rahimi.sshellspace.Tab
+import com.github.arshia_rahimi.sshellspace.feature.newtab.NewTabComponent
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
 class NewTab(
-    override var component: TabComponent,
+    override var component: NewTabComponent,
     override val id: String,
-): Tab
+): Tab<NewTabComponent>
 
 class NewTabFactory(
-    private val createComponent: () -> TabComponent,
+    private val createComponent: () -> NewTabComponent,
 ) {
     fun create() = NewTab(createComponent(), generateId())
 

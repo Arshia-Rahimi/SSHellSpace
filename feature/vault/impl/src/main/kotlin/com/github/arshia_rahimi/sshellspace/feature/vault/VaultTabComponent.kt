@@ -11,7 +11,6 @@ import org.koin.core.annotation.Named
 import sshellspace.feature.vault.impl.generated.resources.Res
 import sshellspace.feature.vault.impl.generated.resources.vault
 
-@Named("Vault")
 class VaultTabComponent: TabComponent {
     override val title = MutableStateFlow(Res.string.vault)
     override val icon = MutableStateFlow(null)

@@ -1,11 +1,10 @@
 package com.github.arshia_rahimi.sshellspace.tabs
 
-import com.github.arshia_rahimi.core.ui.TabComponent
 import com.github.arshia_rahimi.sshellspace.Tab
-import org.koin.core.annotation.Named
+import com.github.arshia_rahimi.sshellspace.feature.vault.VaultTabComponent
 
 class VaultTab(
-    @Named("Vault") override var component: TabComponent,
-): Tab {
+    override var component: VaultTabComponent,
+): Tab<VaultTabComponent> {
     override val id = "Vault"
 }

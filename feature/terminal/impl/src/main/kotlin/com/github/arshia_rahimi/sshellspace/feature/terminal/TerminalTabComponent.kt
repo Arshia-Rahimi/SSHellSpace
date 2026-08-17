@@ -8,7 +8,6 @@ import org.koin.core.annotation.Named
 import sshellspace.feature.terminal.impl.generated.resources.Res
 import sshellspace.feature.terminal.impl.generated.resources.terminal
 
-@Named("Terminal")
 class TerminalTabComponent: TabComponent {
     override val title = MutableStateFlow(Res.string.terminal)
     override val icon = MutableStateFlow(null)

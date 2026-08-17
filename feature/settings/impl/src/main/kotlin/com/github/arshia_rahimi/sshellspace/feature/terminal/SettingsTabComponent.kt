@@ -10,7 +10,6 @@ import org.koin.core.annotation.Named
 import sshellspace.feature.settings.impl.generated.resources.Res
 import sshellspace.feature.settings.impl.generated.resources.settings
 
-@Named("Settings")
 class SettingsTabComponent: TabComponent {
     override val title = MutableStateFlow(Res.string.settings)
     override val icon = MutableStateFlow(null)
