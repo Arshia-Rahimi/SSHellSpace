@@ -15,6 +15,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -26,7 +29,9 @@ import com.github.arshia_rahimi.core.ui.Icons
 import com.github.arshia_rahimi.core.ui.components.IconButton
 import com.github.arshia_rahimi.core.ui.components.ReorderableTabRow
 import com.github.arshia_rahimi.core.ui.components.Text
+import com.github.arshia_rahimi.sshellspace.core.tabs.TabId
 import com.github.arshia_rahimi.sshellspace.core.tabs.TabManager
+import com.github.arshia_rahimi.sshellspace.core.tabs.TabViewModel
 import dev.nucleusframework.window.DecoratedWindowScope
 import dev.nucleusframework.window.WindowControls
 import dev.nucleusframework.window.noWindowDrag
@@ -41,6 +46,7 @@ import sshellspace.app.generated.resources.new_tab
 fun DecoratedWindowScope.TitleBar() {
     val tabManager = koinInject<TabManager>()
     val tabsState by tabManager.tabsState.collectAsStateWithLifecycle()
+    var tabKeys by remember { mutableStateOf(emptyList<TabId>()) }
 
     Row(
         modifier = Modifier
@@ -57,28 +63,25 @@ fun DecoratedWindowScope.TitleBar() {
         WindowControls()
 
         ReorderableTabRow(
+            tabKeys = tabKeys,
+            setTabKeys = { tabKeys = it },
+            fixedTabKeys = tabsState.fixedTabs.map { it.id },
             gap = 4.dp,
-            fixedTabs = tabsState.fixedTabs,
-            tabs = tabsState.tabs,
-            tabsOrder = tabsState.tabsOrder,
-            getKey = { id },
             onSelected = { tabManager.setCurrentTab(it) },
             selectedKey = tabsState.currentTabId,
             tabModifier = Modifier.noWindowDrag(),
-            onTabsReordered = { from, to -> tabManager.moveTab(from, to) },
-            separator = {
-                VerticalDivider(
-                    modifier = Modifier.padding(vertical = 4.dp)
-                )
-            },
-            tab = { modifier, tab, isSelected, isFixed ->
+            separator = { VerticalDivider(Modifier.padding(vertical = 4.dp)) },
+            tab = { modifier, tabId, isSelected, isFixed ->
                 Tab(
-                    title = tab.title,
+                    tab = tabsState.getTab(tabId),
                     isSelected = isSelected,
                     isFixed = isFixed,
                     closeIcon = Icons.Cross,
                     closeIconDescription = Res.string.close_tab.asString(),
-                    onCloseTab = { tabManager.closeTab(tab.id) },
+                    onCloseTab = {
+                        tabManager.closeTab(tabId)
+                        tabKeys -= tabId
+                    },
                     modifier = modifier,
                 )
             },
@@ -88,7 +91,10 @@ fun DecoratedWindowScope.TitleBar() {
                         .background(color = MaterialTheme.colorScheme.background)
                 ) {
                     IconButton(
-                        onClick = { tabManager.createNewTab() },
+                        onClick = {
+                            val id = tabManager.createNewTab()
+                            tabKeys = listOf(id) + tabKeys
+                        },
                         imageVector = Icons.Plus,
                         contentDescription = Res.string.new_tab.asString(),
                         modifier = Modifier.clip(CircleShape),
@@ -102,8 +108,8 @@ fun DecoratedWindowScope.TitleBar() {
 
 @Composable
 fun Tab(
+    tab: TabViewModel,
     modifier: Modifier,
-    title: String,
     isSelected: Boolean,
     isFixed: Boolean,
     closeIcon: ImageVector,
@@ -118,7 +124,7 @@ fun Tab(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
-        Text(title)
+        Text(tab.title)
 
         if (!isFixed) {
             IconButton(

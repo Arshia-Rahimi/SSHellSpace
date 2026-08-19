@@ -12,15 +12,15 @@ class TabManager(
     private val _tabsState = MutableStateFlow(TabsState(fixedTabs, defaultTabId))
     val tabsState = _tabsState.asStateFlow()
 
-    fun createNewTab() {
+    fun createNewTab(): TabId {
+        val newTab = tabViewModelFactory()
         _tabsState.update {
-            val newTab = tabViewModelFactory()
             it.copy(
                 tabs = it.tabs + newTab,
-                tabsOrder = it.tabsOrder + newTab.id,
                 currentTabId = newTab.id,
             )
         }
+        return newTab.id
     }
 
     fun setCurrentTab(id: TabId) {
@@ -48,19 +48,8 @@ class TabManager(
 
             state.copy(
                 tabs = newTabs,
-                tabsOrder = state.tabsOrder - tabId,
                 currentTabId = newCurrentTabId,
             )
-        }
-    }
-
-    fun moveTab(from: TabId, to: TabId) {
-        _tabsState.update { state ->
-            val tabsOrder = state.tabsOrder.toMutableList()
-            tabsOrder.removeAll { it == from }
-            val toIndex = tabsOrder.indexOfFirst { it == to }
-            tabsOrder.add(toIndex.coerceIn(0, tabsOrder.size), from)
-            state.copy(tabsOrder = tabsOrder)
         }
     }
 }
@@ -69,8 +58,9 @@ data class TabsState(
     val fixedTabs: List<TabViewModel>,
     val currentTabId: TabId,
     val tabs: List<TabViewModel> = emptyList(),
-    val tabsOrder: List<String> = emptyList(),
 ) {
     val tabsSequence: Sequence<TabViewModel> get() = tabs.asSequence() + fixedTabs.asSequence()
     val currentTab: TabViewModel get() = tabsSequence.first { it.id == currentTabId }
+
+    fun getTab(id: TabId): TabViewModel = tabsSequence.find { it.id == id }!!
 }

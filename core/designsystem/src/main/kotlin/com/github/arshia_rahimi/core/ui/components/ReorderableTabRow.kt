@@ -18,30 +18,30 @@ import sh.calvin.reorderable.ReorderableItem
 import sh.calvin.reorderable.rememberReorderableLazyListState
 
 @Composable
-fun <T, K : Any> ReorderableTabRow(
-    fixedTabs: List<T>,
-    tabs: List<T>,
-    tabsOrder: List<K>,
-    getKey: T.() -> K,
+fun <K : Any> ReorderableTabRow(
+    tabKeys: List<K>,
+    setTabKeys: (List<K>) -> Unit,
+    fixedTabKeys: List<K>,
     selectedKey: K,
     onSelected: (K) -> Unit,
-    onTabsReordered: (key: K, to: K) -> Unit,
     modifier: Modifier = Modifier,
     lazyRowModifier: Modifier = Modifier,
     gap: Dp = 0.dp,
     tabModifier: Modifier = Modifier,
     separator: @Composable () -> Unit = {},
-    trailingIcon: @Composable (Modifier) -> Unit = {},
-    tab: @Composable (modifier: Modifier, item: T, isSelected: Boolean, isFixed: Boolean) -> Unit,
+    trailingIcon: (@Composable (Modifier) -> Unit)? = null,
+    tab: @Composable (modifier: Modifier, key: K, isSelected: Boolean, isFixed: Boolean) -> Unit,
 ) {
     val listState = rememberLazyListState()
     val reorderableLazyListState = rememberReorderableLazyListState(
         lazyListState = listState,
         scrollThreshold = 40.dp,
     ) { from, to ->
-        val from = tabs.first { it.getKey() == from.key }.getKey()
-        val to = tabs.first { it.getKey() == to.key }.getKey()
-        onTabsReordered(from, to)
+        val trailingIconIndexLength = if (trailingIcon != null) 1 else 0
+        setTabKeys(
+            tabKeys.toMutableList()
+                .apply { add(to.index - trailingIconIndexLength, removeAt(from.index - trailingIconIndexLength)) }
+        )
     }
 
     Row(
@@ -49,11 +49,11 @@ fun <T, K : Any> ReorderableTabRow(
         horizontalArrangement = Arrangement.spacedBy(gap, Alignment.Start),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        fixedTabs.forEach { item ->
+        fixedTabKeys.forEach { key ->
             Box(
-                modifier = tabModifier.clickable { onSelected(item.getKey()) }
+                modifier = tabModifier.clickable { onSelected(key) }
             ) {
-                tab(Modifier, item, item.getKey() == selectedKey, true)
+                tab(Modifier, key, key == selectedKey, true)
             }
         }
 
@@ -66,33 +66,35 @@ fun <T, K : Any> ReorderableTabRow(
             horizontalArrangement = Arrangement.spacedBy(gap, Alignment.Start),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            stickyHeader(key = "new-tab") {
-                trailingIcon(
-                    Modifier.animateItem(
-                        placementSpec = tween(),
+            trailingIcon?.let {
+                stickyHeader(key = "new-tab") {
+                    it(
+                        Modifier.animateItem(
+                            placementSpec = tween(),
+                        )
                     )
-                )
+                }
             }
 
             items(
-                items = tabsOrder.reversed(),
+                items = tabKeys,
                 key = { it },
-            ) { tabId ->
+            ) { key ->
                 ReorderableItem(
                     state = reorderableLazyListState,
-                    key = tabId,
+                    key = key,
                 ) { isDragging ->
                     tab(
                         Modifier
-                            .clickable { onSelected(tabId) }
+                            .clickable { onSelected(key) }
                             .draggableHandle()
                             .animateItem(
                                 fadeInSpec = tween(),
                                 fadeOutSpec = tween(),
-                                placementSpec = if(isDragging) null else tween(),
+                                placementSpec = if (isDragging) null else tween(),
                             ),
-                        tabs.find { it.getKey() == tabId }!!,
-                        tabId == selectedKey,
+                        key,
+                        key == selectedKey,
                         false,
                     )
                 }
