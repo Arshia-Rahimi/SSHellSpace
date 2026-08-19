@@ -12,7 +12,6 @@ import com.github.arshia_rahimi.sshellspace.feature.vault.VaultModule
 import com.github.arshia_rahimi.sshellspace.feature.vault.VaultTabViewModel
 import org.koin.core.context.startKoin
 import org.koin.dsl.module
-import org.koin.plugin.module.dsl.create
 
 fun initKoin() {
     startKoin {
@@ -36,14 +35,12 @@ val AppModule = module {
     )
 
     single<TabManager> {
-        create<TabManager> {
-            val vaultTab: VaultTabViewModel = get()
-            val settingsTab: SettingsTabViewModel = get()
-            TabManager(
-                defaultTabId = vaultTab.id,
-                fixedTabs = listOf(settingsTab, vaultTab),
-                tabViewModelFactory = { get<NewTabViewModel>() },
-            )
-        }
+        val vaultTab: VaultTabViewModel = get()
+        val settingsTab: SettingsTabViewModel = get()
+        TabManager(
+            defaultTabId = vaultTab.id,
+            fixedTabs = listOf(settingsTab, vaultTab),
+            tabViewModelFactory = { get<NewTabViewModel>() },
+        )
     }
 }
