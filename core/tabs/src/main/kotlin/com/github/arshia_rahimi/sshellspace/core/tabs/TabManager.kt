@@ -1,6 +1,7 @@
 package com.github.arshia_rahimi.sshellspace.core.tabs
 
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
@@ -10,9 +11,10 @@ class TabManager(
     val newTabViewModelFactory: () -> TabViewModel,
 ) : TabController {
     private val _tabsState = MutableStateFlow(TabsState(fixedTabs, defaultTabId))
-    val tabsState = _tabsState.asStateFlow()
 
-    fun createNewTab(): TabId {
+    override fun tabsState() = _tabsState.asStateFlow()
+
+    override fun createNewTab(): TabId {
         val newTab = newTabViewModelFactory()
         _tabsState.update {
             it.copy(
@@ -23,14 +25,14 @@ class TabManager(
         return newTab.id
     }
 
-    fun setCurrentTab(id: TabId) {
+    override fun setCurrentTab(tabId: TabId) {
         _tabsState.update { state ->
-            if (id !in state.tabsSequence.map { it.id }) return@update state
-            state.copy(currentTabId = id)
+            if (tabId !in state.tabsSequence.map { it.id }) return@update state
+            state.copy(currentTabId = tabId)
         }
     }
 
-    fun closeTab(tabId: TabId) {
+    override fun closeTab(tabId: TabId) {
         _tabsState.update { state ->
             val index = state.tabs.indexOfFirst { it.id == tabId }
             if (index == -1) return@update state

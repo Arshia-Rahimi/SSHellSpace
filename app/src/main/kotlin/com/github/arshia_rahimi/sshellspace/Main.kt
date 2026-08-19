@@ -7,7 +7,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.arshia_rahimi.core.compose_utils.asString
-import com.github.arshia_rahimi.sshellspace.core.tabs.TabManager
+import com.github.arshia_rahimi.sshellspace.core.tabs.TabController
 import com.github.arshia_rahimi.sshellspace.ui.AppTheme
 import com.github.arshia_rahimi.sshellspace.ui.TitleBar
 import dev.nucleusframework.application.DecoratedWindow
@@ -30,7 +30,10 @@ fun main() {
                 WindowScaffold(
                     titleBar = { TitleBar() },
                 ) { ip ->
-                    val tabsState by koinInject<TabManager>().tabsState.collectAsStateWithLifecycle()
+                    val tabsState by koinInject<TabController>()
+                        .tabsState()
+                        .collectAsStateWithLifecycle()
+
                     AnimatedContent(
                         targetState = tabsState.currentTab,
                         modifier = Modifier.fillMaxSize()

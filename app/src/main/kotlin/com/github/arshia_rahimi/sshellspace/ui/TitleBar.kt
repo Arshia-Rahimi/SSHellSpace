@@ -43,7 +43,7 @@ import sshellspace.app.generated.resources.new_tab
 @Composable
 fun DecoratedWindowScope.TitleBar() {
     val tabManager = koinInject<TabManager>()
-    val tabsState by tabManager.tabsState.collectAsStateWithLifecycle()
+    val tabsState by tabManager.tabsState().collectAsStateWithLifecycle()
     var tabKeys by remember { mutableStateOf(emptyList<TabId>()) }
 
     Row(
