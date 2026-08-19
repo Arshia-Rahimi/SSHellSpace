@@ -41,7 +41,6 @@ import sshellspace.app.generated.resources.Res
 import sshellspace.app.generated.resources.close_tab
 import sshellspace.app.generated.resources.new_tab
 
-@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun DecoratedWindowScope.TitleBar() {
     val tabManager = koinInject<TabManager>()
