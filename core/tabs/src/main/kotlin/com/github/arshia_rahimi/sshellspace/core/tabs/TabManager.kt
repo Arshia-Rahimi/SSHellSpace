@@ -1,46 +1,22 @@
-package com.github.arshia_rahimi.sshellspace
+package com.github.arshia_rahimi.sshellspace.core.tabs
 
-import com.github.arshia_rahimi.core.ui.TabComponent
-import com.github.arshia_rahimi.sshellspace.tabs.NewTabFactory
-import com.github.arshia_rahimi.sshellspace.tabs.SettingsTab
-import com.github.arshia_rahimi.sshellspace.tabs.VaultTab
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
-interface Tab<C: TabComponent> {
-    val id: TabId
-    var component: C
-}
-
-typealias TabId = String
-
-data class TabsState(
-    val fixedTabs: List<Tab<*>>,
-    val tabs: List<Tab<*>> = emptyList(),
-    val tabsOrder: List<TabId> = emptyList(),
-    val currentTabId: TabId,
-) {
-    val tabsSequence: Sequence<Tab<*>>
-        get() = tabs.asSequence() + fixedTabs.asSequence()
-
-    val currentTab: Tab<*>
-        get() = tabsSequence.first { it.id == currentTabId }
-}
-
 class TabManager(
-    settingsTab: SettingsTab,
-    vaultTab: VaultTab,
-    val newTabFactory: NewTabFactory,
+    defaultTabId: TabId,
+    fixedTabs: List<TabViewModel>,
+    val tabViewModelFactory: () -> TabViewModel,
 ) {
     private val _tabsState = MutableStateFlow(
-        TabsState(listOf(settingsTab, vaultTab), emptyList(), emptyList(), vaultTab.id)
+        TabsState(fixedTabs, emptyList(), emptyList(), defaultTabId)
     )
     val tabsState = _tabsState.asStateFlow()
 
     fun createNewTab() {
         _tabsState.update {
-            val newTab = newTabFactory.create()
+            val newTab = tabViewModelFactory()
             it.copy(
                 tabs = it.tabs + newTab,
                 tabsOrder = it.tabsOrder + newTab.id,
@@ -89,4 +65,17 @@ class TabManager(
             state.copy(tabsOrder = tabsOrder)
         }
     }
+}
+
+data class TabsState(
+    val fixedTabs: List<TabViewModel>,
+    val tabs: List<TabViewModel> = emptyList(),
+    val tabsOrder: List<String> = emptyList(),
+    val currentTabId: TabId,
+) {
+    val tabsSequence: Sequence<TabViewModel>
+        get() = tabs.asSequence() + fixedTabs.asSequence()
+
+    val currentTab: TabViewModel
+        get() = tabsSequence.first { it.id == currentTabId }
 }

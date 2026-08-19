@@ -2,9 +2,10 @@ package com.github.arshia_rahimi.sshellspace.feature.newtab
 
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
+import androidx.lifecycle.ViewModel
+import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun NewTabContent(modifier: Modifier) {
+fun NewTabScreen() {
     Text("new tab")
 }

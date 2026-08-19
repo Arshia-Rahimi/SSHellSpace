@@ -1,11 +1,13 @@
 package com.github.arshia_rahimi.sshellspace
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.arshia_rahimi.core.compose_utils.asString
+import com.github.arshia_rahimi.sshellspace.core.tabs.TabManager
 import com.github.arshia_rahimi.sshellspace.ui.AppTheme
 import com.github.arshia_rahimi.sshellspace.ui.TitleBar
 import dev.nucleusframework.application.DecoratedWindow
@@ -28,9 +30,14 @@ fun main() {
                 WindowScaffold(
                     titleBar = { TitleBar() },
                 ) { ip ->
-                    val tabManager = koinInject<TabManager>()
-                    val tabsState by tabManager.tabsState.collectAsStateWithLifecycle()
-                    tabsState.currentTab.component.content(Modifier.fillMaxSize().padding(ip))
+                    val tabsState by koinInject<TabManager>().tabsState.collectAsStateWithLifecycle()
+                    AnimatedContent(
+                        targetState = tabsState.currentTab,
+                        modifier = Modifier.fillMaxSize()
+                            .padding(ip),
+                    ) {
+                        it.screen()
+                    }
                 }
             }
         }

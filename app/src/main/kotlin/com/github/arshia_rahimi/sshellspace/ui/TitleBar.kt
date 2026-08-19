@@ -26,7 +26,7 @@ import com.github.arshia_rahimi.core.ui.Icons
 import com.github.arshia_rahimi.core.ui.components.IconButton
 import com.github.arshia_rahimi.core.ui.components.ReorderableTabRow
 import com.github.arshia_rahimi.core.ui.components.Text
-import com.github.arshia_rahimi.sshellspace.TabManager
+import com.github.arshia_rahimi.sshellspace.core.tabs.TabManager
 import dev.nucleusframework.window.DecoratedWindowScope
 import dev.nucleusframework.window.WindowControls
 import dev.nucleusframework.window.noWindowDrag
@@ -72,9 +72,8 @@ fun DecoratedWindowScope.TitleBar() {
                 )
             },
             tab = { modifier, tab, isSelected, isFixed ->
-                val title by tab.component.title.collectAsStateWithLifecycle()
                 Tab(
-                    title = title.asString(),
+                    title = tab.title,
                     isSelected = isSelected,
                     isFixed = isFixed,
                     closeIcon = Icons.Cross,

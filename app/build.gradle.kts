@@ -8,7 +8,7 @@ plugins {
 }
 
 dependencies {
-    implementation(projects.core.composeutils)
+    implementation(projects.core.commonCompose)
     implementation(projects.core.designsystem)
     implementation(projects.core.model)
     implementation(projects.core.database)
@@ -17,6 +17,7 @@ dependencies {
     implementation(projects.feature.settings.impl)
     implementation(projects.feature.terminal.impl)
     implementation(projects.feature.newtab.impl)
+    implementation(projects.core.tabs)
     //
     implementation(compose.desktop.currentOs)
     implementation(libs.compose.ui.tooling.preview)

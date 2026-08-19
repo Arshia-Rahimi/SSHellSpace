@@ -1,6 +1,7 @@
 package utils
 
 import org.gradle.api.Project
+import org.gradle.api.artifacts.ProjectDependency
 import org.gradle.api.artifacts.VersionCatalogsExtension
 import org.gradle.kotlin.dsl.apply
 import org.gradle.kotlin.dsl.getByType
@@ -21,6 +22,10 @@ class ProjectVersionCatalog(private val project: Project) {
 
     fun addDependency(vararg dependency: Pair<String, String>) = dependency.toSet().forEach {
         project.dependencies.add(it.first, libs.findLibrary(it.second).get())
+    }
+
+    fun addProjectDependency(vararg dependency: Pair<String, ProjectDependency>) = dependency.toSet().forEach {
+        project.dependencies.add(it.first, it.second)
     }
 
     fun addBom(vararg bomName: String) {

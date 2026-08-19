@@ -1,7 +1,7 @@
 plugins {
-    alias(libs.plugins.project.compose.library)
+    alias(libs.plugins.project.feature.library)
 }
 
 dependencies {
-    implementation(projects.core.designsystem)
+
 }

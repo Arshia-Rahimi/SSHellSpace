@@ -29,5 +29,9 @@ gradlePlugin {
             id = libs.plugins.project.compose.library.get().pluginId
             implementationClass = "ComposeLibraryPlugin"
         }
+        register("Feature") {
+            id = libs.plugins.project.feature.library.get().pluginId
+            implementationClass = "FeaturePlugin"
+        }
     }
 }
