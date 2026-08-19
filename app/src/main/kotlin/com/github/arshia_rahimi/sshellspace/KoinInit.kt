@@ -39,11 +39,10 @@ val AppModule = module {
         create<TabManager> {
             val vaultTab: VaultTabViewModel = get()
             val settingsTab: SettingsTabViewModel = get()
-            val newTabFactory = { get<NewTabViewModel>() }
             TabManager(
                 defaultTabId = vaultTab.id,
                 fixedTabs = listOf(settingsTab, vaultTab),
-                tabViewModelFactory = newTabFactory,
+                tabViewModelFactory = { get<NewTabViewModel>() },
             )
         }
     }
