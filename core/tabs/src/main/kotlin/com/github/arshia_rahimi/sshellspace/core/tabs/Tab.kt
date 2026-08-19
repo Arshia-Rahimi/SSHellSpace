@@ -4,7 +4,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-interface TabHandle {
+interface Tab {
     val id: TabId
     var title: String
     var icon: ImageVector?
