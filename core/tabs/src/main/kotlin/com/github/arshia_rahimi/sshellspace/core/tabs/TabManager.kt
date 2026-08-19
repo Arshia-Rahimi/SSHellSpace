@@ -9,9 +9,7 @@ class TabManager(
     fixedTabs: List<TabViewModel>,
     val tabViewModelFactory: () -> TabViewModel,
 ) {
-    private val _tabsState = MutableStateFlow(
-        TabsState(fixedTabs, emptyList(), emptyList(), defaultTabId)
-    )
+    private val _tabsState = MutableStateFlow(TabsState(fixedTabs, defaultTabId))
     val tabsState = _tabsState.asStateFlow()
 
     fun createNewTab() {
@@ -69,13 +67,10 @@ class TabManager(
 
 data class TabsState(
     val fixedTabs: List<TabViewModel>,
+    val currentTabId: TabId,
     val tabs: List<TabViewModel> = emptyList(),
     val tabsOrder: List<String> = emptyList(),
-    val currentTabId: TabId,
 ) {
-    val tabsSequence: Sequence<TabViewModel>
-        get() = tabs.asSequence() + fixedTabs.asSequence()
-
-    val currentTab: TabViewModel
-        get() = tabsSequence.first { it.id == currentTabId }
+    val tabsSequence: Sequence<TabViewModel> get() = tabs.asSequence() + fixedTabs.asSequence()
+    val currentTab: TabViewModel get() = tabsSequence.first { it.id == currentTabId }
 }

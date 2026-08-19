@@ -20,4 +20,3 @@ abstract class TabViewModel(
     @Composable
     abstract fun screen()
 }
-
