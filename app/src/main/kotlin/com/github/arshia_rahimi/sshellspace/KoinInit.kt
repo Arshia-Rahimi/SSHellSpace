@@ -2,6 +2,7 @@ package com.github.arshia_rahimi.sshellspace
 
 import com.github.arshia_rahimi.core.data.DataModule
 import com.github.arshia_rahimi.core.database.DatabaseModule
+import com.github.arshia_rahimi.sshellspace.core.tabs.TabController
 import com.github.arshia_rahimi.sshellspace.core.tabs.TabManager
 import com.github.arshia_rahimi.sshellspace.feature.newtab.NewTabViewModel
 import com.github.arshia_rahimi.sshellspace.feature.newtab.NewTabViewModelModule
@@ -11,6 +12,7 @@ import com.github.arshia_rahimi.sshellspace.feature.terminal.TerminalModule
 import com.github.arshia_rahimi.sshellspace.feature.vault.VaultModule
 import com.github.arshia_rahimi.sshellspace.feature.vault.VaultTabViewModel
 import org.koin.core.context.startKoin
+import org.koin.dsl.bind
 import org.koin.dsl.module
 
 fun initKoin() {
@@ -40,7 +42,7 @@ val AppModule = module {
         TabManager(
             defaultTabId = vaultTab.id,
             fixedTabs = listOf(settingsTab, vaultTab),
-            tabViewModelFactory = { get<NewTabViewModel>() },
+            newTabViewModelFactory = { get<NewTabViewModel>() },
         )
-    }
+    } bind TabController::class
 }

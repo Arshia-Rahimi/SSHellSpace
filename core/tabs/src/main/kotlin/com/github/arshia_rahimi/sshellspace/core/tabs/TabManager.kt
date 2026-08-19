@@ -7,13 +7,13 @@ import kotlinx.coroutines.flow.update
 class TabManager(
     defaultTabId: TabId,
     fixedTabs: List<TabViewModel>,
-    val tabViewModelFactory: () -> TabViewModel,
-) {
+    val newTabViewModelFactory: () -> TabViewModel,
+) : TabController {
     private val _tabsState = MutableStateFlow(TabsState(fixedTabs, defaultTabId))
     val tabsState = _tabsState.asStateFlow()
 
     fun createNewTab(): TabId {
-        val newTab = tabViewModelFactory()
+        val newTab = newTabViewModelFactory()
         _tabsState.update {
             it.copy(
                 tabs = it.tabs + newTab,
@@ -35,7 +35,8 @@ class TabManager(
             val index = state.tabs.indexOfFirst { it.id == tabId }
             if (index == -1) return@update state
 
-            val newTabs = state.tabs.filterNot { it.id == tabId }
+            val newTabs = state.tabs.toMutableList()
+            newTabs.removeAt(index).onClose()
 
             val newCurrentTabId =
                 if (state.currentTabId != tabId) {
@@ -52,15 +53,14 @@ class TabManager(
             )
         }
     }
-}
 
-data class TabsState(
-    val fixedTabs: List<TabViewModel>,
-    val currentTabId: TabId,
-    val tabs: List<TabViewModel> = emptyList(),
-) {
-    val tabsSequence: Sequence<TabViewModel> get() = tabs.asSequence() + fixedTabs.asSequence()
-    val currentTab: TabViewModel get() = tabsSequence.first { it.id == currentTabId }
-
-    fun getTab(id: TabId): TabViewModel = tabsSequence.find { it.id == id }!!
+    override fun replaceTab(tabId: TabId, newViewModel: TabViewModel) {
+        _tabsState.update { state ->
+            val index = state.tabs.indexOfFirst { it.id == tabId }
+            if (index == -1) return@update state
+            val newTabs = state.tabs.toMutableList()
+            newTabs[index] = newViewModel
+            state.copy(tabs = newTabs)
+        }
+    }
 }

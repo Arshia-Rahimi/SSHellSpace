@@ -36,7 +36,6 @@ compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-pre
 kolor = { module = "com.materialkolor:material-kolor", version.ref = "kolor" }
 compose-icons = { module = "com.composables:icons-radix-cmp", version.ref = "compose-icons" }
 reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
-lifecycle-viewmodel-compose = { module = "org.jetbrains.androidx.lifecycle:lifecycle-viewmodel-compose", version.ref = "lifecycle" }
 #kotlin
 coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
