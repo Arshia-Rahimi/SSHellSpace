@@ -2,8 +2,4 @@
     <string name="title">SSHellSpace</string>
     <string name="vault">Vault</string>
     <string name="settings">Settings</string>
-
-    <!--  accessibility  -->
-    <string name="new_tab">new tab</string>
-    <string name="close_tab">close tab</string>
 </resources>

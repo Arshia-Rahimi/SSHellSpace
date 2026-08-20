@@ -11,8 +11,8 @@ dependencies {
     implementation(projects.core.ui.commonCompose)
     implementation(projects.core.ui.designsystem)
     implementation(projects.core.ui.tabs)
-    implementation(projects.core.domain.model)
-    implementation(projects.core.data.database)
+    implementation(projects.core.domain)
+    implementation(projects.core.database)
     implementation(projects.core.data)
     //
     implementation(projects.feature.vault.ui)

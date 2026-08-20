@@ -55,8 +55,6 @@ include(":core:ui:designsystem")
 include("core:ui:tabs")
 
 include("core:common")
-
 include(":core:data")
-include(":core:data:database")
-
-include(":core:domain:model")
+include(":core:database")
+include("core:domain")

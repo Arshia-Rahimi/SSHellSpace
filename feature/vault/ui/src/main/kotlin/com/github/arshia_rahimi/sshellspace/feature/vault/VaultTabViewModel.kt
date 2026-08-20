@@ -1,7 +1,7 @@
 package com.github.arshia_rahimi.sshellspace.feature.vault
 
 import androidx.compose.runtime.Composable
-import com.github.arshia_rahimi.sshellspace.core.tabs.TabViewModel
+import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabViewModel
 
 class VaultTabViewModel: TabViewModel(
     id = "Vault",

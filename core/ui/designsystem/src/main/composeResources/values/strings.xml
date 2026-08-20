@@ -1,0 +1,6 @@
+<resources>
+    <!--  accessibility  -->
+    <string name="new_tab">new tab</string>
+    <string name="close_tab">close tab</string>
+    <!--  end accessibility  -->
+</resources>

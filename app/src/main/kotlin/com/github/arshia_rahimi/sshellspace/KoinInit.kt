@@ -2,11 +2,11 @@ package com.github.arshia_rahimi.sshellspace
 
 import com.github.arshia_rahimi.core.data.DataModule
 import com.github.arshia_rahimi.core.database.DatabaseModule
-import com.github.arshia_rahimi.sshellspace.core.tabs.TabController
-import com.github.arshia_rahimi.sshellspace.core.tabs.TabManager
-import com.github.arshia_rahimi.sshellspace.core.tabs.TabViewModel
-import com.github.arshia_rahimi.sshellspace.feature.newtab.NewTabViewModel
-import com.github.arshia_rahimi.sshellspace.feature.newtab.NewTabViewModelModule
+import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabController
+import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabFactoryEntry
+import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabManager
+import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabType
+import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabViewModelFactory
 import com.github.arshia_rahimi.sshellspace.feature.terminal.SettingsModule
 import com.github.arshia_rahimi.sshellspace.feature.terminal.SettingsTabViewModel
 import com.github.arshia_rahimi.sshellspace.feature.terminal.TerminalModule
@@ -36,13 +36,21 @@ val AppModule = module {
         TerminalModule,
     )
 
+    single<TabViewModelFactory> {
+        { type: TabType ->
+            getAll<TabFactoryEntry>()
+                .firstOrNull { it.type.isInstance(type) }
+                ?.create
+                ?.invoke(type)
+                ?: error("No factory registered for ${type::class}")
+        }
+    }
+
     single<TabManager> {
-        val vaultTab: VaultTabViewModel = get()
-        val settingsTab: SettingsTabViewModel = get()
         TabManager(
             defaultTabId = vaultTab.id,
             fixedTabs = listOf(settingsTab, vaultTab),
-            tabViewModelFactory = { get<TabViewModel>() },
+            tabViewModelFactory = get(),
         )
     } bind TabController::class
 }

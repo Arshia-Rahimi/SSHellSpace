@@ -6,10 +6,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.github.arshia_rahimi.core.compose_utils.asString
-import com.github.arshia_rahimi.sshellspace.core.tabs.TabController
-import com.github.arshia_rahimi.sshellspace.ui.AppTheme
-import com.github.arshia_rahimi.sshellspace.ui.TitleBar
+import com.github.arshia_rahimi.core.ui.common_compose.asString
+import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabController
+import com.github.arshia_rahimi.core.ui.designsystem.AppTheme
+import com.github.arshia_rahimi.core.ui.designsystem.titlebar.TitleBar
 import dev.nucleusframework.application.DecoratedWindow
 import dev.nucleusframework.application.NucleusBackend
 import dev.nucleusframework.application.nucleusApplication

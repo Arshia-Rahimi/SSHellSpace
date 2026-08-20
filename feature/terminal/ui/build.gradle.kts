@@ -3,5 +3,6 @@ plugins {
 }
 
 dependencies {
-//    implementation(projects.feature.terminal.api)
+    implementation(projects.core.ui.tabs)
+    implementation(projects.feature.terminal.domain)
 }
