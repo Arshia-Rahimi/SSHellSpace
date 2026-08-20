@@ -71,7 +71,6 @@ koin-plugin = { module = "io.insert-koin:koin-compiler-gradle-plugin", version.r
 #convention plugins (defined in build-logic)
 project-root = { id = "project.root" }
 project-compose-library = { id = "project.compose.library" }
-project-feature-library = { id = "project.feature.library" }
 project-kotlin-library = { id = "project.kotlin.library" }
 #
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }

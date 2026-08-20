@@ -8,16 +8,21 @@ plugins {
 }
 
 dependencies {
-    implementation(projects.core.commonCompose)
-    implementation(projects.core.designsystem)
-    implementation(projects.core.model)
-    implementation(projects.core.database)
+    implementation(projects.core.ui.commonCompose)
+    implementation(projects.core.ui.designsystem)
+    implementation(projects.core.ui.tabs)
+    implementation(projects.core.domain.model)
+    implementation(projects.core.data.database)
     implementation(projects.core.data)
-    implementation(projects.feature.vault.impl)
-    implementation(projects.feature.settings.impl)
-    implementation(projects.feature.terminal.impl)
-    implementation(projects.feature.newtab.impl)
-    implementation(projects.core.tabs)
+    //
+    implementation(projects.feature.vault.ui)
+    implementation(projects.feature.vault.data)
+    //
+    implementation(projects.feature.settings.ui)
+    implementation(projects.feature.settings.data)
+    //
+    implementation(projects.feature.terminal.ui)
+    implementation(projects.feature.terminal.data)
     //
     implementation(compose.desktop.currentOs)
     implementation(libs.compose.ui.tooling.preview)

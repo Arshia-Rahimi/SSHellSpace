@@ -3,6 +3,5 @@ plugins {
 }
 
 dependencies {
-    implementation(projects.core.database)
-    api(projects.core.model)
+
 }

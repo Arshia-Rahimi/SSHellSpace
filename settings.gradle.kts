@@ -37,19 +37,26 @@ enableFeaturePreview("TYPESAFE_PROJECT_ACCESSORS")
 include(":app")
 
 // feature
-include(":feature:vault:api")
-include(":feature:vault:impl")
-include(":feature:terminal:api")
-include(":feature:terminal:impl")
-include(":feature:settings:api")
-include(":feature:settings:impl")
-include("feature:newtab:impl")
+include(":feature:vault:ui")
+include(":feature:vault:domain")
+include(":feature:vault:data")
+
+include(":feature:terminal:domain")
+include(":feature:terminal:ui")
+include(":feature:terminal:data")
+
+include(":feature:settings:domain")
+include(":feature:settings:ui")
+include(":feature:settings:data")
 
 // core
-include(":core:common-compose")
+include(":core:ui:common-compose")
+include(":core:ui:designsystem")
+include("core:ui:tabs")
+
 include("core:common")
+
 include(":core:data")
-include(":core:model")
-include(":core:database")
-include(":core:designsystem")
-include("core:tabs")
+include(":core:data:database")
+
+include(":core:domain:model")

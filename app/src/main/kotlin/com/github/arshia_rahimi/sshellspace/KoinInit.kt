@@ -4,6 +4,7 @@ import com.github.arshia_rahimi.core.data.DataModule
 import com.github.arshia_rahimi.core.database.DatabaseModule
 import com.github.arshia_rahimi.sshellspace.core.tabs.TabController
 import com.github.arshia_rahimi.sshellspace.core.tabs.TabManager
+import com.github.arshia_rahimi.sshellspace.core.tabs.TabViewModel
 import com.github.arshia_rahimi.sshellspace.feature.newtab.NewTabViewModel
 import com.github.arshia_rahimi.sshellspace.feature.newtab.NewTabViewModelModule
 import com.github.arshia_rahimi.sshellspace.feature.terminal.SettingsModule
@@ -32,7 +33,6 @@ val AppModule = module {
     includes(
         VaultModule,
         SettingsModule,
-        NewTabViewModelModule,
         TerminalModule,
     )
 
@@ -42,7 +42,7 @@ val AppModule = module {
         TabManager(
             defaultTabId = vaultTab.id,
             fixedTabs = listOf(settingsTab, vaultTab),
-            newTabViewModelFactory = { get<NewTabViewModel>() },
+            tabViewModelFactory = { get<TabViewModel>() },
         )
     } bind TabController::class
 }
