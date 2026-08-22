@@ -3,20 +3,24 @@ package com.github.arshia_rahimi.sshellspace.core.ui.tabs
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import org.koin.core.Koin
+import org.koin.core.qualifier.named
+
+typealias TabId = String
 
 class TabManager(
     defaultTabId: TabId,
-    fixedTabs: List<Tab>,
-    val tabViewModelFactory: TabViewModelFactory,
+    fixedTabs: List<TabQualifier>,
+    private val tabViewModelFactory: TabViewModelFactory,
 ) : TabController {
     private val _tabsState = MutableStateFlow(
-        TabsState(fixedTabs.map { tabViewModelFactory(it) }, defaultTabId)
+        TabsState(fixedTabs.map(tabViewModelFactory::create), defaultTabId)
     )
 
     override fun tabsState() = _tabsState.asStateFlow()
 
-    override fun createNewTab(tab: Tab): TabId {
-        val newTab = tabViewModelFactory(tab)
+    override fun createNewTab(tabQualifier: TabQualifier): TabId {
+        val newTab = tabViewModelFactory.create(tabQualifier)
         _tabsState.update {
             it.copy(
                 tabs = it.tabs + newTab,

@@ -5,6 +5,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
+import kotlin.uuid.ExperimentalUuidApi
+import kotlin.uuid.Uuid
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -26,3 +28,6 @@ abstract class TabViewModel(
     @Composable
     abstract fun screen()
 }
+
+@OptIn(ExperimentalUuidApi::class)
+private fun generateTabId() = Uuid.generateV7().toString()

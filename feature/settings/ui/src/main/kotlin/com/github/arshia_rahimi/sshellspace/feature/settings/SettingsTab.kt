@@ -1,5 +1,5 @@
 package com.github.arshia_rahimi.sshellspace.feature.settings
 
-import com.github.arshia_rahimi.sshellspace.core.ui.tabs.Tab
+import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabQualifier
 
-object SettingsTab: Tab
+val SettingsTabQualifier = TabQualifier("SettingsTab")

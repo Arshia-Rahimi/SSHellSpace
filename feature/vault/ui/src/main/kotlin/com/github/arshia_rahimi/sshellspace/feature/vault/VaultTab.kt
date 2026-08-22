@@ -1,5 +1,6 @@
 package com.github.arshia_rahimi.sshellspace.feature.vault
 
-import com.github.arshia_rahimi.sshellspace.core.ui.tabs.Tab
+import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabQualifier
 
-object VaultTab: Tab
+const val VAULT_TAB_ID = "Vault"
+val VaultTabQualifier = TabQualifier(VAULT_TAB_ID)
