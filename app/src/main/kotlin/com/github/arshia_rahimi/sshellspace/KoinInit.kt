@@ -9,7 +9,7 @@ import com.github.arshia_rahimi.sshellspace.feature.settings.SettingsModule
 import com.github.arshia_rahimi.sshellspace.feature.terminal.TerminalModule
 import com.github.arshia_rahimi.sshellspace.feature.vault.VAULT_TAB_ID
 import com.github.arshia_rahimi.sshellspace.feature.vault.VaultModule
-import com.github.arshia_rahimi.sshellspace.feature.vault.VaultTabQualifier
+import com.github.arshia_rahimi.sshellspace.feature.vault.MainVaultTabInstance
 import org.koin.core.context.startKoin
 import org.koin.dsl.bind
 import org.koin.dsl.module
@@ -35,11 +35,10 @@ val AppModule = module {
         SettingsModule,
         TerminalModule,
     )
-
     single {
         TabManager(
             defaultTabId = VAULT_TAB_ID,
-            fixedTabs = listOf(VaultTabQualifier),
+            fixedTabs = listOf(MainVaultTabInstance),
             tabViewModelFactory = get(),
         )
     } bind TabController::class

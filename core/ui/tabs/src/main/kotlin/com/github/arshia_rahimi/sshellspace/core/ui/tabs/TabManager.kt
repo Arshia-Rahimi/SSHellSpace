@@ -10,7 +10,7 @@ typealias TabId = String
 
 class TabManager(
     defaultTabId: TabId,
-    fixedTabs: List<TabQualifier>,
+    fixedTabs: List<TabInstance>,
     private val tabViewModelFactory: TabViewModelFactory,
 ) : TabController {
     private val _tabsState = MutableStateFlow(
@@ -19,8 +19,8 @@ class TabManager(
 
     override fun tabsState() = _tabsState.asStateFlow()
 
-    override fun createNewTab(tabQualifier: TabQualifier): TabId {
-        val newTab = tabViewModelFactory.create(tabQualifier)
+    override fun createNewTab(tabInstance: TabInstance): TabId {
+        val newTab = tabViewModelFactory.create(tabInstance)
         _tabsState.update {
             it.copy(
                 tabs = it.tabs + newTab,

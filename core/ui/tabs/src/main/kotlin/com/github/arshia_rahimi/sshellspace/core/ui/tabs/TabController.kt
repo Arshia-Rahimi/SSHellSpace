@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.StateFlow
 
 interface TabController {
     fun tabsState(): StateFlow<TabsState>
-    fun createNewTab(tabQualifier: TabQualifier): TabId
+    fun createNewTab(tabInstance: TabInstance): TabId
     fun setCurrentTab(id: TabId)
     fun closeTab(id: TabId)
 }

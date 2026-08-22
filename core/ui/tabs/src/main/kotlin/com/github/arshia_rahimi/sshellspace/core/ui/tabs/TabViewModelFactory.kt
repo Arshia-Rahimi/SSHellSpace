@@ -4,15 +4,12 @@ import org.koin.core.Koin
 import org.koin.core.qualifier.named
 
 interface TabViewModelFactory {
-    fun create(qualifier: TabQualifier): TabViewModel
+    fun create(tabInstance: TabInstance): TabViewModel
 }
-
-@JvmInline
-value class TabQualifier(val value: String)
 
 class KoinTabViewModelFactory(
     private val koin: Koin,
 ) : TabViewModelFactory {
-    override fun create(qualifier: TabQualifier): TabViewModel =
-        koin.get<TabViewModel>(named(qualifier.value))
+    override fun create(tabInstance: TabInstance): TabViewModel =
+        koin.get(tabInstance.tab.viewModelKClass, named(tabInstance.tab.qualifier))
 }

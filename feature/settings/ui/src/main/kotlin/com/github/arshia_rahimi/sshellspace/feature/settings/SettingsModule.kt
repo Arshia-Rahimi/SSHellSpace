@@ -7,5 +7,5 @@ import org.koin.dsl.bind
 import org.koin.dsl.module
 
 val SettingsModule = module {
-    single(named(SettingsTabQualifier.value)) { SettingsTabViewModel() } bind TabViewModel::class
+    single(named(SettingsTab.qualifier)) { SettingsTabViewModel() } bind TabViewModel::class
 }
