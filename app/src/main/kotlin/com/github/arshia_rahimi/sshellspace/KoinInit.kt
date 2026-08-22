@@ -2,16 +2,16 @@ package com.github.arshia_rahimi.sshellspace
 
 import com.github.arshia_rahimi.core.data.DataModule
 import com.github.arshia_rahimi.core.database.DatabaseModule
+import com.github.arshia_rahimi.sshellspace.core.ui.tabs.Tab
 import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabController
-import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabFactoryEntry
 import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabManager
-import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabType
 import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabViewModelFactory
-import com.github.arshia_rahimi.sshellspace.feature.terminal.SettingsModule
-import com.github.arshia_rahimi.sshellspace.feature.terminal.SettingsTabViewModel
+import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabViewModelFactoryEntry
+import com.github.arshia_rahimi.sshellspace.feature.settings.SettingsModule
 import com.github.arshia_rahimi.sshellspace.feature.terminal.TerminalModule
 import com.github.arshia_rahimi.sshellspace.feature.vault.VaultModule
-import com.github.arshia_rahimi.sshellspace.feature.vault.VaultTabViewModel
+import com.github.arshia_rahimi.sshellspace.feature.vault.VaultTab
+import com.github.arshia_rahimi.sshellspace.feature.vault.screen.VAULT_TAB_ID
 import org.koin.core.context.startKoin
 import org.koin.dsl.bind
 import org.koin.dsl.module
@@ -37,19 +37,17 @@ val AppModule = module {
     )
 
     single<TabViewModelFactory> {
-        { type: TabType ->
-            getAll<TabFactoryEntry>()
-                .firstOrNull { it.type.isInstance(type) }
-                ?.create
-                ?.invoke(type)
-                ?: error("No factory registered for ${type::class}")
+        { tab: Tab ->
+            getOrNull<TabViewModelFactoryEntry<Tab>>()
+                ?.create(tab)
+                ?: error("No factory registered for ${tab::class}")
         }
     }
 
-    single<TabManager> {
+    single {
         TabManager(
-            defaultTabId = vaultTab.id,
-            fixedTabs = listOf(settingsTab, vaultTab),
+            defaultTabId = VAULT_TAB_ID,
+            fixedTabs = listOf(VaultTab),
             tabViewModelFactory = get(),
         )
     } bind TabController::class

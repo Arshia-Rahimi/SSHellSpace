@@ -6,7 +6,7 @@ import kotlinx.coroutines.flow.update
 
 class TabManager(
     defaultTabId: TabId,
-    fixedTabs: List<TabType>,
+    fixedTabs: List<Tab>,
     val tabViewModelFactory: TabViewModelFactory,
 ) : TabController {
     private val _tabsState = MutableStateFlow(
@@ -15,8 +15,8 @@ class TabManager(
 
     override fun tabsState() = _tabsState.asStateFlow()
 
-    override fun createNewTab(tabType: TabType): TabId {
-        val newTab = tabViewModelFactory(tabType)
+    override fun createNewTab(tab: Tab): TabId {
+        val newTab = tabViewModelFactory(tab)
         _tabsState.update {
             it.copy(
                 tabs = it.tabs + newTab,
@@ -26,23 +26,23 @@ class TabManager(
         return newTab.id
     }
 
-    override fun setCurrentTab(tabId: TabId) {
+    override fun setCurrentTab(id: TabId) {
         _tabsState.update { state ->
-            if (tabId !in state.tabsSequence.map { it.id }) return@update state
-            state.copy(currentTabId = tabId)
+            if (id !in state.tabsSequence.map { it.id }) return@update state
+            state.copy(currentTabId = id)
         }
     }
 
-    override fun closeTab(tabId: TabId) {
+    override fun closeTab(id: TabId) {
         _tabsState.update { state ->
-            val index = state.tabs.indexOfFirst { it.id == tabId }
+            val index = state.tabs.indexOfFirst { it.id == id }
             if (index == -1) return@update state
 
             val newTabs = state.tabs.toMutableList()
             newTabs.removeAt(index).onClose()
 
             val newCurrentTabId =
-                if (state.currentTabId != tabId) {
+                if (state.currentTabId != id) {
                     state.currentTabId
                 } else {
                     newTabs.getOrNull(index - 1)?.id

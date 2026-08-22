@@ -1,9 +1,9 @@
-package com.github.arshia_rahimi.sshellspace.feature.terminal
+package com.github.arshia_rahimi.sshellspace.feature.terminal.screen
 
 import androidx.compose.runtime.Composable
 import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabViewModel
 
-class TerminalTabViewModelImpl : TabViewModel(
+class TerminalTabViewModel : TabViewModel(
     initialTitle = "Vault",
     initialIcon = null,
 ) {

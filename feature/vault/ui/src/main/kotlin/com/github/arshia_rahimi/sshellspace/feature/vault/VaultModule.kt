@@ -1,8 +1,12 @@
 package com.github.arshia_rahimi.sshellspace.feature.vault
 
+import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabViewModelFactoryEntry
+import com.github.arshia_rahimi.sshellspace.feature.vault.screen.VaultTabViewModel
+import org.koin.core.qualifier.named
 import org.koin.dsl.module
-import org.koin.plugin.module.dsl.single
 
 val VaultModule = module {
-    single<VaultTabViewModel>()
+    single(named<VaultTab>()) {
+        TabViewModelFactoryEntry<VaultTab> { _ -> VaultTabViewModel() }
+    }
 }

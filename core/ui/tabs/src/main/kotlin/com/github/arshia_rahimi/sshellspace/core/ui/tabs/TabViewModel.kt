@@ -12,12 +12,12 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.swing.Swing
 
 abstract class TabViewModel(
-    override val id: TabId = generateTabId(),
+    val id: TabId = generateTabId(),
     initialTitle: String,
     initialIcon: ImageVector?
-): Tab {
-    override var title by mutableStateOf(initialTitle)
-    override var icon by mutableStateOf(initialIcon)
+) {
+    var title by mutableStateOf(initialTitle)
+    var icon by mutableStateOf(initialIcon)
 
     protected val scope = CoroutineScope(SupervisorJob() + Dispatchers.Swing.immediate)
 

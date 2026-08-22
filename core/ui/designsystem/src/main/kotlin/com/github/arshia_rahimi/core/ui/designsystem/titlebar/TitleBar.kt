@@ -27,8 +27,8 @@ import com.github.arshia_rahimi.core.ui.common_compose.asString
 import com.github.arshia_rahimi.core.ui.designsystem.Icons
 import com.github.arshia_rahimi.core.ui.designsystem.components.IconButton
 import com.github.arshia_rahimi.core.ui.designsystem.components.Text
+import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabController
 import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabId
-import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabManager
 import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabViewModel
 import dev.nucleusframework.window.DecoratedWindowScope
 import dev.nucleusframework.window.WindowControls
@@ -41,7 +41,7 @@ import sshellspace.core.ui.designsystem.generated.resources.new_tab
 
 @Composable
 fun DecoratedWindowScope.TitleBar() {
-    val tabManager = koinInject<TabManager>()
+    val tabManager = koinInject<TabController>()
     val tabsState by tabManager.tabsState().collectAsStateWithLifecycle()
     var tabKeys by remember { mutableStateOf(emptyList<TabId>()) }
 
@@ -89,8 +89,9 @@ fun DecoratedWindowScope.TitleBar() {
                 ) {
                     IconButton(
                         onClick = {
-                            val id = tabManager.createNewTab()
-                            tabKeys = listOf(id) + tabKeys
+                            // todo
+//                            val id = tabManager.createNewTab()
+//                            tabKeys = listOf(id) + tabKeys
                         },
                         imageVector = Icons.Plus,
                         contentDescription = Res.string.new_tab.asString(),
