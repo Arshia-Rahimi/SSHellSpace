@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -40,10 +41,18 @@ import sshellspace.core.ui.designsystem.generated.resources.close_tab
 import sshellspace.core.ui.designsystem.generated.resources.new_tab
 
 @Composable
-fun DecoratedWindowScope.TitleBar() {
+fun DecoratedWindowScope.TitleBar(
+    onCreateNewTab: () -> Unit,
+) {
     val tabManager = koinInject<TabController>()
     val tabsState by tabManager.tabsState().collectAsStateWithLifecycle()
     var tabKeys by remember { mutableStateOf(emptyList<TabId>()) }
+
+    LaunchedEffect(tabsState) {
+        val tabControllerTabKeys = tabsState.tabs.map { it.id }
+        (tabControllerTabKeys - tabKeys.toSet()).forEach { tabKeys += it }
+        (tabKeys - tabControllerTabKeys.toSet()).forEach { tabKeys -= it }
+    }
 
     Row(
         modifier = Modifier
@@ -75,10 +84,7 @@ fun DecoratedWindowScope.TitleBar() {
                     isFixed = isFixed,
                     closeIcon = Icons.Cross,
                     closeIconDescription = Res.string.close_tab.asString(),
-                    onCloseTab = {
-                        tabManager.closeTab(tabId)
-                        tabKeys -= tabId
-                    },
+                    onCloseTab = { tabManager.closeTab(tabId) },
                     modifier = modifier,
                 )
             },
@@ -88,11 +94,7 @@ fun DecoratedWindowScope.TitleBar() {
                         .background(color = MaterialTheme.colorScheme.background)
                 ) {
                     IconButton(
-                        onClick = {
-                            // todo
-//                            val id = tabManager.createNewTab()
-//                            tabKeys = listOf(id) + tabKeys
-                        },
+                        onClick = onCreateNewTab,
                         imageVector = Icons.Plus,
                         contentDescription = Res.string.new_tab.asString(),
                         modifier = Modifier.clip(CircleShape),

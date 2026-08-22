@@ -19,7 +19,7 @@ class TabManager(
 
     override fun tabsState() = _tabsState.asStateFlow()
 
-    override fun createNewTab(tabInstance: TabInstance): TabId {
+    override fun createNewTab(tabInstance: TabInstance) {
         val newTab = tabViewModelFactory.create(tabInstance)
         _tabsState.update {
             it.copy(
@@ -27,7 +27,6 @@ class TabManager(
                 currentTabId = newTab.id,
             )
         }
-        return newTab.id
     }
 
     override fun setCurrentTab(id: TabId) {
