@@ -1,6 +1,5 @@
 import dev.nucleusframework.desktop.application.dsl.NativeImageOptimization
 import dev.nucleusframework.desktop.application.dsl.TargetFormat
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     alias(libs.plugins.project.compose.library)
@@ -28,7 +27,6 @@ dependencies {
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.nucleus.application)
     implementation(libs.nucleus.tao)
-    implementation(libs.nucleus.material3)
 }
 
 nucleus.application {

@@ -4,7 +4,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class Theme(
-    val darkModeConfig: DarkModeConfig = DarkModeConfig.SYSTEM_DEFAULT,
+    val darkModeConfig: ThemePreference = ThemePreference.SYSTEM_DEFAULT,
     val primary: Color = Color(0xFFFF0000),
     val secondary: Color? = null,
     val tertiary: Color? = null,
@@ -17,11 +17,8 @@ data class Theme(
 @JvmInline
 value class Color(val value: Long)
 
-enum class DarkModeConfig {
+enum class ThemePreference {
     SYSTEM_DEFAULT,
     LIGHT,
-    DARK,
-    AMOLED_DARK;
-
-    fun isDark(): Boolean = this == DARK || this == AMOLED_DARK
+    DARK
 }

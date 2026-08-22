@@ -18,7 +18,7 @@ nucleus = "2.4.1"
 jediterm = "3.9"
 compose-icons = "2.2.1"
 reorderable = "3.1.0"
-lifecycle = "2.11.0"
+compose-unstyled = "2.9.0"
 
 [libraries]
 #koin
@@ -29,13 +29,31 @@ koin-annotations = { module = "io.insert-koin:koin-annotations", version.ref = "
 compose-ui-tooling = { module = "org.jetbrains.compose.ui:ui-tooling", version.ref = "cmp" }
 compose-runtime = { module = "org.jetbrains.compose.runtime:runtime", version.ref = "cmp" }
 compose-foundation = { module = "org.jetbrains.compose.foundation:foundation", version.ref = "cmp" }
-compose-material3 = { module = "org.jetbrains.compose.material3:material3", version.ref = "material3" }
 compose-ui = { module = "org.jetbrains.compose.ui:ui", version.ref = "cmp" }
 compose-components-resources = { module = "org.jetbrains.compose.components:components-resources", version.ref = "cmp" }
 compose-ui-tooling-preview = { module = "org.jetbrains.compose.ui:ui-tooling-preview", version.ref = "cmp" }
-kolor = { module = "com.materialkolor:material-kolor", version.ref = "kolor" }
 compose-icons = { module = "com.composables:icons-radix-cmp", version.ref = "compose-icons" }
 reorderable = { module = "sh.calvin.reorderable:reorderable", version.ref = "reorderable" }
+composeunstyled-theming = { module = "com.composables:composeunstyled-theming", version.ref = "compose-unstyled" }
+composeunstyled-button = { module = "com.composables:composeunstyled-button", version.ref = "compose-unstyled" }
+composeunstyled-text-field = { module = "com.composables:composeunstyled-text-field", version.ref = "compose-unstyled" }
+composeunstyled-platformtheme = { module = "com.composables:composeunstyled-platformtheme", version.ref = "compose-unstyled" }
+composeunstyled-dialog = { module = "com.composables:composeunstyled-dialog", version.ref = "compose-unstyled" }
+composeunstyled-avatar = { module = "com.composables:composeunstyled-avatar", version.ref = "compose-unstyled" }
+composeunstyled-checkbox = { module = "com.composables:composeunstyled-checkbox", version.ref = "compose-unstyled" }
+composeunstyled-tri-state-checkbox = { module = "com.composables:composeunstyled-tri-state-checkbox", version.ref = "compose-unstyled" }
+composeunstyled-disclosure = { module = "com.composables:composeunstyled-disclosure", version.ref = "compose-unstyled" }
+composeunstyled-dropdown-menu = { module = "com.composables:composeunstyled-dropdown-menu", version.ref = "compose-unstyled" }
+composeunstyled-icon = { module = "com.composables:composeunstyled-icon", version.ref = "compose-unstyled" }
+composeunstyled-progress = { module = "com.composables:composeunstyled-progress", version.ref = "compose-unstyled" }
+composeunstyled-radio-group = { module = "com.composables:composeunstyled-radio-group", version.ref = "compose-unstyled" }
+composeunstyled-separators = { module = "com.composables:composeunstyled-separators", version.ref = "compose-unstyled" }
+composeunstyled-slider = { module = "com.composables:composeunstyled-slider", version.ref = "compose-unstyled" }
+composeunstyled-tab-group = { module = "com.composables:composeunstyled-tab-group", version.ref = "compose-unstyled" }
+composeunstyled-toggle-switch = { module = "com.composables:composeunstyled-toggle-switch", version.ref = "compose-unstyled" }
+composeunstyled-tooltip = { module = "com.composables:composeunstyled-tooltip", version.ref = "compose-unstyled" }
+composeunstyled-escape-handler = { module = "com.composables:composeunstyled-escape-handler", version.ref = "compose-unstyled" }
+composeunstyled-modal = { module = "com.composables:composeunstyled-modal", version.ref = "compose-unstyled" }
 #kotlin
 coroutines-core = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-core", version.ref = "kotlinx-coroutines" }
 coroutines-test = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-test", version.ref = "kotlinx-coroutines" }
@@ -54,7 +72,6 @@ filekit-dialogs = { module = "io.github.vinceglb:filekit-dialogs", version.ref =
 #nucleus
 nucleus-application = { module = "dev.nucleusframework:nucleus.nucleus-application", version.ref = "nucleus" }
 nucleus-tao = { module = "dev.nucleusframework:nucleus.decorated-window-tao", version.ref = "nucleus" }
-nucleus-material3 = { module = "dev.nucleusframework:nucleus.decorated-window-material3", version.ref = "nucleus" }
 
 appdirs = { module ="net.harawata:appdirs", version.ref = "appdirs"}
 jediterm = { module = "org.jetbrains.jediterm:jediterm-ui", version.ref = "jediterm" }

@@ -8,7 +8,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.github.arshia_rahimi.core.ui.common_compose.asString
 import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabController
-import com.github.arshia_rahimi.core.ui.designsystem.AppTheme
+import com.github.arshia_rahimi.core.ui.designsystem.SSHellSpaceTheme
 import com.github.arshia_rahimi.core.ui.designsystem.titlebar.TitleBar
 import com.github.arshia_rahimi.sshellspace.newtab.NewTabController
 import com.github.arshia_rahimi.sshellspace.newtab.NewTabDialog
@@ -28,11 +28,12 @@ fun main() {
             onCloseRequest = ::exitApplication,
             title = Res.string.title.asString(),
         ) {
-            AppTheme {
+            SSHellSpaceTheme {
                 WindowScaffold(
                     titleBar = { TitleBar(NewTabController::emitNewTabButtonEvent) },
                 ) { ip ->
                     NewTabDialog()
+
                     val tabsState by koinInject<TabController>()
                         .tabsState()
                         .collectAsStateWithLifecycle()
