@@ -13,18 +13,6 @@ dependencyResolutionManagement {
     repositories {
         google()
         mavenCentral()
-
-        exclusiveContent {
-            forRepository {
-                maven {
-                    url = uri("https://packages.jetbrains.team/maven/p/ij/intellij-dependencies")
-                }
-            }
-
-            filter {
-                includeGroup("org.jetbrains.jediterm")
-            }
-        }
     }
 }
 

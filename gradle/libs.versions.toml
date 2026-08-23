@@ -2,7 +2,6 @@
 cmp = "1.11.1"
 kotlin = "2.4.10"
 kotlinx-coroutines = "1.11.0"
-material3 = "1.11.0-alpha07"
 appdirs = "1.5.0"
 sqldelight = "2.3.2"
 serialization-json = "1.11.0"
@@ -11,14 +10,15 @@ koin-plugin = "1.1.0"
 filekit = "0.14.2"
 kotlinx-datetime = "0.7.1"
 detekt = "2.0.0-alpha.6"
-kolor = "5.0.0"
 junit = "4.9"
 mockk = "1.14.11"
 nucleus = "2.4.1"
-jediterm = "3.9"
 compose-icons = "2.2.1"
 reorderable = "3.1.0"
 compose-unstyled = "2.9.0"
+pty4j = "0.13.12"
+compose-webview = "1.0.1"
+node = "7.1.0"
 
 [libraries]
 #koin
@@ -73,8 +73,9 @@ filekit-dialogs = { module = "io.github.vinceglb:filekit-dialogs", version.ref =
 nucleus-application = { module = "dev.nucleusframework:nucleus.nucleus-application", version.ref = "nucleus" }
 nucleus-tao = { module = "dev.nucleusframework:nucleus.decorated-window-tao", version.ref = "nucleus" }
 
+compose-webview = { module = "dev.nucleusframework:composewebview", version.ref = "compose-webview" }
+pty4j = { module = "org.jetbrains.pty4j:pty4j", version.ref = "pty4j" }
 appdirs = { module ="net.harawata:appdirs", version.ref = "appdirs"}
-jediterm = { module = "org.jetbrains.jediterm:jediterm-ui", version.ref = "jediterm" }
 
 #Gradle plugin artifacts (consumed by build-logic convention plugins)
 kotlin-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin" }
@@ -90,5 +91,6 @@ project-root = { id = "project.root" }
 project-compose-library = { id = "project.compose.library" }
 project-kotlin-library = { id = "project.kotlin.library" }
 #
+node = { id = "com.github.node-gradle.node", version.ref = "node" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
 nucleus = { id = "dev.nucleusframework", version.ref = "nucleus" }
