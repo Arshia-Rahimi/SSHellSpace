@@ -14,25 +14,25 @@ import dev.nucleusframework.webview.web.WebView
 import dev.nucleusframework.webview.web.WebViewFileReadType
 import dev.nucleusframework.webview.web.WebViewNavigator
 import dev.nucleusframework.webview.web.rememberWebViewNavigator
+import dev.nucleusframework.webview.web.rememberWebViewStateWithHTMLData
 import dev.nucleusframework.webview.web.rememberWebViewStateWithHTMLFile
-import java.net.URI
-import java.net.URL
 import java.nio.charset.StandardCharsets
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import sshellspace.feature.terminal.ui.generated.resources.Res
 
 @Composable
 fun XTermTerminal(modifier: Modifier = Modifier) {
     val navigator = rememberWebViewNavigator()
     val bridge = rememberWebViewJsBridge(navigator)
     val state = rememberWebViewStateWithHTMLFile(
-        fileName = "file:///resources/xterm/index.html",
+        fileName = Res.getUri("files/xterm/index.html"),
         readType = WebViewFileReadType.COMPOSE_RESOURCE_FILES,
     )
 
     val process = remember {
         PtyProcessBuilder()
-            .setCommand(arrayOf("/bin/bash", "--login"))
+            .setCommand(arrayOf("/bin/zsh", "--login"))
             .setEnvironment(HashMap(System.getenv()).apply { put("TERM", "xterm-256color") })
             .setInitialColumns(80)
             .setInitialRows(24)
