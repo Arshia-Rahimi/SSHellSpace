@@ -1,13 +1,32 @@
 package com.sshellspace.feature.terminal.screen.components
 
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
 import com.pty4j.PtyProcessBuilder
+import dev.nucleusframework.webview.jsbridge.IJsMessageHandler
+import dev.nucleusframework.webview.jsbridge.JsMessage
+import dev.nucleusframework.webview.jsbridge.rememberWebViewJsBridge
+import dev.nucleusframework.webview.web.WebView
+import dev.nucleusframework.webview.web.WebViewFileReadType
+import dev.nucleusframework.webview.web.WebViewNavigator
+import dev.nucleusframework.webview.web.rememberWebViewNavigator
+import dev.nucleusframework.webview.web.rememberWebViewStateWithHTMLFile
+import java.net.URI
+import java.net.URL
+import java.nio.charset.StandardCharsets
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 @Composable
 fun XTermTerminal(modifier: Modifier = Modifier) {
     val navigator = rememberWebViewNavigator()
     val bridge = rememberWebViewJsBridge(navigator)
     val state = rememberWebViewStateWithHTMLFile(
-        fileName = "files/xterm/index.html",
+        fileName = "file:///resources/xterm/index.html",
         readType = WebViewFileReadType.COMPOSE_RESOURCE_FILES,
     )
 
@@ -40,7 +59,7 @@ fun XTermTerminal(modifier: Modifier = Modifier) {
     LaunchedEffect(process) {
         val buf = ByteArray(4096)
         withContext(Dispatchers.IO) {
-            while (isActive && process.isAlive) {
+            while (process.isAlive) {
                 val n = process.inputStream.read(buf)
                 if (n <= 0) break
                 val chunk = String(buf, 0, n, StandardCharsets.UTF_8)

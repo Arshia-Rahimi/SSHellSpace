@@ -18,7 +18,6 @@ reorderable = "3.1.0"
 compose-unstyled = "2.9.0"
 pty4j = "0.13.12"
 compose-webview = "1.0.1"
-node = "7.1.0"
 
 [libraries]
 #koin
@@ -91,6 +90,5 @@ project-root = { id = "project.root" }
 project-compose-library = { id = "project.compose.library" }
 project-kotlin-library = { id = "project.kotlin.library" }
 #
-node = { id = "com.github.node-gradle.node", version.ref = "node" }
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
 nucleus = { id = "dev.nucleusframework", version.ref = "nucleus" }
