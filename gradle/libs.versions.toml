@@ -17,7 +17,7 @@ compose-icons = "2.2.1"
 reorderable = "3.1.0"
 compose-unstyled = "2.9.0"
 pty4j = "0.13.12"
-compose-webview = "1.0.1"
+bossterm = "1.2.152"
 
 [libraries]
 #koin
@@ -71,8 +71,10 @@ filekit-dialogs = { module = "io.github.vinceglb:filekit-dialogs", version.ref =
 #nucleus
 nucleus-application = { module = "dev.nucleusframework:nucleus.nucleus-application", version.ref = "nucleus" }
 nucleus-tao = { module = "dev.nucleusframework:nucleus.decorated-window-tao", version.ref = "nucleus" }
+#bossterm
+bossterm-compose = { module = "com.risaboss:bossterm-compose", version.ref = "bossterm"}
+bossterm-core = { module = "com.risaboss:bossterm-core", version.ref = "bossterm"}
 
-compose-webview = { module = "dev.nucleusframework:composewebview", version.ref = "compose-webview" }
 pty4j = { module = "org.jetbrains.pty4j:pty4j", version.ref = "pty4j" }
 appdirs = { module ="net.harawata:appdirs", version.ref = "appdirs"}
 

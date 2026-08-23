@@ -6,6 +6,7 @@ dependencies {
     implementation(projects.core.ui.tabs)
     implementation(projects.feature.terminal.domain)
     //
-    implementation(libs.compose.webview)
+    implementation(libs.bossterm.compose)
+    implementation(libs.bossterm.core)
     implementation(libs.pty4j)
 }

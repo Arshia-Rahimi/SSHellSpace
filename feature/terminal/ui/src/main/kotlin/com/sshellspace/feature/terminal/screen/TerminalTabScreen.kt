@@ -3,9 +3,9 @@ package com.sshellspace.feature.terminal.screen
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import com.sshellspace.feature.terminal.screen.components.XTermTerminal
+import com.sshellspace.feature.terminal.screen.components.BossTerm
 
 @Composable
 fun TerminalTabScreen() {
-    XTermTerminal(Modifier.fillMaxSize())
+    BossTerm(Modifier.fillMaxSize())
 }
