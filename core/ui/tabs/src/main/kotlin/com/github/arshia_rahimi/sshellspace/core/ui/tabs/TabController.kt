@@ -7,4 +7,5 @@ interface TabController {
     fun createNewTab(tabInstance: TabInstance)
     fun setCurrentTab(id: TabId)
     fun closeTab(id: TabId)
+    fun onNewTabCreated(callBack: (TabId) -> Unit)
 }

@@ -8,10 +8,10 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.launch
 
 object NewTabController {
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
     private val _newTabButtonEvent = MutableSharedFlow<Unit>()
     val newTabButtonEvent = _newTabButtonEvent.asSharedFlow()
-
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     fun emitNewTabButtonEvent() {
         scope.launch {

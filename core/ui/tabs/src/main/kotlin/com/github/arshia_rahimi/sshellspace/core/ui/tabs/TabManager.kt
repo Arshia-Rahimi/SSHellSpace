@@ -3,8 +3,6 @@ package com.github.arshia_rahimi.sshellspace.core.ui.tabs
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
-import org.koin.core.Koin
-import org.koin.core.qualifier.named
 
 typealias TabId = String
 
@@ -13,6 +11,8 @@ class TabManager(
     fixedTabs: List<TabInstance>,
     private val tabViewModelFactory: TabViewModelFactory,
 ) : TabController {
+    private var onNewTabCreated: ((TabId) -> Unit)? = null
+
     private val _tabsState = MutableStateFlow(
         TabsState(fixedTabs.map(tabViewModelFactory::create), defaultTabId)
     )
@@ -27,6 +27,7 @@ class TabManager(
                 currentTabId = newTab.id,
             )
         }
+        onNewTabCreated?.invoke(newTab.id)
     }
 
     override fun setCurrentTab(id: TabId) {
@@ -58,5 +59,9 @@ class TabManager(
                 currentTabId = newCurrentTabId,
             )
         }
+    }
+
+    override fun onNewTabCreated(callback: (TabId) -> Unit) {
+        onNewTabCreated = callback
     }
 }

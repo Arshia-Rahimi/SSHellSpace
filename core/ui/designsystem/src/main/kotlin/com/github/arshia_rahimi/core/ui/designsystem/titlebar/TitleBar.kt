@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.Button
-import androidx.compose.material.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -28,6 +26,7 @@ import com.composeunstyled.Text
 import com.composeunstyled.UnstyledVerticalSeparator
 import com.github.arshia_rahimi.core.ui.common_compose.asString
 import com.github.arshia_rahimi.core.ui.designsystem.Icons
+import com.github.arshia_rahimi.core.ui.designsystem.components.IconButton
 import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabController
 import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabId
 import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabViewModel
@@ -48,10 +47,10 @@ fun DecoratedWindowScope.TitleBar(
     val tabsState by tabManager.tabsState().collectAsStateWithLifecycle()
     var tabKeys by remember { mutableStateOf(emptyList<TabId>()) }
 
-    LaunchedEffect(tabsState) {
-        val tabControllerTabKeys = tabsState.tabs.map { it.id }
-        (tabControllerTabKeys - tabKeys.toSet()).forEach { tabKeys += it }
-        (tabKeys - tabControllerTabKeys.toSet()).forEach { tabKeys -= it }
+    LaunchedEffect(Unit) {
+        tabManager.onNewTabCreated {
+            tabKeys += it
+        }
     }
 
     Row(
@@ -84,23 +83,24 @@ fun DecoratedWindowScope.TitleBar(
                     isFixed = isFixed,
                     closeIcon = Icons.Cross,
                     closeIconDescription = Res.string.close_tab.asString(),
-                    onCloseTab = { tabManager.closeTab(tabId) },
+                    onCloseTab = {
+                        tabKeys -= tabId
+                        tabManager.closeTab(tabId)
+                    },
                     modifier = modifier,
                 )
             },
             trailingIcon = { modifier ->
                 Box(
                     modifier = modifier.fillMaxHeight(),
+                    contentAlignment = Alignment.Center,
                 ) {
-                    Button(
+                    IconButton(
+                        imageVector = Icons.Plus,
+                        contentDescription = Res.string.new_tab.asString(),
                         onClick = onCreateNewTab,
                         modifier = Modifier.clip(CircleShape),
-                    ) {
-                        Icon(
-                            imageVector = Icons.Plus,
-                            contentDescription = Res.string.new_tab.asString(),
-                        )
-                    }
+                    )
                 }
             },
         )
@@ -127,14 +127,11 @@ fun Tab(
         Text(tab.title)
 
         if (!isFixed) {
-            Button(
+            IconButton(
                 onClick = onCloseTab,
-            ) {
-                Icon(
-                    contentDescription = closeIconDescription,
-                    imageVector = closeIcon,
-                )
-            }
+                contentDescription = closeIconDescription,
+                imageVector = closeIcon,
+            )
         }
     }
 }

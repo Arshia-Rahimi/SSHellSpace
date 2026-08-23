@@ -4,7 +4,7 @@ import androidx.compose.runtime.Composable
 import com.github.arshia_rahimi.sshellspace.core.ui.tabs.TabViewModel
 
 class TerminalTabViewModel : TabViewModel(
-    initialTitle = "Vault",
+    initialTitle = "Terminal",
     initialIcon = null,
 ) {
     @Composable

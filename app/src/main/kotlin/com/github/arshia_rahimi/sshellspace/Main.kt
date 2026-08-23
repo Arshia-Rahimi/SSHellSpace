@@ -31,6 +31,7 @@ fun main() {
             SSHellSpaceTheme {
                 WindowScaffold(
                     titleBar = { TitleBar(NewTabController::emitNewTabButtonEvent) },
+                    modifier = Modifier.fillMaxSize(),
                 ) { ip ->
                     NewTabDialog()
 
