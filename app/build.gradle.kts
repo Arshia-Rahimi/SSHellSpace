@@ -30,7 +30,7 @@ dependencies {
 }
 
 nucleus.application {
-    mainClass = "com.github.arshia_rahimi.sshellspace.MainKt"
+    mainClass = "com.sshellspace.MainKt"
 
     graalvm {
         isEnabled = true
@@ -40,7 +40,7 @@ nucleus.application {
 
     nativeDistributions {
         targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.AppImage)
-        packageName = "com.github.arshia_rahimi.sshellspace"
+        packageName = "com.sshellspace"
         packageVersion = "0.1.0"
     }
 }
