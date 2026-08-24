@@ -4,6 +4,7 @@ import dev.nucleusframework.desktop.application.dsl.TargetFormat
 plugins {
     alias(libs.plugins.project.compose.library)
     alias(libs.plugins.nucleus)
+    alias(libs.plugins.sqldelight)
 }
 
 dependencies {
@@ -11,7 +12,6 @@ dependencies {
     implementation(projects.core.ui.designsystem)
     implementation(projects.core.ui.tabs)
     implementation(projects.core.domain)
-    implementation(projects.core.database)
     implementation(projects.core.data)
     //
     implementation(projects.feature.vault.ui)
@@ -24,6 +24,8 @@ dependencies {
     implementation(projects.feature.terminal.data)
     //
     implementation(compose.desktop.currentOs)
+    implementation(libs.sqldelight.desktop)
+    implementation(libs.appdirs)
     implementation(libs.compose.ui.tooling.preview)
     implementation(libs.nucleus.application)
     implementation(libs.nucleus.tao)
@@ -42,5 +44,14 @@ nucleus.application {
         targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.AppImage)
         packageName = "com.sshellspace"
         packageVersion = "0.1.0"
+    }
+}
+
+sqldelight {
+    databases {
+        create("Database") {
+            packageName.set("com.shellspace.generated")
+            dependency(projects.core.data)
+        }
     }
 }

@@ -3,7 +3,6 @@ package com.sshellspace.core.data
 import com.sshellspace.core.data.models.Preferences
 import com.sshellspace.core.data.models.Theme
 import com.sshellspace.core.data.repositories.PreferencesRepository
-import com.sshellspace.core.database.PreferencesDatasource
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob

@@ -44,5 +44,4 @@ include("core:ui:tabs")
 
 include("core:common")
 include(":core:data")
-include(":core:database")
 include("core:domain")

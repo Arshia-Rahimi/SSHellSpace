@@ -1,4 +1,4 @@
-package com.sshellspace.core.database
+package com.sshellspace.core.data
 
 import com.sshellspace.core.data.models.Preferences
 import kotlinx.coroutines.flow.Flow
