@@ -20,6 +20,7 @@ import com.composeunstyled.Scrim
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledDialog
 import com.composeunstyled.theme.Theme
+import com.sshellspace.core.domain.listen
 import com.sshellspace.core.ui.designsystem.components.Button
 import com.sshellspace.core.ui.designsystem.theme.background
 import com.sshellspace.core.ui.designsystem.theme.colors
@@ -34,7 +35,7 @@ fun NewTabDialog() {
     var shouldShowNewTabDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        NewTabController.newTabButtonEvent
+        NewTabButtonEvent.listen()
             .collect { shouldShowNewTabDialog = true }
     }
 
