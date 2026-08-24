@@ -15,8 +15,8 @@ object EventBus {
 
     private val _events = MutableSharedFlow<Event>(
         replay = 0,
-        extraBufferCapacity = 64,
-        onBufferOverflow = BufferOverflow.SUSPEND
+        extraBufferCapacity = 63,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )
     val events = _events.asSharedFlow()
 
