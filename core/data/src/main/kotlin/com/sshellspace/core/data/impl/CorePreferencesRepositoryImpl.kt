@@ -21,7 +21,7 @@ internal class CorePreferencesRepositoryImpl(
 
     override fun getTheme() = preference
         .map { it.themePreference }
-        .stateIn(scope, SharingStarted.Lazily, ThemePreference.SYSTEM_DEFAULT)
+        .stateIn(scope, SharingStarted.WhileSubscribed(), ThemePreference.SYSTEM_DEFAULT)
 
     override suspend fun setTheme(theme: ThemePreference) {
         preferencesRepository.set(preference.first().copy(themePreference = theme))
