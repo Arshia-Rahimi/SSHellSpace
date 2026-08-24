@@ -6,7 +6,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.sshellspace.core.ui.common_compose.asString
+import com.sshellspace.core.ui.designsystem.common.asString
 import com.sshellspace.core.ui.tabs.TabController
 import com.sshellspace.core.ui.designsystem.theme.SSHellSpaceTheme
 import com.sshellspace.core.ui.designsystem.titlebar.TitleBar

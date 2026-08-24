@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.shareIn
 
-class SqlDelightPreferencesRepository(
+internal class SqlDelightPreferencesRepository(
     private val preferencesDatasource: PreferencesDatasource,
 ) : PreferencesRepository {
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)

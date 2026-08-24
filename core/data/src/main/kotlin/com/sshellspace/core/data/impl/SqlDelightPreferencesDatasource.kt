@@ -10,7 +10,7 @@ import com.sshellspace.core.domain.models.Preference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.map
 
-class SqlDelightPreferencesDatasource(
+internal class SqlDelightPreferencesDatasource(
     driver: SqlDriver,
 ) : PreferencesDatasource {
     private val db = Database(driver)

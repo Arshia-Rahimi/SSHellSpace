@@ -1,4 +1,4 @@
-package com.sshellspace.core.ui.common_compose
+package com.sshellspace.core.ui.designsystem.common
 
 import androidx.compose.runtime.Composable
 import org.jetbrains.compose.resources.StringResource

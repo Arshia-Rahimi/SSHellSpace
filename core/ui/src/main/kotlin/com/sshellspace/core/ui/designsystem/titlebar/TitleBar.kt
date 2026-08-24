@@ -24,7 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledVerticalSeparator
-import com.sshellspace.core.ui.common_compose.asString
+import com.sshellspace.core.ui.designsystem.common.asString
 import com.sshellspace.core.ui.designsystem.Icons
 import com.sshellspace.core.ui.designsystem.components.IconButton
 import com.sshellspace.core.ui.tabs.TabController
