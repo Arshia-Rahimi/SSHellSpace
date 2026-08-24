@@ -8,9 +8,8 @@ plugins {
 }
 
 dependencies {
-    implementation(projects.core.ui.commonCompose)
-    implementation(projects.core.ui.designsystem)
-    implementation(projects.core.ui.tabs)
+    implementation(projects.core.ui)
+    implementation(projects.core.tabs)
     implementation(projects.core.domain)
     implementation(projects.core.data)
     //
@@ -51,7 +50,6 @@ sqldelight {
     databases {
         create("Database") {
             packageName.set("com.shellspace.generated")
-            dependency(projects.core.data)
         }
     }
 }

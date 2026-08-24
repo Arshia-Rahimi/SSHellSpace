@@ -38,9 +38,8 @@ include(":feature:settings:ui")
 include(":feature:settings:data")
 
 // core
-include(":core:ui:common-compose")
-include(":core:ui:designsystem")
-include("core:ui:tabs")
+include(":core:ui")
+include("core:tabs")
 
 include("core:common")
 include(":core:data")

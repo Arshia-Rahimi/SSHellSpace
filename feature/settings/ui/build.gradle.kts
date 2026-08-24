@@ -3,6 +3,7 @@ plugins {
 }
 
 dependencies {
-    implementation(projects.core.ui.tabs)
+    implementation(projects.core.tabs)
+    implementation(projects.core.ui)
     implementation(projects.feature.settings.domain)
 }

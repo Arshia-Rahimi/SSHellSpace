@@ -3,8 +3,8 @@ plugins {
 }
 
 dependencies {
-    implementation(projects.core.ui.tabs)
-    implementation(projects.core.ui.commonCompose)
+    implementation(projects.core.tabs)
+    implementation(projects.core.ui)
     implementation(projects.core.domain)
     //
     implementation(libs.compose.icons)

@@ -3,7 +3,8 @@ plugins {
 }
 
 dependencies {
-    implementation(projects.core.ui.tabs)
+    implementation(projects.core.ui)
+    implementation(projects.core.tabs)
     implementation(projects.feature.terminal.domain)
     //
     implementation(libs.bossterm.compose)
