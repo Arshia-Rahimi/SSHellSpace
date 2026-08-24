@@ -6,12 +6,7 @@ CREATE TABLE preferences_table (
 index:
 SELECT * FROM preferences_table;
 
-get:
-SELECT value FROM preferences_table
-WHERE name = ?
-LIMIT 1;
-
-create:
+insert:
 INSERT INTO preferences_table VALUES (?, ?);
 
 update:

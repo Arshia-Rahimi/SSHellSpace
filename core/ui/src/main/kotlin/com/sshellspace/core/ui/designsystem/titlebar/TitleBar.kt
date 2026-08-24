@@ -35,9 +35,9 @@ import dev.nucleusframework.window.WindowControls
 import dev.nucleusframework.window.noWindowDrag
 import dev.nucleusframework.window.windowDragArea
 import org.koin.compose.koinInject
-import sshellspace.core.ui.designsystem.generated.resources.Res
-import sshellspace.core.ui.designsystem.generated.resources.close_tab
-import sshellspace.core.ui.designsystem.generated.resources.new_tab
+import sshellspace.core.ui.generated.resources.Res
+import sshellspace.core.ui.generated.resources.close_tab
+import sshellspace.core.ui.generated.resources.new_tab
 
 @Composable
 fun DecoratedWindowScope.TitleBar(

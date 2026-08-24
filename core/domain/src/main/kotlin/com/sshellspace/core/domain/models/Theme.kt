@@ -1,4 +1,4 @@
-package com.sshellspace.core.data.models
+package com.sshellspace.core.domain.models
 
 import kotlinx.serialization.Serializable
 
