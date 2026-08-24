@@ -85,12 +85,14 @@ kotlin-compose-plugin = { module = "org.jetbrains.kotlin:compose-compiler-gradle
 compose-multiplatform-plugin = { module = "org.jetbrains.compose:org.jetbrains.compose.gradle.plugin", version.ref = "cmp" }
 detekt-plugin = { module = "dev.detekt:detekt-gradle-plugin", version.ref = "detekt" }
 koin-plugin = { module = "io.insert-koin:koin-compiler-gradle-plugin", version.ref = "koin-plugin" }
+sqldelight-plugin = { module = "app.cash.sqldelight:app.cash.sqldelight.gradle.plugin", version.ref = "sqldelight" }
 
 [plugins]
 #convention plugins (defined in build-logic)
 project-root = { id = "project.root" }
 project-compose-library = { id = "project.compose.library" }
 project-kotlin-library = { id = "project.kotlin.library" }
+project-sqldelight = { id = "project.sqldelight" }
 #
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
 nucleus = { id = "dev.nucleusframework", version.ref = "nucleus" }

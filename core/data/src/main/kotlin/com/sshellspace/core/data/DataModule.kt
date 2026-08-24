@@ -1,5 +1,6 @@
 package com.sshellspace.core.data
 
+import com.sshellspace.core.data.impl.PreferencesRepositoryImpl
 import com.sshellspace.core.data.impl.SqldelightPreferencesDataSource
 import com.sshellspace.core.data.repositories.PreferencesRepository
 import org.koin.dsl.bind

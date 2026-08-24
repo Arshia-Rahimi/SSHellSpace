@@ -13,6 +13,7 @@ dependencies {
     implementation(libs.compose.multiplatform.plugin)
     implementation(libs.detekt.plugin)
     implementation(libs.koin.plugin)
+    implementation(libs.sqldelight.plugin)
 }
 
 gradlePlugin {
@@ -28,6 +29,10 @@ gradlePlugin {
         register("Compose") {
             id = libs.plugins.project.compose.library.get().pluginId
             implementationClass = "ComposeLibraryPlugin"
+        }
+        register("Sqldelight") {
+            id = libs.plugins.project.sqldelight.get().pluginId
+            implementationClass = "SqldelightPlugin"
         }
     }
 }
