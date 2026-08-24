@@ -4,7 +4,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.BufferOverflow
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.filterIsInstance
@@ -29,4 +29,5 @@ interface Event
 
 fun Event.emit() = EventBus.emit(this)
 
-inline fun <reified T : Event> T.listen(): Flow<T> = EventBus.events.filterIsInstance<T>()
+suspend inline fun <reified T : Event> T.listen(collector: FlowCollector<T>) =
+    EventBus.events.filterIsInstance<T>().collect(collector)

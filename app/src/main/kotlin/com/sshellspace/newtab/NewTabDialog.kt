@@ -35,8 +35,7 @@ fun NewTabDialog() {
     var shouldShowNewTabDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        NewTabButtonEvent.listen()
-            .collect { shouldShowNewTabDialog = true }
+        NewTabButtonEvent.listen { shouldShowNewTabDialog = true }
     }
 
     UnstyledDialog(
