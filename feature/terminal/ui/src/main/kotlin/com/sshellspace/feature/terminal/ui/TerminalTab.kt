@@ -1,8 +1,8 @@
-package com.sshellspace.feature.terminal
+package com.sshellspace.feature.terminal.ui
 
 import com.sshellspace.core.ui.tabs.Tab
 import com.sshellspace.core.ui.tabs.TabInstance
-import com.sshellspace.feature.terminal.screen.TerminalTabViewModel
+import com.sshellspace.feature.terminal.ui.screen.TerminalTabViewModel
 
 val TerminalTab = Tab(
     qualifier = "TerminalTab",

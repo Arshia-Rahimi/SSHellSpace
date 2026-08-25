@@ -6,6 +6,6 @@ import org.koin.core.qualifier.named
 import org.koin.dsl.bind
 import org.koin.dsl.module
 
-val SettingsModule = module {
+val SettingsUiModule = module {
     single(named(SettingsTab.qualifier)) { SettingsTabViewModel() } bind TabViewModel::class
 }

@@ -1,4 +1,4 @@
-package com.sshellspace.feature.terminal.screen.components
+package com.sshellspace.feature.terminal.ui.screen.components
 
 import ai.rever.bossterm.compose.EmbeddableTerminal
 import ai.rever.bossterm.compose.rememberEmbeddableTerminalState

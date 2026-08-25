@@ -5,9 +5,10 @@ import com.sshellspace.core.data.DataModule
 import com.sshellspace.core.ui.tabs.TabController
 import com.sshellspace.core.ui.tabs.TabManager
 import com.sshellspace.core.ui.tabs.TabsModule
-import com.sshellspace.feature.settings.SettingsModule
-import com.sshellspace.feature.terminal.TerminalModule
-import com.sshellspace.feature.vault.VaultModule
+import com.sshellspace.feature.settings.SettingsUiModule
+import com.sshellspace.feature.terminal.data.TerminalDataModule
+import com.sshellspace.feature.terminal.ui.TerminalUiModule
+import com.sshellspace.feature.vault.VaultUiModule
 import org.koin.core.context.startKoin
 import org.koin.dsl.bind
 import org.koin.dsl.module
@@ -19,9 +20,10 @@ val AppModule = module {
     includes(
         DataModule,
         TabsModule,
-        VaultModule,
-        SettingsModule,
-        TerminalModule,
+        VaultUiModule,
+        SettingsUiModule,
+        TerminalUiModule,
+        TerminalDataModule,
     )
 
     single { getKoin() }

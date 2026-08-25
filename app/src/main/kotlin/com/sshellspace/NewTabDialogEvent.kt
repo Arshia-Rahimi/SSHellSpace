@@ -11,7 +11,7 @@ import com.sshellspace.core.ui.designsystem.dialog.DialogEvent
 import com.sshellspace.core.ui.designsystem.theme.background
 import com.sshellspace.core.ui.designsystem.theme.colors
 import com.sshellspace.core.ui.tabs.TabController
-import com.sshellspace.feature.terminal.TerminalTabInstance
+import com.sshellspace.feature.terminal.ui.TerminalTabInstance
 import org.koin.compose.koinInject
 
 object NewTabDialogEvent : DialogEvent() {
