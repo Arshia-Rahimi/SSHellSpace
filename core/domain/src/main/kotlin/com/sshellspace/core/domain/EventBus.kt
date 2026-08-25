@@ -10,8 +10,7 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
 
-@PublishedApi
-internal object EventBus {
+object EventBus {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     private val _events = MutableSharedFlow<Event>(

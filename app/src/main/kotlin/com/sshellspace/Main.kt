@@ -8,11 +8,11 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sshellspace.core.domain.emit
 import com.sshellspace.core.ui.designsystem.common.asString
+import com.sshellspace.core.ui.designsystem.dialog.AppDialog
 import com.sshellspace.core.ui.tabs.TabController
 import com.sshellspace.core.ui.designsystem.theme.SSHellSpaceTheme
 import com.sshellspace.core.ui.designsystem.titlebar.TitleBar
-import com.sshellspace.newtab.NewTabButtonEvent
-import com.sshellspace.newtab.NewTabDialog
+import com.sshellspace.events.NewTabButtonEvent
 import dev.nucleusframework.application.DecoratedWindow
 import dev.nucleusframework.application.NucleusBackend
 import dev.nucleusframework.application.nucleusApplication
@@ -34,7 +34,7 @@ fun main() {
                     titleBar = { TitleBar(NewTabButtonEvent::emit) },
                     modifier = Modifier.fillMaxSize(),
                 ) { ip ->
-                    NewTabDialog()
+                    AppDialog()
 
                     val tabsState by koinInject<TabController>()
                         .tabsState()
