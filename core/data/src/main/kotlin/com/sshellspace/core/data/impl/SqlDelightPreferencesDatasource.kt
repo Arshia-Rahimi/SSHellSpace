@@ -9,6 +9,7 @@ import com.sshellspace.core.data.PreferencesDatasource
 import com.sshellspace.core.domain.models.Preference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.Serializable
 
 internal class SqlDelightPreferencesDatasource(
     driver: SqlDriver,
