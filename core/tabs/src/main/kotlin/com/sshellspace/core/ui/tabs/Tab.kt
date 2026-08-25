@@ -1,11 +1,9 @@
 package com.sshellspace.core.ui.tabs
 
-import kotlin.reflect.KClass
-
-data class Tab(
-    val qualifier: String,
-    val viewModelKClass: KClass<*>,
-)
+interface Tab {
+    val qualifier: String
+        get() = this::class.qualifiedName!!
+}
 
 interface TabInstance {
     val tab: Tab

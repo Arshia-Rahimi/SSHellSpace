@@ -21,6 +21,7 @@ dependencies {
     //
     implementation(projects.feature.terminal.ui)
     implementation(projects.feature.terminal.data)
+    implementation(projects.feature.terminal.domain)
     //
     implementation(compose.desktop.currentOs)
     implementation(libs.sqldelight.desktop)

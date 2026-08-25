@@ -6,10 +6,10 @@ import com.sshellspace.feature.terminal.domain.Shell
 import com.sshellspace.feature.terminal.domain.ShellDiscoveryService
 import java.io.File
 
-class ShellDiscoveryServiceImpl: ShellDiscoveryService {
-    override fun discover(): List<Shell> = when(getOs()) {
+class ShellDiscoveryServiceImpl : ShellDiscoveryService {
+    override fun discover(): List<Shell> = when (getOs()) {
         OS.Windows -> discoverWindowsShells() + discoverWslShells()
-        else ->discoverUnix()
+        else -> discoverUnix()
     }
 
     private fun discoverUnix(): List<Shell> {

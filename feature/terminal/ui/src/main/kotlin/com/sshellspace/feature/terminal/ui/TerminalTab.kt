@@ -2,15 +2,13 @@ package com.sshellspace.feature.terminal.ui
 
 import com.sshellspace.core.ui.tabs.Tab
 import com.sshellspace.core.ui.tabs.TabInstance
+import com.sshellspace.feature.terminal.domain.Shell
 import com.sshellspace.feature.terminal.ui.screen.TerminalTabViewModel
 
-val TerminalTab = Tab(
-    qualifier = "TerminalTab",
-    viewModelKClass = TerminalTabViewModel::class,
-)
+object TerminalTab: Tab
 
 data class TerminalTabInstance(
-    val shellType: String,
+    val shell: Shell,
 ): TabInstance {
     override val tab: Tab = TerminalTab
 }

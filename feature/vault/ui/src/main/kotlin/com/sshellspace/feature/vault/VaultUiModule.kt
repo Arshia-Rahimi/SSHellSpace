@@ -1,9 +1,10 @@
 package com.sshellspace.feature.vault
 
+import com.sshellspace.core.ui.tabs.registerViewModel
 import com.sshellspace.feature.vault.screen.VaultTabViewModel
-import org.koin.core.qualifier.named
 import org.koin.dsl.module
+import org.koin.plugin.module.dsl.create
 
 val VaultUiModule = module {
-    single(named(VaultTab.qualifier)) { VaultTabViewModel() }
+    VaultTab.registerViewModel { create(::VaultTabViewModel) }
 }
