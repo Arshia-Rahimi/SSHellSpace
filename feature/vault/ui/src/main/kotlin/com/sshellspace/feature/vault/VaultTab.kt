@@ -6,7 +6,9 @@ import com.sshellspace.feature.vault.screen.VaultTabViewModel
 
 const val VAULT_TAB_ID = "Vault"
 
-object VaultTab : Tab
+object VaultTab : Tab {
+    override val isSingleInstance = true
+}
 
 object VaultTabInstance : TabInstance {
     override val tab = VaultTab
