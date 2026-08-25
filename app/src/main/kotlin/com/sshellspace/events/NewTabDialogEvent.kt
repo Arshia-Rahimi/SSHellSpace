@@ -14,7 +14,7 @@ import com.sshellspace.core.ui.tabs.TabController
 import com.sshellspace.feature.terminal.TerminalTabInstance
 import org.koin.compose.koinInject
 
-object NewTabButtonEvent : DialogEvent() {
+object NewTabDialogEvent : DialogEvent() {
     @Composable
     override fun content() {
         val tabController = koinInject<TabController>()
