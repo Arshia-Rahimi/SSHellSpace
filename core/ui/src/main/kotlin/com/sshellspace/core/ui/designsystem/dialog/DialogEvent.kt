@@ -5,6 +5,7 @@ import com.sshellspace.core.domain.Event
 
 abstract class DialogEvent: Event {
     protected var onCloseDialog: (() -> Unit)? = null
+        private set
 
     @JvmName("setOnCloseDialogCallback")
     fun setOnCloseDialog(callback: () -> Unit) {
