@@ -1,6 +1,6 @@
 package com.sshellspace
 
-import androidx.compose.animation.AnimatedContent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.getValue
@@ -9,9 +9,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sshellspace.core.domain.emit
 import com.sshellspace.core.ui.designsystem.common.asString
 import com.sshellspace.core.ui.designsystem.dialog.AppDialog
-import com.sshellspace.core.ui.tabs.TabController
 import com.sshellspace.core.ui.designsystem.theme.SSHellSpaceTheme
 import com.sshellspace.core.ui.designsystem.titlebar.TitleBar
+import com.sshellspace.core.ui.tabs.TabController
 import dev.nucleusframework.application.DecoratedWindow
 import dev.nucleusframework.application.NucleusBackend
 import dev.nucleusframework.application.nucleusApplication
@@ -39,12 +39,11 @@ fun main() {
                         .tabsState()
                         .collectAsStateWithLifecycle()
 
-                    AnimatedContent(
-                        targetState = tabsState.currentTab,
+                    Box(
                         modifier = Modifier.fillMaxSize()
                             .padding(ip),
                     ) {
-                        it.screen()
+                        tabsState.currentTab.screen()
                     }
                 }
             }

@@ -10,14 +10,7 @@ import androidx.compose.ui.Modifier
 fun BossTerm(
     modifier: Modifier = Modifier,
 ) {
-    val terminalState = rememberEmbeddableTerminalState(false)
-
-    DisposableEffect(Unit) {
-        onDispose {
-            terminalState.dispose()
-        }
-    }
-
+    val terminalState = rememberEmbeddableTerminalState(autoDispose = false)
     EmbeddableTerminal(
         state = terminalState,
         modifier = modifier,

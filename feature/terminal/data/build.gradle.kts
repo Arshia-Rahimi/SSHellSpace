@@ -4,4 +4,5 @@ plugins {
 
 dependencies {
     implementation(projects.feature.terminal.domain)
+    implementation(projects.core.domain)
 }
