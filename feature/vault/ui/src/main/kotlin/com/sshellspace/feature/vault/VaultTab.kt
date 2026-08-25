@@ -11,6 +11,6 @@ val VaultTab = Tab(
     viewModelKClass = VaultTabViewModel::class,
 )
 
-object MainVaultTabInstance : TabInstance {
+object VaultTabInstance : TabInstance {
     override val tab = VaultTab
 }

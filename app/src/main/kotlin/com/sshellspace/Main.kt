@@ -12,7 +12,6 @@ import com.sshellspace.core.ui.designsystem.dialog.AppDialog
 import com.sshellspace.core.ui.tabs.TabController
 import com.sshellspace.core.ui.designsystem.theme.SSHellSpaceTheme
 import com.sshellspace.core.ui.designsystem.titlebar.TitleBar
-import com.sshellspace.events.NewTabDialogEvent
 import dev.nucleusframework.application.DecoratedWindow
 import dev.nucleusframework.application.NucleusBackend
 import dev.nucleusframework.application.nucleusApplication

@@ -1,4 +1,4 @@
-package com.sshellspace.events
+package com.sshellspace
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
