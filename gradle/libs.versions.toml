@@ -93,6 +93,6 @@ project-root = { id = "project.root" }
 project-compose-library = { id = "project.compose.library" }
 project-kotlin-library = { id = "project.kotlin.library" }
 project-sqldelight = { id = "project.sqldelight" }
-#
+#app module plugins
 sqldelight = { id = "app.cash.sqldelight", version.ref = "sqldelight" }
 nucleus = { id = "dev.nucleusframework", version.ref = "nucleus" }
