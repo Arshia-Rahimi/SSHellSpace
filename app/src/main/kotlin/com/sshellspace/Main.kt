@@ -4,9 +4,11 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.sshellspace.core.domain.emit
 import com.sshellspace.core.ui.designsystem.common.asString
 import com.sshellspace.core.ui.designsystem.dialog.AppDialog
@@ -51,7 +53,9 @@ private fun DecoratedWindowScope.AppWindow() {
             modifier = Modifier.fillMaxSize()
                 .padding(ip),
         ) {
-            tabsState.currentTab.screen()
+            CompositionLocalProvider(LocalViewModelStoreOwner provides tabsState.currentTab.storeOwner) {
+                tabsState.currentTab.screen()
+            }
         }
     }
 }
