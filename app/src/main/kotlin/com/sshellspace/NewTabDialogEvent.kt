@@ -12,7 +12,7 @@ import com.sshellspace.core.ui.designsystem.theme.background
 import com.sshellspace.core.ui.designsystem.theme.colors
 import com.sshellspace.core.ui.tabs.TabController
 import com.sshellspace.feature.terminal.domain.Shell
-import com.sshellspace.feature.terminal.ui.TerminalTabInstance
+import com.sshellspace.feature.terminal.ui.TerminalTab
 import org.koin.compose.koinInject
 
 object NewTabDialogEvent : DialogEvent() {
@@ -25,7 +25,7 @@ object NewTabDialogEvent : DialogEvent() {
         ) {
             Button(
                 onClick = {
-                    tabController.createNewTab(TerminalTabInstance(Shell("zsh", "/bin/zsh")))
+                    tabController.createNewTab(TerminalTab(Shell("zsh", "/bin/zsh")))
                     onCloseDialog?.invoke()
                 },
             ) {

@@ -13,6 +13,8 @@ class ComposeLibraryPlugin : Plugin<Project> {
 
         versionCatalog.addDependency(
             "implementation" to "koin-compose",
+            "implementation" to "koin-compose-viewmodel",
+            "implementation" to "lifecycle-viewmodel",
             "implementation" to "compose-ui-tooling",
             "implementation" to "compose-runtime",
             "implementation" to "compose-foundation",

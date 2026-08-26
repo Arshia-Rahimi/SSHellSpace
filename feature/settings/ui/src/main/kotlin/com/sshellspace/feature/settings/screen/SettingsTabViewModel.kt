@@ -1,12 +1,7 @@
 package com.sshellspace.feature.settings.screen
 
-import androidx.compose.runtime.Composable
-import com.sshellspace.core.ui.tabs.TabViewModel
+import androidx.lifecycle.ViewModel
 
-class SettingsTabViewModel: TabViewModel(
-    initialTitle = "Settings",
-    initialIcon = null,
-) {
-    @Composable
-    override fun screen() = SettingsTabScreen()
+class SettingsTabViewModel: ViewModel() {
+
 }

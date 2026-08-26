@@ -1,12 +1,12 @@
 package com.sshellspace.core.ui.tabs
 
 data class TabsState(
-    val fixedTab: List<TabViewModel>,
+    val fixedTab: List<Tab>,
     val currentTabId: TabId,
-    val tabs: List<TabViewModel> = emptyList(),
+    val tabs: List<Tab> = emptyList(),
 ) {
-    val tabsSequence: Sequence<TabViewModel> get() = tabs.asSequence() + fixedTab.asSequence()
-    val currentTab: TabViewModel get() = tabsSequence.first { it.id == currentTabId }
+    val tabsSequence: Sequence<Tab> get() = tabs.asSequence() + fixedTab.asSequence()
+    val currentTab: Tab get() = tabsSequence.first { it.id == currentTabId }
 
-    fun getTab(id: TabId): TabViewModel = tabsSequence.find { it.id == id }!!
+    fun getTab(id: TabId): Tab = tabsSequence.find { it.id == id }!!
 }

@@ -3,6 +3,7 @@ package com.sshellspace
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -15,6 +16,7 @@ import com.sshellspace.core.ui.tabs.TabController
 import dev.nucleusframework.application.DecoratedWindow
 import dev.nucleusframework.application.NucleusBackend
 import dev.nucleusframework.application.nucleusApplication
+import dev.nucleusframework.window.DecoratedWindowScope
 import dev.nucleusframework.window.WindowScaffold
 import org.koin.compose.koinInject
 import sshellspace.app.generated.resources.Res
@@ -28,25 +30,28 @@ fun main() {
             onCloseRequest = ::exitApplication,
             title = Res.string.title.asString(),
         ) {
-            SSHellSpaceTheme {
-                WindowScaffold(
-                    titleBar = { TitleBar(NewTabDialogEvent::emit) },
-                    modifier = Modifier.fillMaxSize(),
-                ) { ip ->
-                    AppDialog()
+            SSHellSpaceTheme { AppWindow() }
+        }
+    }
+}
 
-                    val tabsState by koinInject<TabController>()
-                        .tabsState()
-                        .collectAsStateWithLifecycle()
+@Composable
+private fun DecoratedWindowScope.AppWindow() {
+    WindowScaffold(
+        titleBar = { TitleBar(NewTabDialogEvent::emit) },
+        modifier = Modifier.fillMaxSize(),
+    ) { ip ->
+        AppDialog()
 
-                    Box(
-                        modifier = Modifier.fillMaxSize()
-                            .padding(ip),
-                    ) {
-                        tabsState.currentTab.screen()
-                    }
-                }
-            }
+        val tabsState by koinInject<TabController>()
+            .tabsState()
+            .collectAsStateWithLifecycle()
+
+        Box(
+            modifier = Modifier.fillMaxSize()
+                .padding(ip),
+        ) {
+            tabsState.currentTab.screen()
         }
     }
 }

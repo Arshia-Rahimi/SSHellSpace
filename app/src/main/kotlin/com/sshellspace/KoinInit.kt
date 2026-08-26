@@ -32,7 +32,6 @@ val AppModule = module {
         TabManager(
             defaultTabId = DEFAULT_TAB_ID,
             fixedTabs = listOf(fixedTabInstance),
-            tabViewModelFactory = get(),
         )
     } bind TabController::class
 }

@@ -6,5 +6,5 @@ import org.koin.dsl.module
 import org.koin.plugin.module.dsl.create
 
 val SettingsUiModule = module {
-    SettingsTab.registerViewModel { create(::SettingsTabViewModel) }
+    SettingsTabType.registerViewModel { create(::SettingsTabViewModel) }
 }

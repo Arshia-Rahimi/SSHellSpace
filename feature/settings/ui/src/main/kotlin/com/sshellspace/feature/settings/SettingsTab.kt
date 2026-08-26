@@ -1,12 +1,19 @@
 package com.sshellspace.feature.settings
 
+import androidx.compose.runtime.Composable
 import com.sshellspace.core.ui.tabs.Tab
-import com.sshellspace.core.ui.tabs.TabInstance
+import com.sshellspace.core.ui.tabs.TabType
+import com.sshellspace.feature.settings.screen.SettingsTabScreen
 
-object SettingsTab: Tab
+object SettingsTabType : TabType
 
-data class SettingsTabInstance(
+data class SettingsTab(
     val from: String,
-): TabInstance {
-    override val tab = SettingsTab
+) : Tab(
+    type = SettingsTabType,
+    initialTitle = "Settings",
+    initialIcon = null,
+) {
+    @Composable
+    override fun screen() = SettingsTabScreen()
 }

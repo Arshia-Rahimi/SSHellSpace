@@ -1,12 +1,7 @@
 package com.sshellspace.feature.terminal.ui.screen
 
-import androidx.compose.runtime.Composable
-import com.sshellspace.core.ui.tabs.TabViewModel
+import androidx.lifecycle.ViewModel
 
-class TerminalTabViewModel : TabViewModel(
-    initialTitle = "Terminal",
-    initialIcon = null,
-) {
-    @Composable
-    override fun screen() = TerminalTabScreen()
+class TerminalTabViewModel : ViewModel() {
+
 }

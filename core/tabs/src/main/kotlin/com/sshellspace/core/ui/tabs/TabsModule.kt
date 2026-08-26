@@ -5,5 +5,5 @@ import org.koin.dsl.module
 import org.koin.plugin.module.dsl.single
 
 val TabsModule = module {
-    single<KoinTabViewModelFactory>() bind TabViewModelFactory::class
+//    single<KoinTabViewModelFactory>() bind TabViewModelFactory::class
 }

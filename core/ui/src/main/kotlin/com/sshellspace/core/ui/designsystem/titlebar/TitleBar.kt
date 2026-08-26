@@ -29,7 +29,7 @@ import com.sshellspace.core.ui.designsystem.Icons
 import com.sshellspace.core.ui.designsystem.components.IconButton
 import com.sshellspace.core.ui.tabs.TabController
 import com.sshellspace.core.ui.tabs.TabId
-import com.sshellspace.core.ui.tabs.TabViewModel
+import com.sshellspace.core.ui.tabs.Tab
 import dev.nucleusframework.window.DecoratedWindowScope
 import dev.nucleusframework.window.WindowControls
 import dev.nucleusframework.window.noWindowDrag
@@ -109,7 +109,7 @@ fun DecoratedWindowScope.TitleBar(
 
 @Composable
 fun Tab(
-    tab: TabViewModel,
+    tab: Tab,
     modifier: Modifier,
     isSelected: Boolean,
     isFixed: Boolean,

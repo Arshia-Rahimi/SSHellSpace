@@ -6,5 +6,5 @@ import org.koin.dsl.module
 import org.koin.plugin.module.dsl.create
 
 val TerminalUiModule = module {
-    TerminalTab.registerViewModel { create(::TerminalTabViewModel) }
+    TerminalTabType.registerViewModel { create(::TerminalTabViewModel) }
 }

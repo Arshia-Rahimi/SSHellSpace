@@ -1,14 +1,20 @@
 package com.sshellspace.feature.terminal.ui
 
+import androidx.compose.runtime.Composable
 import com.sshellspace.core.ui.tabs.Tab
-import com.sshellspace.core.ui.tabs.TabInstance
+import com.sshellspace.core.ui.tabs.TabType
 import com.sshellspace.feature.terminal.domain.Shell
-import com.sshellspace.feature.terminal.ui.screen.TerminalTabViewModel
+import com.sshellspace.feature.terminal.ui.screen.TerminalTabScreen
 
-object TerminalTab: Tab
+object TerminalTabType : TabType
 
-data class TerminalTabInstance(
+data class TerminalTab(
     val shell: Shell,
-): TabInstance {
-    override val tab: Tab = TerminalTab
+) : Tab(
+    type = TerminalTabType,
+    initialTitle = shell.name,
+    initialIcon = null,
+) {
+    @Composable
+    override fun screen() = TerminalTabScreen()
 }

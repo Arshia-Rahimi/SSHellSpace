@@ -6,5 +6,5 @@ import org.koin.dsl.module
 import org.koin.plugin.module.dsl.create
 
 val VaultUiModule = module {
-    VaultTab.registerViewModel { create(::VaultTabViewModel) }
+    VaultTabType.registerViewModel { create(::VaultTabViewModel) }
 }
