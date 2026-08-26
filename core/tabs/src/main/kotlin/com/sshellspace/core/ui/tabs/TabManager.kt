@@ -40,6 +40,7 @@ class TabManager(
         _tabsState.update { state ->
             val index = state.tabs.indexOfFirst { it.id == id }
             if (index == -1) return@update state
+            state.tabs[index].storeOwner.viewModelStore.clear()
 
             val newTabs = state.tabs.toMutableList()
 
