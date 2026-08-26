@@ -21,6 +21,7 @@ import dev.nucleusframework.application.nucleusApplication
 import dev.nucleusframework.window.DecoratedWindowScope
 import dev.nucleusframework.window.WindowScaffold
 import org.koin.compose.koinInject
+import org.koin.compose.viewmodel.koinViewModel
 import sshellspace.app.generated.resources.Res
 import sshellspace.app.generated.resources.title
 
