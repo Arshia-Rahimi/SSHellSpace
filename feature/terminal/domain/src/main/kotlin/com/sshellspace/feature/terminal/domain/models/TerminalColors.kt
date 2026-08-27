@@ -1,4 +1,4 @@
-package com.sshellspace.feature.terminal.domain
+package com.sshellspace.feature.terminal.domain.models
 
 import com.sshellspace.core.domain.models.ColorHex
 import kotlinx.serialization.SerialName

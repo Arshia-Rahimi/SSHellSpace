@@ -26,14 +26,14 @@ internal class SqlDelightPreferencesDatasource(
 
     override suspend fun insert(value: Preference) {
         db.preferencesQueries.insert(
-            name = value::class.simpleName ?: return,
+            name = value.qualifiedName,
             value_ = JsonSerializer.encodeToString(value)
         )
     }
 
     override suspend fun update(value: Preference) {
         db.preferencesQueries.update(
-            name = value::class.simpleName ?: return,
+            name = value.qualifiedName,
             value_ = JsonSerializer.encodeToString(value)
         )
     }

@@ -7,12 +7,13 @@ enum class OS {
     Unknown;
 }
 
-fun getOs(): OS {
-    val osName = System.getProperty("os.name").lowercase()
-    return when {
-        osName.contains("linux") -> OS.Linux
-        osName.contains("mac") -> OS.MacOS
-        osName.contains("win") -> OS.Windows
-        else -> OS.Unknown
+fun getOs(): OS = System.getProperty("os.name").lowercase()
+    .run {
+        when {
+            contains("linux") -> OS.Linux
+            contains("mac") -> OS.MacOS
+            contains("win") -> OS.Windows
+            else -> OS.Unknown
+        }
     }
-}
+

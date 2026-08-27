@@ -7,9 +7,7 @@ import com.sshellspace.feature.vault.screen.VaultTabScreen
 
 const val VAULT_TAB_ID = "Vault"
 
-object VaultTabType : TabType {
-    override val isSingleInstance = true
-}
+object VaultTabType : TabType
 
 object VaultTab : Tab(
     type = VaultTabType,

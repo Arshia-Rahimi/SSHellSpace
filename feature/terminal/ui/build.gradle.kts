@@ -5,6 +5,7 @@ plugins {
 dependencies {
     implementation(projects.core.ui)
     implementation(projects.core.tabs)
+    implementation(projects.core.domain)
     implementation(projects.feature.terminal.domain)
     //
     implementation(libs.bossterm.compose)
