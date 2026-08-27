@@ -15,13 +15,19 @@ dependencies {
     //
     implementation(projects.feature.vault.ui)
     implementation(projects.feature.vault.data)
+    implementation(projects.feature.vault.domain)
     //
     implementation(projects.feature.settings.ui)
     implementation(projects.feature.settings.data)
+    implementation(projects.feature.settings.domain)
     //
     implementation(projects.feature.terminal.ui)
     implementation(projects.feature.terminal.data)
     implementation(projects.feature.terminal.domain)
+    //
+    implementation(projects.feature.newtab.ui)
+    implementation(projects.feature.newtab.data)
+    implementation(projects.feature.newtab.domain)
     //
     implementation(compose.desktop.currentOs)
     implementation(libs.sqldelight.desktop)

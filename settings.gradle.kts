@@ -37,6 +37,10 @@ include(":feature:settings:domain")
 include(":feature:settings:ui")
 include(":feature:settings:data")
 
+include("feature:newtab:data")
+include("feature:newtab:domain")
+include("feature:newtab:ui")
+
 // core
 include(":core:ui")
 include("core:tabs")

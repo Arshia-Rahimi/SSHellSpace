@@ -15,13 +15,19 @@ import com.sshellspace.core.ui.designsystem.dialog.AppDialog
 import com.sshellspace.core.ui.designsystem.theme.SSHellSpaceTheme
 import com.sshellspace.core.ui.designsystem.titlebar.TitleBar
 import com.sshellspace.core.ui.tabs.TabController
+import com.sshellspace.feature.newtab.ui.NewTabDialogEvent
+import com.sshellspace.feature.settings.SettingsTab
+import com.sshellspace.feature.settings.screen.SettingsTabScreen
+import com.sshellspace.feature.terminal.ui.TerminalTab
+import com.sshellspace.feature.terminal.ui.screen.TerminalTabScreen
+import com.sshellspace.feature.vault.VaultTab
+import com.sshellspace.feature.vault.screen.VaultTabScreen
 import dev.nucleusframework.application.DecoratedWindow
 import dev.nucleusframework.application.NucleusBackend
 import dev.nucleusframework.application.nucleusApplication
 import dev.nucleusframework.window.DecoratedWindowScope
 import dev.nucleusframework.window.WindowScaffold
 import org.koin.compose.koinInject
-import org.koin.compose.viewmodel.koinViewModel
 import sshellspace.app.generated.resources.Res
 import sshellspace.app.generated.resources.title
 
@@ -54,8 +60,13 @@ private fun DecoratedWindowScope.AppWindow() {
             modifier = Modifier.fillMaxSize()
                 .padding(ip),
         ) {
-            CompositionLocalProvider(LocalViewModelStoreOwner provides tabsState.currentTab.storeOwner) {
-                tabsState.currentTab.screen()
+            CompositionLocalProvider(LocalViewModelStoreOwner provides tabsState.currentTab) {
+                when (tabsState.currentTab) {
+                    VaultTab -> VaultTabScreen()
+                    SettingsTab -> SettingsTabScreen()
+                    is TerminalTab -> TerminalTabScreen()
+                    else -> error("Unknown tab")
+                }
             }
         }
     }

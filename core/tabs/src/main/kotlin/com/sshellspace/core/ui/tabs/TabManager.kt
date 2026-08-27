@@ -1,5 +1,6 @@
 package com.sshellspace.core.ui.tabs
 
+import com.sshellspace.core.domain.models.TabKey
 import kotlin.collections.plus
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,14 +20,14 @@ class TabManager(
 
     override fun tabsState() = _tabsState.asStateFlow()
 
-    override fun createNewTab(tab: Tab) {
+    override fun createNewTab(key: TabKey) {
         _tabsState.update {
             it.copy(
-                tabs = it.tabs + tab,
-                currentTabId = tab.id,
+                tabs = it.tabs + key,
+                currentTabId = key.id,
             )
         }
-        onNewTabCreated?.invoke(tab.id)
+        onNewTabCreated?.invoke(key.id)
     }
 
     override fun setCurrentTab(id: TabId) {
@@ -40,7 +41,7 @@ class TabManager(
         _tabsState.update { state ->
             val index = state.tabs.indexOfFirst { it.id == id }
             if (index == -1) return@update state
-            state.tabs[index].storeOwner.viewModelStore.clear()
+            state.tabs[index].viewModelStore.clear()
 
             val newTabs = state.tabs.toMutableList()
 

@@ -1,0 +1,10 @@
+plugins {
+    alias(libs.plugins.project.compose.library)
+}
+
+dependencies {
+    implementation(projects.core.tabs)
+    implementation(projects.core.ui)
+    implementation(projects.core.domain)
+    implementation(projects.feature.terminal.domain)
+}

@@ -1,6 +1,5 @@
 package com.sshellspace.core.ui.tabs
 
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
@@ -10,22 +9,15 @@ import androidx.lifecycle.ViewModelStoreOwner
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
-abstract class Tab(
-    val type: TabType,
+class Tab(
     val id: TabId = generateTabId(),
     initialTitle: String,
     initialIcon: ImageVector?
-) {
-    val storeOwner = TabViewModelStoreOwner()
+): ViewModelStoreOwner {
+    override val viewModelStore = ViewModelStore()
 
     var title by mutableStateOf(initialTitle)
     var icon by mutableStateOf(initialIcon)
-
-    @Composable abstract fun screen()
-}
-
-class TabViewModelStoreOwner: ViewModelStoreOwner {
-    override val viewModelStore = ViewModelStore()
 }
 
 @OptIn(ExperimentalUuidApi::class)

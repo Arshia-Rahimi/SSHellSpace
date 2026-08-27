@@ -1,10 +1,13 @@
 package com.sshellspace
 
 import app.cash.sqldelight.db.SqlDriver
+import com.sshellspace.config.DEFAULT_TAB_ID
+import com.sshellspace.config.fixedTabInstance
 import com.sshellspace.core.data.DataModule
 import com.sshellspace.core.ui.tabs.TabController
 import com.sshellspace.core.ui.tabs.TabManager
 import com.sshellspace.core.ui.tabs.TabsModule
+import com.sshellspace.feature.newtab.ui.NewTabUiModule
 import com.sshellspace.feature.settings.SettingsUiModule
 import com.sshellspace.feature.terminal.data.TerminalDataModule
 import com.sshellspace.feature.terminal.ui.TerminalUiModule
@@ -24,6 +27,7 @@ val AppModule = module {
         SettingsUiModule,
         TerminalUiModule,
         TerminalDataModule,
+        NewTabUiModule,
     )
 
     single { getKoin() }

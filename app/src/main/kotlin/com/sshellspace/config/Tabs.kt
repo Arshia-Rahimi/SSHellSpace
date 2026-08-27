@@ -1,4 +1,4 @@
-package com.sshellspace
+package com.sshellspace.config
 
 import com.sshellspace.feature.vault.VAULT_TAB_ID
 import com.sshellspace.feature.vault.VaultTab
