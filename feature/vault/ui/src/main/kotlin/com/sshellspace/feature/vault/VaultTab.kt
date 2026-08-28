@@ -19,7 +19,9 @@ val VaultTabItem = TabItem(
     initialTitle = "Vault",
     initialIcon = null,
     contentProvider = { item ->
-        val viewModel: VaultTabViewModel = koinViewModel { parametersOf(item as TabController) }
+        val viewModel: VaultTabViewModel = koinViewModel {
+            parametersOf(item as TabController)
+        }
         VaultTabScreen(viewModel)
     }
 )

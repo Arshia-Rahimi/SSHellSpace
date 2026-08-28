@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -45,6 +46,13 @@ fun DecoratedWindowScope.TitleBar(
     val tabManager = koinInject<TabManager>()
     val tabsState by tabManager.tabsState().collectAsStateWithLifecycle()
     var tabKeys by remember { mutableStateOf(emptyList<TabId>()) }
+    println(tabKeys)
+
+    LaunchedEffect(Unit) {
+        tabManager.onNewTabCreated {
+            tabKeys += it
+        }
+    }
 
     Row(
         modifier = Modifier

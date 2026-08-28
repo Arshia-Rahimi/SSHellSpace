@@ -7,6 +7,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
+import com.sshellspace.core.domain.models.TabParams
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
@@ -47,8 +48,8 @@ class TabItem(
     override fun hashCode() = tab.id.hashCode()
 }
 
-fun interface TabInitializer {
-    fun create(): TabItem
+fun interface TabItemFactory<T: TabParams> {
+    fun create(tabParameters: T): TabItem
 }
 
 @OptIn(ExperimentalUuidApi::class)

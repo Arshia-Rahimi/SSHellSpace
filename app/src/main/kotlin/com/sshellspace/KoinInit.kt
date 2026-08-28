@@ -30,7 +30,7 @@ val AppModule = module {
     single { getKoin() }
     single { create(::createSqliteDriver) } bind SqlDriver::class
     single {
-        TabManager(
+        TabManagerImpl(
             defaultTabId = DEFAULT_TAB_ID,
             fixedTabs = fixedTabItems,
         )
