@@ -39,11 +39,7 @@ fun main() {
                 ) { ip ->
                     AppDialog()
 
-                    Box(
-                        modifier = Modifier.fillMaxSize().padding(ip),
-                    ) {
-                        TabHost()
-                    }
+                    TabHost(Modifier.fillMaxSize().padding(ip))
                 }
             }
         }
@@ -51,12 +47,17 @@ fun main() {
 }
 
 @Composable
-private fun TabHost() {
+private fun TabHost(
+    modifier: Modifier = Modifier,
+) {
     val tabsState by koinInject<TabManager>()
         .tabsState()
         .collectAsStateWithLifecycle()
 
-    CompositionLocalProvider(LocalViewModelStoreOwner provides tabsState.currentTab.tab) {
-        tabsState.currentTab.content()
+    Box(modifier) {
+        CompositionLocalProvider(LocalViewModelStoreOwner provides tabsState.currentTab.tab) {
+            tabsState.currentTab.content()
+        }
+
     }
 }
