@@ -1,12 +1,8 @@
 package com.sshellspace.core.ui.tabs
 
-import com.sshellspace.core.domain.models.TabKey
-import kotlinx.coroutines.flow.StateFlow
+import androidx.compose.ui.graphics.vector.ImageVector
 
 interface TabController {
-    fun tabsState(): StateFlow<TabsState>
-    fun createNewTab(key: TabKey)
-    fun setCurrentTab(id: TabId)
-    fun closeTab(id: TabId)
-    fun onNewTabCreated(callback: (TabId) -> Unit)
+    fun setTitle(title: String)
+    fun setIcon(icon: ImageVector?)
 }

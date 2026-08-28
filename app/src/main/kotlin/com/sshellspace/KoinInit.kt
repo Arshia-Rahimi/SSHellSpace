@@ -2,11 +2,9 @@ package com.sshellspace
 
 import app.cash.sqldelight.db.SqlDriver
 import com.sshellspace.config.DEFAULT_TAB_ID
-import com.sshellspace.config.fixedTabInstance
+import com.sshellspace.config.fixedTabItems
 import com.sshellspace.core.data.DataModule
-import com.sshellspace.core.ui.tabs.TabController
 import com.sshellspace.core.ui.tabs.TabManager
-import com.sshellspace.core.ui.tabs.TabsModule
 import com.sshellspace.feature.newtab.ui.NewTabUiModule
 import com.sshellspace.feature.settings.SettingsUiModule
 import com.sshellspace.feature.terminal.data.TerminalDataModule
@@ -22,7 +20,6 @@ fun initKoin() = startKoin { modules(AppModule) }
 val AppModule = module {
     includes(
         DataModule,
-        TabsModule,
         VaultUiModule,
         SettingsUiModule,
         TerminalUiModule,
@@ -35,7 +32,7 @@ val AppModule = module {
     single {
         TabManager(
             defaultTabId = DEFAULT_TAB_ID,
-            fixedTabs = listOf(fixedTabInstance),
+            fixedTabs = fixedTabItems,
         )
-    } bind TabController::class
+    } bind TabManager::class
 }

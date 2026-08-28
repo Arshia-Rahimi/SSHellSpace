@@ -14,18 +14,11 @@ import com.sshellspace.core.ui.designsystem.common.asString
 import com.sshellspace.core.ui.designsystem.dialog.AppDialog
 import com.sshellspace.core.ui.designsystem.theme.SSHellSpaceTheme
 import com.sshellspace.core.ui.designsystem.titlebar.TitleBar
-import com.sshellspace.core.ui.tabs.TabController
+import com.sshellspace.core.ui.tabs.TabManager
 import com.sshellspace.feature.newtab.ui.NewTabDialogEvent
-import com.sshellspace.feature.settings.SettingsTab
-import com.sshellspace.feature.settings.screen.SettingsTabScreen
-import com.sshellspace.feature.terminal.ui.TerminalTab
-import com.sshellspace.feature.terminal.ui.screen.TerminalTabScreen
-import com.sshellspace.feature.vault.VaultTab
-import com.sshellspace.feature.vault.screen.VaultTabScreen
 import dev.nucleusframework.application.DecoratedWindow
 import dev.nucleusframework.application.NucleusBackend
 import dev.nucleusframework.application.nucleusApplication
-import dev.nucleusframework.window.DecoratedWindowScope
 import dev.nucleusframework.window.WindowScaffold
 import org.koin.compose.koinInject
 import sshellspace.app.generated.resources.Res
@@ -39,35 +32,31 @@ fun main() {
             onCloseRequest = ::exitApplication,
             title = Res.string.title.asString(),
         ) {
-            SSHellSpaceTheme { AppWindow() }
+            SSHellSpaceTheme {
+                WindowScaffold(
+                    titleBar = { TitleBar(NewTabDialogEvent::emit) },
+                    modifier = Modifier.fillMaxSize(),
+                ) { ip ->
+                    AppDialog()
+
+                    Box(
+                        modifier = Modifier.fillMaxSize().padding(ip),
+                    ) {
+                        TabHost()
+                    }
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun DecoratedWindowScope.AppWindow() {
-    WindowScaffold(
-        titleBar = { TitleBar(NewTabDialogEvent::emit) },
-        modifier = Modifier.fillMaxSize(),
-    ) { ip ->
-        AppDialog()
+private fun TabHost() {
+    val tabsState by koinInject<TabManager>()
+        .tabsState()
+        .collectAsStateWithLifecycle()
 
-        val tabsState by koinInject<TabController>()
-            .tabsState()
-            .collectAsStateWithLifecycle()
-
-        Box(
-            modifier = Modifier.fillMaxSize()
-                .padding(ip),
-        ) {
-            CompositionLocalProvider(LocalViewModelStoreOwner provides tabsState.currentTab) {
-                when (tabsState.currentTab) {
-                    VaultTab -> VaultTabScreen()
-                    SettingsTab -> SettingsTabScreen()
-                    is TerminalTab -> TerminalTabScreen()
-                    else -> error("Unknown tab")
-                }
-            }
-        }
+    CompositionLocalProvider(LocalViewModelStoreOwner provides tabsState.currentTab.tab) {
+        tabsState.currentTab.content()
     }
 }

@@ -1,67 +1,10 @@
 package com.sshellspace.core.ui.tabs
 
-import com.sshellspace.core.domain.models.TabKey
-import kotlin.collections.plus
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.StateFlow
 
-typealias TabId = String
-
-class TabManager(
-    defaultTabId: TabId,
-    fixedTabs: List<Tab>,
-) : TabController {
-    private var onNewTabCreated: ((TabId) -> Unit)? = null
-
-    private val _tabsState = MutableStateFlow(
-        TabsState(fixedTabs, defaultTabId)
-    )
-
-    override fun tabsState() = _tabsState.asStateFlow()
-
-    override fun createNewTab(key: TabKey) {
-        _tabsState.update {
-            it.copy(
-                tabs = it.tabs + key,
-                currentTabId = key.id,
-            )
-        }
-        onNewTabCreated?.invoke(key.id)
-    }
-
-    override fun setCurrentTab(id: TabId) {
-        _tabsState.update { state ->
-            if (id !in state.tabsSequence.map { it.id }) return@update state
-            state.copy(currentTabId = id)
-        }
-    }
-
-    override fun closeTab(id: TabId) {
-        _tabsState.update { state ->
-            val index = state.tabs.indexOfFirst { it.id == id }
-            if (index == -1) return@update state
-            state.tabs[index].viewModelStore.clear()
-
-            val newTabs = state.tabs.toMutableList()
-
-            val newCurrentTabId =
-                if (state.currentTabId != id) {
-                    state.currentTabId
-                } else {
-                    newTabs.getOrNull(index - 1)?.id
-                        ?: state.fixedTab.lastOrNull()?.id
-                        ?: return@update state
-                }
-
-            state.copy(
-                tabs = newTabs,
-                currentTabId = newCurrentTabId,
-            )
-        }
-    }
-
-    override fun onNewTabCreated(callback: (TabId) -> Unit) {
-        onNewTabCreated = callback
-    }
+interface TabManager {
+    fun tabsState(): StateFlow<TabsState>
+    fun createNewTab(initializer: TabInitializer): TabId
+    fun setCurrentTab(id: TabId)
+    fun closeTab(id: TabId)
 }

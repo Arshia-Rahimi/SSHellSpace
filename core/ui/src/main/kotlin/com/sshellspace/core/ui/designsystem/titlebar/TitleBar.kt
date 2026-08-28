@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -24,12 +23,12 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledVerticalSeparator
-import com.sshellspace.core.ui.designsystem.common.asString
 import com.sshellspace.core.ui.designsystem.Icons
+import com.sshellspace.core.ui.designsystem.common.asString
 import com.sshellspace.core.ui.designsystem.components.IconButton
-import com.sshellspace.core.ui.tabs.TabController
 import com.sshellspace.core.ui.tabs.TabId
-import com.sshellspace.core.ui.tabs.Tab
+import com.sshellspace.core.ui.tabs.TabItem
+import com.sshellspace.core.ui.tabs.TabManager
 import dev.nucleusframework.window.DecoratedWindowScope
 import dev.nucleusframework.window.WindowControls
 import dev.nucleusframework.window.noWindowDrag
@@ -43,15 +42,9 @@ import sshellspace.core.ui.generated.resources.new_tab
 fun DecoratedWindowScope.TitleBar(
     onCreateNewTab: () -> Unit,
 ) {
-    val tabManager = koinInject<TabController>()
+    val tabManager = koinInject<TabManager>()
     val tabsState by tabManager.tabsState().collectAsStateWithLifecycle()
     var tabKeys by remember { mutableStateOf(emptyList<TabId>()) }
-
-    LaunchedEffect(Unit) {
-        tabManager.onNewTabCreated {
-            tabKeys += it
-        }
-    }
 
     Row(
         modifier = Modifier
@@ -70,7 +63,7 @@ fun DecoratedWindowScope.TitleBar(
         ReorderableTabRow(
             tabKeys = tabKeys,
             setTabKeys = { tabKeys = it },
-            fixedTabKeys = tabsState.fixedTab.map { it.id },
+            fixedTabKeys = tabsState.fixedTab.map { it.tab.id },
             gap = 4.dp,
             onSelected = { tabManager.setCurrentTab(it) },
             selectedKey = tabsState.currentTabId,
@@ -78,7 +71,7 @@ fun DecoratedWindowScope.TitleBar(
             separator = { UnstyledVerticalSeparator(Color.Black, Modifier.padding(vertical = 4.dp)) },
             tab = { modifier, tabId, isSelected, isFixed ->
                 Tab(
-                    tab = tabsState.getTab(tabId),
+                    tab = tabsState.getTab(tabId) ?: return@ReorderableTabRow,
                     isSelected = isSelected,
                     isFixed = isFixed,
                     closeIcon = Icons.Cross,
@@ -109,7 +102,7 @@ fun DecoratedWindowScope.TitleBar(
 
 @Composable
 fun Tab(
-    tab: Tab,
+    tab: TabItem,
     modifier: Modifier,
     isSelected: Boolean,
     isFixed: Boolean,

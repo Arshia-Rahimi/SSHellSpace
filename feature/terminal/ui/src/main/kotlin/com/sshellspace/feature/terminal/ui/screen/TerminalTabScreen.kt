@@ -9,8 +9,8 @@ import com.sshellspace.feature.terminal.ui.screen.components.BossTerm
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun TerminalTabScreen() {
-    val viewModel = koinViewModel<TerminalTabViewModel>()
-
+fun TerminalTabScreen(
+    viewModel: TerminalTabViewModel,
+) {
     BossTerm(Modifier.fillMaxSize())
 }

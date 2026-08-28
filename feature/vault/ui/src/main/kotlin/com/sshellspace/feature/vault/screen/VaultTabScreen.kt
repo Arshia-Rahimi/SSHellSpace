@@ -9,8 +9,9 @@ import com.composeunstyled.Text
 import org.koin.compose.viewmodel.koinViewModel
 
 @Composable
-fun VaultTabScreen() {
-    val viewModel = koinViewModel<VaultTabViewModel>()
+fun VaultTabScreen(
+    viewModel: VaultTabViewModel,
+) {
     Column(
         modifier = Modifier.fillMaxSize(),
     ) {
