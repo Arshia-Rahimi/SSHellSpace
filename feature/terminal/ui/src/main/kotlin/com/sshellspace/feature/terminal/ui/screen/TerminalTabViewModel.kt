@@ -1,10 +1,11 @@
 package com.sshellspace.feature.terminal.ui.screen
 
-import ai.rever.bossterm.compose.EmbeddableTerminalState
 import androidx.lifecycle.ViewModel
 import com.sshellspace.core.ui.tabs.TabController
 import com.sshellspace.feature.terminal.domain.TerminalPreferencesRepository
 import com.sshellspace.feature.terminal.domain.models.Shell
+import com.sshellspace.feature.terminal.ui.screen.emulators.Terminal
+import com.sshellspace.feature.terminal.ui.screen.emulators.bossterm.BossTermTerminal
 import org.koin.core.annotation.InjectedParam
 
 class TerminalTabViewModel(
@@ -14,6 +15,10 @@ class TerminalTabViewModel(
 ) : ViewModel() {
     private val terminalPrefs = terminalPreferencesRepository.get().value
 
-    val terminalState = EmbeddableTerminalState()
+    val terminal: Terminal = BossTermTerminal(shell)
 
+    override fun onCleared() {
+        super.onCleared()
+        terminal.clear()
+    }
 }

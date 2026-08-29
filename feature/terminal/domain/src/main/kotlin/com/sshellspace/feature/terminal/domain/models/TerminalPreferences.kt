@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class TerminalPreferences(
-    val defaultTerminalEmulator: TerminalEmulator = InitialDefaultTerminalEmulator,
+    val defaultTerminalEmulator: TerminalEmulator = TerminalEmulator.BossTerm,
     val defaultShell: Shell = Shell.DeviceDefault,
 ): Preference
 
