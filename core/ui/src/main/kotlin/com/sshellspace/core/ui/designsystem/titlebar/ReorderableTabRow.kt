@@ -77,7 +77,7 @@ fun <K : Any> ReorderableTabRow(
             }
 
             items(
-                items = tabKeys,
+                items = tabKeys.reversed(),
                 key = { it },
             ) { key ->
                 ReorderableItem(

@@ -6,7 +6,6 @@ import com.sshellspace.core.ui.tabs.TabItem
 import com.sshellspace.core.ui.tabs.TabManager
 import com.sshellspace.core.ui.tabs.TabsState
 import com.sshellspace.core.ui.tabs.contains
-import com.sshellspace.core.ui.tabs.get
 import com.sshellspace.feature.terminal.domain.models.TerminalParams
 import com.sshellspace.feature.terminal.ui.TerminalTabFactory
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -45,19 +44,20 @@ class TabManagerImpl(
 
     override fun closeTab(id: TabId) {
         _tabsState.update { state ->
-            val tabItem = state[id] ?: return@update state
-            tabItem.tab.viewModelStore.clear()
+            val tabIndex = state.tabs.indexOfFirst { it.tab.id == id }
+            if (tabIndex == -1) return@update state
 
-            val newTabs = state.tabs.toMutableList()
+            state.tabs[tabIndex].tab.viewModelStore.clear()
+
+            val newTabs = state.tabs.toMutableList().apply { removeAt(tabIndex) }
 
             val newCurrentTabId =
                 if (state.currentTabId != id) {
                     state.currentTabId
                 } else {
-                    val index = state.tabsSequence.indexOf(tabItem)
-                    newTabs.getOrNull(index - 1)?.tab?.id
-                        ?: state.fixedTab.lastOrNull()?.tab?.id
-                        ?: return@update state
+                    newTabs.getOrNull(tabIndex)?.tab?.id
+                        ?: newTabs.getOrNull(tabIndex - 1)?.tab?.id
+                        ?: state.fixedTab.last().tab.id
                 }
 
             state.copy(

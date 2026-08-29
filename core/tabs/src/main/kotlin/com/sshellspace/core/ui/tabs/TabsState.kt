@@ -13,6 +13,3 @@ data class TabsState(
 
 operator fun TabsState.contains(id: TabId): Boolean =
     tabsSequence.map { it.tab.id }.contains(id)
-
-operator fun TabsState.get(id: TabId): TabItem? =
-    tabsSequence.firstOrNull { it.tab.id == id }

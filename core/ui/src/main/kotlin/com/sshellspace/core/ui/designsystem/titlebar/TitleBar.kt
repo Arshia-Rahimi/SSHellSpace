@@ -46,7 +46,6 @@ fun DecoratedWindowScope.TitleBar(
     val tabManager = koinInject<TabManager>()
     val tabsState by tabManager.tabsState().collectAsStateWithLifecycle()
     var tabKeys by remember { mutableStateOf(emptyList<TabId>()) }
-    println(tabKeys)
 
     LaunchedEffect(Unit) {
         tabManager.onNewTabCreated {
@@ -125,7 +124,7 @@ fun Tab(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
-        Text(tab.title)
+        Text(tab.title + if(isSelected) "1" else 0)
 
         if (!isFixed) {
             IconButton(

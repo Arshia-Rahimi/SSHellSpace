@@ -25,9 +25,11 @@ class TabItem(
     val type: TabType,
     contentProvider: @Composable (TabItem) -> Unit,
     initialTitle: String,
-    val tab: Tab = Tab(),
+    tabId: TabId = generateTabId(),
     initialIcon: ImageVector? = null,
 ) : TabController {
+    val tab: Tab = Tab(tabId)
+
     private var _title: String by mutableStateOf(initialTitle)
     val title: String get() = _title
 

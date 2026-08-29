@@ -1,6 +1,5 @@
 package com.sshellspace.feature.vault
 
-import com.sshellspace.core.ui.tabs.Tab
 import com.sshellspace.core.ui.tabs.TabController
 import com.sshellspace.core.ui.tabs.TabItem
 import com.sshellspace.core.ui.tabs.TabType
@@ -14,7 +13,7 @@ const val VAULT_TAB_ID = "Vault"
 object VaultTab: TabType
 
 val VaultTabItem = TabItem(
-    tab = Tab(VAULT_TAB_ID),
+    tabId = VAULT_TAB_ID,
     type = VaultTab,
     initialTitle = "Vault",
     initialIcon = null,
