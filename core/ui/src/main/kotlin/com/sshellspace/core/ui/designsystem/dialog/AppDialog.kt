@@ -43,14 +43,6 @@ fun AppDialog() {
             Scrim(scrimColor = Color.Black.copy(0.3f), enter = fadeIn(), exit = fadeOut())
         },
     ) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            DialogPanel(
-                modifier = Modifier,
-                content = { currentDialogEvent?.content() },
-            )
-        }
+        currentDialogEvent?.content()
     }
 }

@@ -6,6 +6,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.serialization.Serializable
 
 interface PreferencesRepository {
-    fun <T: @Serializable Preference> get(klass: KClass<T>): Flow<T>
-    suspend fun <T: @Serializable Preference> set(value: T)
+    fun <T: Preference> get(klass: KClass<T>): Flow<T>
+    suspend fun <T: Preference> set(value: T)
 }
