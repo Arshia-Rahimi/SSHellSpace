@@ -6,9 +6,15 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class TerminalColors(
+    val name: String,
     val background: ColorHex,
     val foreground: ColorHex,
-    @SerialName("cursor_color") val cursorColor: ColorHex,
+    val cursor: String,
+    @SerialName("cursor_text") val cursorText: String,
+    val selection: String,
+    @SerialName("selection_text") val selectionText: String,
+    @SerialName("search_match") val searchMatch: String,
+    val hyperlink: String,
     val black: ColorHex,
     @SerialName("bright_black") val brightBlack: ColorHex,
     val red: ColorHex,
