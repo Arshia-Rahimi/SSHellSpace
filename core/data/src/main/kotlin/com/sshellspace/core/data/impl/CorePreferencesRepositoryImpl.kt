@@ -1,7 +1,7 @@
 package com.sshellspace.core.data.impl
 
 import com.sshellspace.core.common.JsonSerializer
-import com.sshellspace.core.data.PreferencesDatasource
+import com.sshellspace.core.domain.repositories.PreferencesDatasource
 import com.sshellspace.core.domain.models.CorePreference
 import com.sshellspace.core.domain.models.ThemePreference
 import com.sshellspace.core.domain.repositories.CorePreferencesRepository
@@ -28,7 +28,6 @@ internal class CorePreferencesRepositoryImpl(
 
     override fun getTheme() = preference
         .map { it.themePreference }
-        .stateIn(scope, SharingStarted.Eagerly, ThemePreference.SYSTEM_DEFAULT)
 
     override suspend fun setTheme(theme: ThemePreference) {
         val current = preference.value

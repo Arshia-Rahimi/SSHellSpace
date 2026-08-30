@@ -27,6 +27,9 @@ import org.apache.sshd.common.config.keys.FilePasswordProvider
 import org.apache.sshd.common.config.keys.KeyUtils
 import org.apache.sshd.common.keyprovider.FileKeyPairProvider
 
+private const val VERIFICATION_TIMEOUT_SECONDS = 10L
+private const val SSH_DEFAULT_PORT = 22
+
 class MinaSshAuthenticator : SshAuthenticator {
     private val sshClient: SshClient by lazy {
         SshClient.setUpDefaultClient().apply { start() }
@@ -105,7 +108,7 @@ class MinaSshAuthenticator : SshAuthenticator {
         val (host, portStr) = hostPort.substringBeforeLast(':') to hostPort.substringAfterLast(':')
         return HostKeyPrompt(
             host = host,
-            port = portStr.toIntOrNull() ?: 22,
+            port = portStr.toIntOrNull() ?: SSH_DEFAULT_PORT,
             fingerprint = KeyUtils.getFingerPrint(key),
             keyType = KeyUtils.getKeyType(key) ?: "unknown",
             isChangedKey = false,
@@ -135,7 +138,7 @@ private class MinaSshSession(private val session: ClientSession) : ShellSession.
         channel.ptyType = "xterm-256color"
         channel.ptyColumns = columns
         channel.ptyLines = rows
-        channel.open().verify(10, TimeUnit.SECONDS)
+        channel.open().verify(VERIFICATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)
         return MinaSshShellHandle(session, channel)
     }
 

@@ -1,7 +1,7 @@
 package com.sshellspace.feature.terminal.data
 
 import com.sshellspace.core.common.JsonSerializer
-import com.sshellspace.core.data.PreferencesDatasource
+import com.sshellspace.core.domain.repositories.PreferencesDatasource
 import com.sshellspace.feature.terminal.domain.TerminalPreferencesRepository
 import com.sshellspace.feature.terminal.domain.models.TerminalPreferences
 import com.sshellspace.feature.terminal.domain.models.UpdateTerminalPreferences

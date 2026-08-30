@@ -1,0 +1,11 @@
+config:
+  validation: true
+
+style:
+  active: true
+
+  ReturnCount:
+    ignoreAnnotated: ["Composable", "Preview"]
+
+  UnusedPrivateFunction:
+    ignoreAnnotated: ["Preview"]

@@ -1,9 +1,11 @@
+import dev.detekt.gradle.extensions.DetektExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.testing.Test
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmExtension
+import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 import utils.versionCatalog
 
 class KotlinLibraryPlugin : Plugin<Project> {
@@ -35,6 +37,10 @@ class KotlinLibraryPlugin : Plugin<Project> {
 
         tasks.withType<Test>().configureEach {
             useJUnitPlatform()
+        }
+
+        extensions.configure<DetektExtension> {
+            config.setFrom(files("$rootDir/detekt.yml"))
         }
     }
 }

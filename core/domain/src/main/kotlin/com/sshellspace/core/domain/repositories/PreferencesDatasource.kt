@@ -1,11 +1,7 @@
-package com.sshellspace.core.data
+package com.sshellspace.core.domain.repositories
 
+import com.sshellspace.core.domain.models.StoredPreference
 import kotlinx.coroutines.flow.Flow
-
-data class StoredPreference(
-    val key: String,
-    val value: String,
-)
 
 interface PreferencesDatasource {
     fun observeAll(): Flow<List<StoredPreference>>

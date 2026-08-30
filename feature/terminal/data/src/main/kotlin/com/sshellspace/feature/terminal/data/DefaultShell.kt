@@ -1,3 +1,5 @@
+@file:Suppress("detekt.style.ReturnCount")
+
 package com.sshellspace.feature.terminal.data
 
 import java.io.File
