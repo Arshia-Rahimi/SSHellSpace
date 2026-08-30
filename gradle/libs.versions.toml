@@ -19,6 +19,7 @@ compose-unstyled = "2.9.0"
 pty4j = "0.13.12"
 bossterm = "1.2.152"
 lifecycle = "2.11.0"
+mina = "2.19.0"
 
 [libraries]
 #koin
@@ -77,6 +78,10 @@ nucleus-tao = { module = "dev.nucleusframework:nucleus.decorated-window-tao", ve
 #bossterm
 bossterm-compose = { module = "com.risaboss:bossterm-compose", version.ref = "bossterm"}
 bossterm-core = { module = "com.risaboss:bossterm-core", version.ref = "bossterm"}
+#mina
+mina-common = { module = "org.apache.sshd:sshd-common", version.ref = "mina" }
+mina-sftp = { module = "org.apache.sshd:sshd-sftp", version.ref = "mina" }
+mina-scp = { module = "org.apache.sshd:sshd-scp", version.ref = "mina" }
 
 pty4j = { module = "org.jetbrains.pty4j:pty4j", version.ref = "pty4j" }
 appdirs = { module ="net.harawata:appdirs", version.ref = "appdirs"}

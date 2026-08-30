@@ -26,10 +26,11 @@ class ShellDiscoveryServiceImpl : ShellDiscoveryService {
             .map { path ->
                 Shell(
                     name = File(path).name,
-                    path = path,
+                    command = path,
+                    isDeviceDefault = isDefaultShell(path, false),
                 )
             }
-            .distinctBy { it.path }
+            .distinctBy { it.command }
             .toList()
     }
 
@@ -48,11 +49,12 @@ class ShellDiscoveryServiceImpl : ShellDiscoveryService {
                 findOnPath(executable)?.let { path ->
                     Shell(
                         name = executable.removeSuffix(".exe"),
-                        path = path,
+                        command = path,
+                        isDeviceDefault = isDefaultShell(path, false),
                     )
                 }
             }
-            .distinctBy { it.path }
+            .distinctBy { it.command }
     }
 
     fun discoverWslShells(): List<Shell> {
@@ -70,7 +72,7 @@ class ShellDiscoveryServiceImpl : ShellDiscoveryService {
         return distributions.map { distro ->
             Shell(
                 name = "WSL ($distro)",
-                path = "$wsl -d $distro",
+                command = "$wsl -d $distro",
             )
         }
     }
