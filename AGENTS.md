@@ -12,7 +12,7 @@ SSHellSpace: a Kotlin/JVM desktop SSH client (Compose Multiplatform for Desktop)
 
 ## Module layout & conventions
 
-- Composite build `build-logic/` defines convention plugins: `project.root`, `project.kotlin.library`, `project.compose.library`, `project.sqldelight`. New modules apply a convention plugin instead of hand-wiring plugins/deps — they auto-add coroutines, Koin, kotlinx-serialization, detekt, and test deps (JUnit4, mockk, kotlin-test, coroutines-test).
+- Composite build `build-logic/` defines convention plugins: `project.root`, `project.kotlin.library`, `project.compose.library`, `project.sqldelight`. New modules apply a convention plugin instead of hand-wiring plugins/deps — they auto-add coroutines, Koin, kotlinx-serialization, detekt, and test deps (JUnit 6/jupiter via `useJUnitPlatform()`, mockk, kotlin-test, coroutines-test).
 - Clean architecture: `core/{common,data,domain,tabs,ui}` and `feature/{vault,terminal,settings,newtab}/{data,domain,ui}`. `app/` is the assembly root (Koin wiring, driver, packaging).
 - Type-safe accessors are enabled — reference modules as `projects.feature.vault.ui`, never string paths.
 - `detekt` is applied to every JVM module via convention with default config (no `detekt.yml`).

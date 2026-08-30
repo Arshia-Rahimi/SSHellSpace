@@ -10,9 +10,11 @@ import com.sshellspace.core.domain.models.Preference
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
 
 internal class SqlDelightPreferencesDatasource(
     driver: SqlDriver,
+    private val json: Json = JsonSerializer,
 ) : PreferencesDatasource {
     private val db = Database(driver)
 
@@ -21,20 +23,20 @@ internal class SqlDelightPreferencesDatasource(
         .asFlow()
         .mapToList(Dispatchers.IO)
         .map { result ->
-            result.map { JsonSerializer.decodeFromString<Preference>(it.value_) }
+            result.map { json.decodeFromString<Preference>(it.value_) }
         }
 
     override suspend fun insert(value: Preference) {
         db.preferencesQueries.insert(
             name = value.qualifiedName,
-            value_ = JsonSerializer.encodeToString(value)
+            value_ = json.encodeToString(value)
         )
     }
 
     override suspend fun update(value: Preference) {
         db.preferencesQueries.update(
             name = value.qualifiedName,
-            value_ = JsonSerializer.encodeToString(value)
+            value_ = json.encodeToString(value)
         )
     }
 }

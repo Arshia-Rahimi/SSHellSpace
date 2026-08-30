@@ -1,6 +1,8 @@
 import org.gradle.api.Plugin
 import org.gradle.api.Project
+import org.gradle.api.tasks.testing.Test
 import org.gradle.kotlin.dsl.configure
+import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmExtension
 import utils.versionCatalog
 
@@ -25,9 +27,14 @@ class KotlinLibraryPlugin : Plugin<Project> {
             "implementation" to "kotlinx-datetime",
             "implementation" to "kotlinx-coroutines-swing",
             "testImplementation" to "coroutines-test",
-            "testImplementation" to "junit",
+            "testImplementation" to "junit-jupiter",
+            "testRuntimeOnly" to "junit-platform-launcher",
             "testImplementation" to "kotlin-test",
             "testImplementation" to "mockk",
         )
+
+        tasks.withType<Test>().configureEach {
+            useJUnitPlatform()
+        }
     }
 }
