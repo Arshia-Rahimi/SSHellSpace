@@ -20,7 +20,7 @@ data class BossTermTerminal(
         BossTerm(
             modifier = modifier,
             terminalState = embeddedTerminalState,
-            command = shell.path,
+            command = shell.command ?: "",
         )
     }
 }

@@ -1,11 +1,13 @@
 package com.sshellspace.core.data
 
-import com.sshellspace.core.domain.models.Preference
 import kotlinx.coroutines.flow.Flow
-import kotlinx.serialization.Serializable
+
+data class StoredPreference(
+    val key: String,
+    val value: String,
+)
 
 interface PreferencesDatasource {
-    fun get(): Flow<List<Preference>>
-    suspend fun insert(value: @Serializable Preference)
-    suspend fun update(value: @Serializable Preference)
+    fun observeAll(): Flow<List<StoredPreference>>
+    suspend fun set(key: String, value: String)
 }

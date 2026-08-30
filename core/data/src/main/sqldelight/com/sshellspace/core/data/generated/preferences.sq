@@ -6,10 +6,5 @@ CREATE TABLE preferences_table (
 index:
 SELECT * FROM preferences_table;
 
-insert:
-INSERT INTO preferences_table VALUES (?, ?);
-
-update:
-UPDATE preferences_table
-SET value = ?
-WHERE name = ?;
+upsert:
+INSERT OR REPLACE INTO preferences_table(name, value) VALUES (?, ?);

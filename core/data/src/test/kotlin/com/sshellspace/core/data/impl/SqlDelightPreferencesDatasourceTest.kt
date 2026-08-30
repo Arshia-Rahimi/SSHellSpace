@@ -2,7 +2,7 @@ package com.sshellspace.core.data.impl
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.shellspace.core.data.generated.Database
-import com.sshellspace.core.domain.models.Preference
+import com.sshellspace.core.data.StoredPreference
 import java.util.Properties
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -11,10 +11,6 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
-import kotlinx.serialization.json.Json
-import kotlinx.serialization.modules.SerializersModule
-import kotlinx.serialization.modules.polymorphic
-import kotlinx.serialization.modules.subclass
 
 class SqlDelightPreferencesDatasourceTest {
 
@@ -24,71 +20,53 @@ class SqlDelightPreferencesDatasourceTest {
             schema = Database.Schema,
             properties = Properties(),
         ),
-        json = Json {
-            serializersModule = SerializersModule {
-                polymorphic(Preference::class) {
-                    subclass(FooPreference::class)
-                    subclass(BarPreference::class)
-                }
-            }
-        },
     )
 
     @Test
-    fun `get emits empty list initially`() = runTest {
-        val result = datasource.get().first()
-
-        assertTrue(result.isEmpty())
+    fun `observeAll emits empty list initially`() = runTest {
+        assertTrue(datasource.observeAll().first().isEmpty())
     }
 
     @Test
-    fun `get emits inserted preference`() = runTest {
-        val preference = FooPreference("hello")
+    fun `set stores key value pair`() = runTest {
+        datasource.set("key", "value")
 
-        datasource.insert(preference)
+        val result = datasource.observeAll().first()
 
-        val result = datasource.get().first()
-
-        assertEquals(listOf(preference), result)
+        assertEquals(listOf(StoredPreference(key = "key", value = "value")), result)
     }
 
     @Test
-    fun `get emits preferences of different types`() = runTest {
-        val foo = FooPreference("foo")
-        val bar = BarPreference("bar")
+    fun `set stores independent keys`() = runTest {
+        datasource.set("a", "1")
+        datasource.set("b", "2")
 
-        datasource.insert(foo)
-        datasource.insert(bar)
+        val result = datasource.observeAll().first()
 
-        val result = datasource.get().first()
-
-        assertTrue(result.contains(foo))
-        assertTrue(result.contains(bar))
+        assertTrue(result.contains(StoredPreference(key = "a", value = "1")))
+        assertTrue(result.contains(StoredPreference(key = "b", value = "2")))
     }
 
     @Test
-    fun `get emits updated preference after update`() = runTest {
-        datasource.insert(FooPreference("old"))
-        val updated = FooPreference("new")
+    fun `set overwrites existing key`() = runTest {
+        datasource.set("key", "old")
+        datasource.set("key", "new")
 
-        datasource.update(updated)
+        val result = datasource.observeAll().first()
 
-        val result = datasource.get().first()
-
-        assertEquals(listOf(updated), result)
+        assertEquals(listOf(StoredPreference(key = "key", value = "new")), result)
     }
 
     @Test
-    fun `get re-emits when a preference is inserted`() = runTest {
-        val emissions = Channel<List<Preference>>(Channel.UNLIMITED)
-        val collection = launch { datasource.get().collect { emissions.trySend(it) } }
+    fun `observeAll re-emits when a key is set`() = runTest {
+        val emissions = Channel<List<StoredPreference>>(Channel.UNLIMITED)
+        val collection = launch { datasource.observeAll().collect { emissions.trySend(it) } }
 
         assertTrue(emissions.receive().isEmpty())
 
-        val inserted = FooPreference("new")
-        datasource.insert(inserted)
+        datasource.set("key", "value")
 
-        assertEquals(listOf(inserted), emissions.receive())
+        assertEquals(listOf(StoredPreference(key = "key", value = "value")), emissions.receive())
 
         collection.cancel()
     }
