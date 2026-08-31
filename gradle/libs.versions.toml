@@ -20,6 +20,7 @@ pty4j = "0.13.12"
 bossterm = "1.2.152"
 lifecycle = "2.11.0"
 mina = "2.19.0"
+java-keyring = "1.0.4"
 
 [libraries]
 #koin
@@ -84,6 +85,7 @@ mina-common = { module = "org.apache.sshd:sshd-common", version.ref = "mina" }
 mina-sftp = { module = "org.apache.sshd:sshd-sftp", version.ref = "mina" }
 mina-scp = { module = "org.apache.sshd:sshd-scp", version.ref = "mina" }
 
+java-keyring = { module = "com.github.javakeyring:java-keyring", version.ref = "java-keyring" }
 pty4j = { module = "org.jetbrains.pty4j:pty4j", version.ref = "pty4j" }
 appdirs = { module ="net.harawata:appdirs", version.ref = "appdirs"}
 
