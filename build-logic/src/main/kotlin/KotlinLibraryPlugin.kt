@@ -5,7 +5,6 @@ import org.gradle.api.tasks.testing.Test
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmExtension
-import org.jetbrains.kotlin.gradle.dsl.KotlinJvmProjectExtension
 import utils.versionCatalog
 
 class KotlinLibraryPlugin : Plugin<Project> {

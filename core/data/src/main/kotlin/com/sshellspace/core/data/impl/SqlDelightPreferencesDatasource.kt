@@ -3,7 +3,7 @@ package com.sshellspace.core.data.impl
 import app.cash.sqldelight.coroutines.asFlow
 import app.cash.sqldelight.coroutines.mapToList
 import app.cash.sqldelight.db.SqlDriver
-import com.shellspace.core.data.generated.Database
+import com.sshellspace.core.data.generated.Database
 import com.sshellspace.core.domain.models.StoredPreference
 import com.sshellspace.core.domain.repositories.PreferencesDatasource
 import kotlinx.coroutines.Dispatchers

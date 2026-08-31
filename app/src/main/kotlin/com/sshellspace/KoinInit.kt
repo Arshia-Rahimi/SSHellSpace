@@ -2,6 +2,7 @@ package com.sshellspace
 
 import app.cash.sqldelight.db.SqlDriver
 import com.sshellspace.config.DEFAULT_TAB_ID
+import com.sshellspace.config.createSqliteDriver
 import com.sshellspace.config.fixedTabItems
 import com.sshellspace.core.data.DataModule
 import com.sshellspace.core.ui.tabs.TabManager

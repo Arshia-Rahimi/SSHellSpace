@@ -56,7 +56,7 @@ nucleus.application {
 sqldelight {
     databases {
         create("Database") {
-            packageName.set("com.shellspace.generated")
+            packageName.set("com.sshellspace.generated")
         }
     }
 }

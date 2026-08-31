@@ -14,7 +14,7 @@ class SqldelightPlugin : Plugin<Project> {
         extensions.configure<SqlDelightExtension> {
             databases {
                 create("Database") {
-                    packageName.set("com.shellspace.$modulePath.generated")
+                    packageName.set("com.sshellspace.$modulePath.generated")
                 }
             }
         }

@@ -1,7 +1,7 @@
-package com.sshellspace
+package com.sshellspace.config
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
-import com.shellspace.generated.Database
+import com.sshellspace.generated.Database
 import java.io.File
 import java.util.Properties
 import net.harawata.appdirs.AppDirsFactory
