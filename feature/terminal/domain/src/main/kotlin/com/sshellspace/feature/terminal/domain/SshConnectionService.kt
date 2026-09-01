@@ -1,7 +1,9 @@
 package com.sshellspace.feature.terminal.domain
 
-interface SshAuthenticator {
-    suspend fun connect(config: SshConnectionConfig): SshConnectionResult
+import kotlinx.coroutines.flow.Flow
+
+interface SshConnectionService {
+    suspend fun connect(config: SshConnectionConfig): Flow<SshConnectionStatus>
 }
 
 data class SshConnectionConfig(
@@ -65,9 +67,9 @@ data class HostKeyPrompt(
     val isChangedKey: Boolean,
 )
 
-sealed class SshConnectionResult {
-    data class Success(val session: ShellSession.Ssh) : SshConnectionResult()
-    data class HostKeyRejected(val prompt: HostKeyPrompt) : SshConnectionResult()
-    data class AuthFailed(val reason: String) : SshConnectionResult()
-    data class ConnectFailed(val cause: Throwable) : SshConnectionResult()
+sealed class SshConnectionStatus {
+    data class Success(val session: ShellSession.Ssh) : SshConnectionStatus()
+    data class HostKeyRejected(val prompt: HostKeyPrompt) : SshConnectionStatus()
+    data class AuthFailed(val reason: String) : SshConnectionStatus()
+    data class ConnectFailed(val cause: Throwable) : SshConnectionStatus()
 }

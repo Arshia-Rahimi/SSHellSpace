@@ -3,9 +3,9 @@ package com.sshellspace.feature.terminal.data
 import com.sshellspace.feature.terminal.domain.HostKeyPrompt
 import com.sshellspace.feature.terminal.domain.ShellSession
 import com.sshellspace.feature.terminal.domain.SshAuthMethod
-import com.sshellspace.feature.terminal.domain.SshAuthenticator
+import com.sshellspace.feature.terminal.domain.SshConnectionService
 import com.sshellspace.feature.terminal.domain.SshConnectionConfig
-import com.sshellspace.feature.terminal.domain.SshConnectionResult
+import com.sshellspace.feature.terminal.domain.SshConnectionStatus
 import com.sshellspace.feature.terminal.domain.SshShellHandle
 import java.net.SocketAddress
 import java.nio.file.Files
@@ -30,12 +30,12 @@ import org.apache.sshd.common.keyprovider.FileKeyPairProvider
 private const val VERIFICATION_TIMEOUT_SECONDS = 10L
 private const val SSH_DEFAULT_PORT = 22
 
-class MinaSshAuthenticator : SshAuthenticator {
+class MinaSshConnectionService : SshConnectionService {
     private val sshClient: SshClient by lazy {
         SshClient.setUpDefaultClient().apply { start() }
     }
 
-    override suspend fun connect(config: SshConnectionConfig): SshConnectionResult =
+    override suspend fun connect(config: SshConnectionConfig): SshConnectionStatus =
         withContext(Dispatchers.IO) {
             try {
                 Files.createDirectories(Paths.get(config.knownHostsPath).parent)
@@ -53,7 +53,7 @@ class MinaSshAuthenticator : SshAuthenticator {
 
                 rejectedPrompt?.let {
                     session.close(false)
-                    return@withContext SshConnectionResult.HostKeyRejected(it)
+                    return@withContext SshConnectionStatus.HostKeyRejected(it)
                 }
 
                 applyAuth(session, config.auth)
@@ -61,14 +61,14 @@ class MinaSshAuthenticator : SshAuthenticator {
 
                 if (!session.isAuthenticated) {
                     session.close(false)
-                    return@withContext SshConnectionResult.AuthFailed(
+                    return@withContext SshConnectionStatus.AuthFailed(
                         "Authentication failed for ${config.username}@${config.host}"
                     )
                 }
 
-                SshConnectionResult.Success(MinaSshSession(session))
+                SshConnectionStatus.Success(MinaSshSession(session))
             } catch (t: Throwable) {
-                SshConnectionResult.ConnectFailed(t)
+                SshConnectionStatus.ConnectFailed(t)
             }
         }
 
