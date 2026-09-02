@@ -61,13 +61,13 @@ class MinaSshKeyService : SshKeyService {
                     isEncrypted = detectedEncryption
                 )
             } else if (detectedEncryption && passphraseAttempted) {
-                KeyValidationResult.InvalidPassphrase(isEncrypted = true)
+                KeyValidationResult.InvalidPassphrase
             } else {
                 KeyValidationResult.InvalidKeyFormat("No valid key pairs could be parsed from the input.")
             }
         } catch (e: Exception) {
             if (detectedEncryption && passphraseAttempted) {
-                KeyValidationResult.InvalidPassphrase(isEncrypted = true)
+                KeyValidationResult.InvalidPassphrase
             } else {
                 KeyValidationResult.InvalidKeyFormat(
                     errorMessage = e.message ?: "Failed to decode private key format."

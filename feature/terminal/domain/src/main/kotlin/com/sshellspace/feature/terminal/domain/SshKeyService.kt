@@ -17,9 +17,7 @@ sealed interface KeyValidationResult {
         val isEncrypted: Boolean,
     ) : KeyValidationResult
 
-    data class InvalidPassphrase(
-        val isEncrypted: Boolean = true
-    ) : KeyValidationResult
+    data object InvalidPassphrase : KeyValidationResult
 
     data class InvalidKeyFormat(
         val errorMessage: String
