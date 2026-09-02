@@ -1,15 +1,17 @@
 package com.sshellspace.feature.terminal.domain
 
 import com.sshellspace.feature.terminal.domain.models.Algorithm
-import com.sshellspace.feature.terminal.domain.models.SshKey
+import com.sshellspace.feature.terminal.domain.models.PrivateKey
+import com.sshellspace.feature.terminal.domain.models.PublicKey
 
 interface SshKeyService {
-    suspend fun validate(key: SshKey): KeyValidationResult
-    suspend fun generate(
+    fun validate(key: PrivateKey, passphrase: String? = null): KeyValidationResult
+    fun generate(
         comment: String,
-        algorithm: Algorithm,
         passphrase: String? = null,
-    ): SshKey
+        algorithm: Algorithm = Algorithm.ED25519,
+        keySize: Int = 256,
+    ): Pair<PrivateKey, PublicKey>
 }
 
 sealed interface KeyValidationResult {

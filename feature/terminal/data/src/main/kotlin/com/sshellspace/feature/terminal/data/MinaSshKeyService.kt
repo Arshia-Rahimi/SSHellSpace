@@ -3,8 +3,8 @@ package com.sshellspace.feature.terminal.data
 import com.sshellspace.feature.terminal.domain.KeyValidationResult
 import com.sshellspace.feature.terminal.domain.SshKeyService
 import com.sshellspace.feature.terminal.domain.models.Algorithm
-import com.sshellspace.feature.terminal.domain.models.KeyPair
-import com.sshellspace.feature.terminal.domain.models.SshKey
+import com.sshellspace.feature.terminal.domain.models.PrivateKey
+import com.sshellspace.feature.terminal.domain.models.PublicKey
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.security.Security
@@ -25,7 +25,7 @@ class MinaSshKeyService : SshKeyService {
         }
     }
 
-    override suspend fun validate(key: SshKey): KeyValidationResult {
+    override fun validate(key: PrivateKey, passphrase: String?): KeyValidationResult {
         var detectedEncryption = false
         var passphraseAttempted = false
 
@@ -41,13 +41,13 @@ class MinaSshKeyService : SshKeyService {
                     return null
                 }
                 passphraseAttempted = true
-                return key.passphrase
+                return passphrase
             }
         }
 
         return try {
             val parser = SecurityUtils.getKeyPairResourceParser()
-            val inputStream = ByteArrayInputStream(key.privateKey.toByteArray(Charsets.UTF_8))
+            val inputStream = ByteArrayInputStream(key.toByteArray(Charsets.UTF_8))
 
             val keyPair = parser.loadKeyPairs(
                 null,
@@ -76,22 +76,12 @@ class MinaSshKeyService : SshKeyService {
         }
     }
 
-    override suspend fun generate(
+    override fun generate(
         comment: String,
-        algorithm: Algorithm,
         passphrase: String?,
-    ): SshKey = SshKey(
-        algorithm = algorithm,
-        privateKey = generateSshKeyPair(algorithm, comment, passphrase).private,
-        passphrase = passphrase,
-    )
-
-    fun generateSshKeyPair(
         algorithm: Algorithm,
-        comment: String,
-        passphrase: String? = null,
-        keySize: Int = 256,
-    ): KeyPair {
+        keySize: Int,
+    ): Pair<PrivateKey, PublicKey> {
         val keyPair = KeyUtils.generateKeyPair(algorithm.type, keySize)
         val publicKeyWithComment = "${PublicKeyEntry.toString(keyPair.public)} $comment"
 
@@ -100,12 +90,13 @@ class MinaSshKeyService : SshKeyService {
         val options: OpenSSHKeyEncryptionContext? = passphrase?.let {
             OpenSSHKeyEncryptionContext().apply {
                 password = passphrase
-                cipherName = BuiltinCiphers.aes128ctr.name
+                cipherName = "AES"
+                cipherType = "256"
             }
         }
         writer.writePrivateKey(keyPair, comment, options, outputStream)
         val privateKey = outputStream.toString(Charsets.UTF_8.name())
 
-        return KeyPair(privateKey, publicKeyWithComment)
+        return privateKey to publicKeyWithComment
     }
 }

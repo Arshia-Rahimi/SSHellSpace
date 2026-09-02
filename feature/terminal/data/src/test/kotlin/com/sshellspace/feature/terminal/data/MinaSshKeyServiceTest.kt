@@ -4,29 +4,35 @@ import com.sshellspace.feature.terminal.domain.KeyValidationResult
 import com.sshellspace.feature.terminal.domain.models.Algorithm
 import kotlin.test.Test
 import kotlin.test.assertEquals
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
 
 class MinaSshKeyServiceTest {
 
     private val service = MinaSshKeyService()
-    private val scope = CoroutineScope(Dispatchers.Main)
 
     @Test
-    fun `validate ED25519 key generated without passphrase returns true`() {
-        scope.launch {
-            val key = service.generate("user@test.com", Algorithm.ED25519)
-            assertEquals(service.validate(key), KeyValidationResult.Success(isEncrypted = false))
-        }
+    fun `validate ED25519 key generated without passphrase`() {
+        val key = service.generate("user@test.com", algorithm = Algorithm.ED25519)
+        assertEquals(service.validate(key.first), KeyValidationResult.Success(isEncrypted = false))
     }
 
     @Test
-    fun `validate RSA key generated without passphrase returns true`() {
-        scope.launch {
-            val key = service.generate("user@test.com", Algorithm.RSA)
-            assertEquals(service.validate(key), KeyValidationResult.Success(isEncrypted = false))
-        }
+    fun `validate RSA key generated without passphrase`() {
+        val key = service.generate("user@test.com", algorithm = Algorithm.RSA)
+        assertEquals(service.validate(key.first), KeyValidationResult.Success(isEncrypted = false))
+    }
+
+    @Test
+    fun `validate ED25519 key generated with passphrase`() {
+        val passphrase = "test"
+        val key = service.generate("user@test.com", passphrase, Algorithm.ED25519)
+        assertEquals(service.validate(key.first, passphrase), KeyValidationResult.Success(isEncrypted = true))
+    }
+
+    @Test
+    fun `validate RSA key generated with passphrase`() {
+        val passphrase = "test"
+        val key = service.generate("user@test.com", passphrase, Algorithm.RSA)
+        assertEquals(service.validate(key.first, passphrase), KeyValidationResult.Success(isEncrypted = true))
     }
 
 //    @Test
