@@ -2,7 +2,7 @@ package com.sshellspace.core.data.impl
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.sshellspace.core.common.JsonSerializer
-import com.shellspace.core.data.generated.Database
+import com.sshellspace.core.data.generated.Database
 import com.sshellspace.core.domain.models.CorePreference
 import com.sshellspace.core.domain.models.ThemePreference
 import java.util.Properties

@@ -27,6 +27,7 @@ class KotlinLibraryPlugin : Plugin<Project> {
             "implementation" to "kotlinx-serialization-json",
             "implementation" to "kotlinx-datetime",
             "implementation" to "kotlinx-coroutines-swing",
+            "implementation" to "kotlinx-io",
             "testImplementation" to "coroutines-test",
             "testImplementation" to "junit-jupiter",
             "testRuntimeOnly" to "junit-platform-launcher",

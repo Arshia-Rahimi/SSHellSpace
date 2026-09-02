@@ -8,8 +8,8 @@ dependencies {
     implementation(projects.core.data)
     implementation(projects.core.common)
     //
-    implementation(libs.java.keyring)
     implementation(libs.mina.common)
     implementation(libs.mina.sftp)
     implementation(libs.mina.scp)
+    implementation(libs.bouncy.castle)
 }

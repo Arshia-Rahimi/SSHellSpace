@@ -21,6 +21,8 @@ bossterm = "1.2.152"
 lifecycle = "2.11.0"
 mina = "2.19.0"
 java-keyring = "1.0.4"
+kotlinx-io = "0.9.1"
+bouncy-castle = "1.85.2"
 
 [libraries]
 #koin
@@ -68,6 +70,7 @@ mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization-json" }
 kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinx-coroutines" }
+kotlinx-io = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinx-io" }
 #sqldelight
 sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight"}
 sqldelight-desktop = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight"}
@@ -85,7 +88,7 @@ mina-common = { module = "org.apache.sshd:sshd-common", version.ref = "mina" }
 mina-sftp = { module = "org.apache.sshd:sshd-sftp", version.ref = "mina" }
 mina-scp = { module = "org.apache.sshd:sshd-scp", version.ref = "mina" }
 
-java-keyring = { module = "com.github.javakeyring:java-keyring", version.ref = "java-keyring" }
+bouncy-castle = { module = "org.bouncycastle:bcprov-jdk18on", version.ref = "bouncy-castle"}
 pty4j = { module = "org.jetbrains.pty4j:pty4j", version.ref = "pty4j" }
 appdirs = { module ="net.harawata:appdirs", version.ref = "appdirs"}
 

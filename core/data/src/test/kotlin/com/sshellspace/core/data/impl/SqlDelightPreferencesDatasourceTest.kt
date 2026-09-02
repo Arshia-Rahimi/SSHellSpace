@@ -1,7 +1,7 @@
 package com.sshellspace.core.data.impl
 
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
-import com.shellspace.core.data.generated.Database
+import com.sshellspace.core.data.generated.Database
 import com.sshellspace.core.domain.models.StoredPreference
 import java.util.Properties
 import kotlin.test.Test
