@@ -10,10 +10,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.map
 
 internal class SqlDelightPreferencesDatasource(
-    driver: SqlDriver,
+    private val db: Database,
 ) : PreferencesDatasource {
-    private val db = Database(driver)
-
     override fun observeAll() = db.preferencesQueries
         .index()
         .asFlow()

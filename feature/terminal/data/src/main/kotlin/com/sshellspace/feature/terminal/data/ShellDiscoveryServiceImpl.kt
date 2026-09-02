@@ -1,7 +1,7 @@
 package com.sshellspace.feature.terminal.data
 
-import com.sshellspace.core.domain.OS
-import com.sshellspace.core.domain.getOs
+import com.sshellspace.core.domain.models.OS
+import com.sshellspace.core.domain.models.getOs
 import com.sshellspace.feature.terminal.domain.models.Shell
 import com.sshellspace.feature.terminal.domain.ShellDiscoveryService
 import java.io.File

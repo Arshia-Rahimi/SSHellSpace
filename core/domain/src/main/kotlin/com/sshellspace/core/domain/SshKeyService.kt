@@ -1,9 +1,8 @@
-package com.sshellspace.feature.terminal.domain
+package com.sshellspace.core.domain
 
-import com.sshellspace.feature.terminal.domain.models.Algorithm
-import com.sshellspace.feature.terminal.domain.models.KeyPair
-import com.sshellspace.feature.terminal.domain.models.PrivateKey
-import com.sshellspace.feature.terminal.domain.models.PublicKey
+import com.sshellspace.core.domain.models.Algorithm
+import com.sshellspace.core.domain.models.KeyPair
+import com.sshellspace.core.domain.models.PrivateKey
 
 interface SshKeyService {
     fun validate(key: PrivateKey, passphrase: String? = null): KeyValidationResult

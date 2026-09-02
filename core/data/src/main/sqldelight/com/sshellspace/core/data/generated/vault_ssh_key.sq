@@ -1,0 +1,27 @@
+import com.sshellspace.core.domain.models.Algorithm;
+
+CREATE TABLE vault_ssh_keys(
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    algorithm TEXT AS Algorithm NOT NULL,
+    private_key TEXT NOT NULL
+);
+
+index:
+SELECT * FROM vault_ssh_keys;
+
+get:
+SELECT * FROM vault_ssh_keys
+WHERE id = ?;
+
+insert:
+INSERT INTO vault_ssh_keys VALUES ?;
+
+update:
+UPDATE vault_ssh_keys
+SET name = ?
+WHERE id = ?;
+
+delete:
+DELETE FROM vault_ssh_keys
+WHERE id = ?;

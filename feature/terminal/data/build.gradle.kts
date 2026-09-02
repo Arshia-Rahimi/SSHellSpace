@@ -11,5 +11,4 @@ dependencies {
     implementation(libs.mina.common)
     implementation(libs.mina.sftp)
     implementation(libs.mina.scp)
-    implementation(libs.bouncy.castle)
 }

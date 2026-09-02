@@ -1,0 +1,28 @@
+import com.sshellspace.core.domain.models.Algorithm;
+
+CREATE TABLE device_ssh_keys (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    algorithm TEXT AS Algorithm NOT NULL,
+    path TEXT NOT NULL,
+    passphrase TEXT
+);
+
+index:
+SELECT * FROM device_ssh_keys;
+
+get:
+SELECT * FROM device_ssh_keys
+WHERE id = ?;
+
+insert:
+INSERT INTO device_ssh_keys VALUES ?;
+
+update:
+UPDATE device_ssh_keys
+SET name = ?
+WHERE id = ?;
+
+delete:
+DELETE FROM device_ssh_keys
+WHERE id = ?;

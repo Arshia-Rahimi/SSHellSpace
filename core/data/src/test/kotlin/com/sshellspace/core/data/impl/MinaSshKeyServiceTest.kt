@@ -1,7 +1,7 @@
-package com.sshellspace.feature.terminal.data
+package com.sshellspace.core.data.impl
 
-import com.sshellspace.feature.terminal.domain.KeyValidationResult
-import com.sshellspace.feature.terminal.domain.models.Algorithm
+import com.sshellspace.core.domain.KeyValidationResult
+import com.sshellspace.core.domain.models.Algorithm
 import kotlin.random.Random
 import kotlin.test.Test
 import kotlin.test.assertEquals

@@ -1,38 +1,46 @@
-package com.sshellspace.feature.terminal.domain.models
+package com.sshellspace.core.domain.models
 
 import kotlin.uuid.Uuid
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 
-sealed interface SshCredentials {
-    val name: String
+typealias KeyPair = Pair<PrivateKey, PublicKey>
+typealias PrivateKey = String
+typealias PublicKey = String
+
+sealed interface SshKey {
     val key: PrivateKey
     val passphrase: String?
     val algorithm: Algorithm
 
     data class Vault(
-        override val name: String,
         override val key: PrivateKey,
         override val algorithm: Algorithm,
-        val id: Uuid,
-    ) : SshCredentials {
+    ) : SshKey {
         override val passphrase: String? = null
     }
 
     data class Device(
-        override val name: String,
         override val passphrase: String?,
         override val algorithm: Algorithm,
         val path: String,
-    ) : SshCredentials {
+    ) : SshKey {
         override val key: PrivateKey
             get() = SystemFileSystem.source(Path(path)).use { it.toString() }
     }
 }
 
-typealias KeyPair = Pair<PrivateKey, PublicKey>
-typealias PrivateKey = String
-typealias PublicKey = String
+data class SshKeyInfo(
+    val id: Uuid,
+    val name: String,
+    val algorithm: Algorithm,
+    val type: SshKeyType,
+)
+
+enum class SshKeyType {
+    DEVICE,
+    VAULT,
+}
 
 enum class Algorithm(
     val type: String,

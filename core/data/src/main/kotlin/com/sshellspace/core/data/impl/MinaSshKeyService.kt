@@ -1,10 +1,10 @@
-package com.sshellspace.feature.terminal.data
+package com.sshellspace.core.data.impl
 
-import com.sshellspace.feature.terminal.domain.KeyValidationResult
-import com.sshellspace.feature.terminal.domain.SshKeyService
-import com.sshellspace.feature.terminal.domain.models.Algorithm
-import com.sshellspace.feature.terminal.domain.models.KeyPair
-import com.sshellspace.feature.terminal.domain.models.PrivateKey
+import com.sshellspace.core.domain.KeyValidationResult
+import com.sshellspace.core.domain.SshKeyService
+import com.sshellspace.core.domain.models.Algorithm
+import com.sshellspace.core.domain.models.KeyPair
+import com.sshellspace.core.domain.models.PrivateKey
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.security.Security

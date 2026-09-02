@@ -1,4 +1,4 @@
-package com.sshellspace.core.domain
+package com.sshellspace.core.domain.models
 
 enum class OS {
     Linux,
