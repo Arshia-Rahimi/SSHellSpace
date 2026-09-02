@@ -1,135 +1,32 @@
 package com.sshellspace.feature.terminal.data
 
-import com.sshellspace.feature.terminal.domain.HostKeyPrompt
 import com.sshellspace.feature.terminal.domain.ShellSession
-import com.sshellspace.feature.terminal.domain.SshAuthMethod
 import com.sshellspace.feature.terminal.domain.SshConnectionService
-import com.sshellspace.feature.terminal.domain.SshConnectionConfig
 import com.sshellspace.feature.terminal.domain.SshConnectionStatus
 import com.sshellspace.feature.terminal.domain.SshShellHandle
-import java.net.SocketAddress
-import java.nio.file.Files
-import java.nio.file.Paths
-import java.security.PublicKey
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
-import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 import org.apache.sshd.client.SshClient
 import org.apache.sshd.client.channel.ChannelShell
 import org.apache.sshd.client.channel.ClientChannelEvent
-import org.apache.sshd.client.keyverifier.KnownHostsServerKeyVerifier
-import org.apache.sshd.client.keyverifier.ServerKeyVerifier
 import org.apache.sshd.client.session.ClientSession
-import org.apache.sshd.common.config.keys.FilePasswordProvider
-import org.apache.sshd.common.config.keys.KeyUtils
-import org.apache.sshd.common.keyprovider.FileKeyPairProvider
 
-private const val VERIFICATION_TIMEOUT_SECONDS = 10L
-private const val SSH_DEFAULT_PORT = 22
+class MinaSshConnectionService(
+    private val sshClient: SshClient,
+): SshConnectionService {
+    private val _status = MutableStateFlow(SshConnectionStatus.Idle)
+    override val status = _status.asStateFlow()
 
-class MinaSshConnectionService : SshConnectionService {
-    private val sshClient: SshClient by lazy {
-        SshClient.setUpDefaultClient().apply { start() }
-    }
-
-    override suspend fun connect(config: SshConnectionConfig): SshConnectionStatus =
-        withContext(Dispatchers.IO) {
-            try {
-                Files.createDirectories(Paths.get(config.knownHostsPath).parent)
-
-                var rejectedPrompt: HostKeyPrompt? = null
-                sshClient.serverKeyVerifier = buildVerifier(config) { prompt ->
-                    val accepted = runBlockingPrompt(config.onHostKeyPrompt, prompt)
-                    if (!accepted) rejectedPrompt = prompt
-                    accepted
-                }
-
-                val connectFuture = sshClient.connect(config.username, config.host, config.port)
-                    .verify(config.connectTimeoutSeconds, TimeUnit.SECONDS)
-                val session = connectFuture.session
-
-                rejectedPrompt?.let {
-                    session.close(false)
-                    return@withContext SshConnectionStatus.HostKeyRejected(it)
-                }
-
-                applyAuth(session, config.auth)
-                session.auth().verify(config.authTimeoutSeconds, TimeUnit.SECONDS)
-
-                if (!session.isAuthenticated) {
-                    session.close(false)
-                    return@withContext SshConnectionStatus.AuthFailed(
-                        "Authentication failed for ${config.username}@${config.host}"
-                    )
-                }
-
-                SshConnectionStatus.Success(MinaSshSession(session))
-            } catch (t: Throwable) {
-                SshConnectionStatus.ConnectFailed(t)
-            }
-        }
-
-    private fun applyAuth(session: ClientSession, auth: SshAuthMethod) {
-        when (auth) {
-            is SshAuthMethod.Agent -> {
-                // Requires agent support wired on SshClient (see agentFactory setup);
-                // no extra per-session code needed once that's configured.
-            }
-
-            is SshAuthMethod.PrivateKey -> {
-                val provider = FileKeyPairProvider(Paths.get(auth.path))
-                auth.passphrase?.let {
-                    provider.passwordFinder = FilePasswordProvider.of(String(it))
-                }
-                provider.loadKeys(session).forEach { session.addPublicKeyIdentity(it) }
-            }
-
-            is SshAuthMethod.Password -> {
-                session.addPasswordIdentity(String(auth.password))
-            }
-        }
-    }
-
-    private fun buildVerifier(
-        config: SshConnectionConfig,
-        onPrompt: (HostKeyPrompt) -> Boolean,
-    ): ServerKeyVerifier {
-        val fallback = ServerKeyVerifier { _, remoteAddress, serverKey ->
-            onPrompt(toPrompt(remoteAddress, serverKey))
-        }
-        return KnownHostsServerKeyVerifier(fallback, Paths.get(config.knownHostsPath))
-    }
-
-    private fun toPrompt(address: SocketAddress, key: PublicKey): HostKeyPrompt {
-        val hostPort = address.toString().trimStart('/')
-        val (host, portStr) = hostPort.substringBeforeLast(':') to hostPort.substringAfterLast(':')
-        return HostKeyPrompt(
-            host = host,
-            port = portStr.toIntOrNull() ?: SSH_DEFAULT_PORT,
-            fingerprint = KeyUtils.getFingerPrint(key),
-            keyType = KeyUtils.getKeyType(key) ?: "unknown",
-            isChangedKey = false,
-        )
-    }
-
-    @OptIn(ExperimentalCoroutinesApi::class)
-    private fun runBlockingPrompt(
-        prompt: suspend (HostKeyPrompt) -> Boolean,
-        request: HostKeyPrompt,
-    ): Boolean {
-        val deferred = CompletableDeferred<Boolean>()
-        kotlinx.coroutines.runBlocking {
-            deferred.complete(prompt(request))
-        }
-        return deferred.getCompleted()
+    override suspend fun connect() {
+        TODO("Not yet implemented")
     }
 }
 
 private class MinaSshSession(private val session: ClientSession) : ShellSession.Ssh {
-
     override val isAuthenticated: Boolean
         get() = session.isAuthenticated
 
@@ -138,7 +35,7 @@ private class MinaSshSession(private val session: ClientSession) : ShellSession.
         channel.ptyType = "xterm-256color"
         channel.ptyColumns = columns
         channel.ptyLines = rows
-        channel.open().verify(VERIFICATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+        channel.open().verify(10L, TimeUnit.SECONDS)
         return MinaSshShellHandle(session, channel)
     }
 
