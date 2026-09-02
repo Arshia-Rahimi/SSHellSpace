@@ -1,7 +1,10 @@
 package com.sshellspace.core.data.impl
 
+import app.cash.sqldelight.EnumColumnAdapter
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.sshellspace.core.data.generated.Database
+import com.sshellspace.core.data.generated.Device_ssh_keys
+import com.sshellspace.core.data.generated.Vault_ssh_keys
 import com.sshellspace.core.domain.models.StoredPreference
 import java.util.Properties
 import kotlin.test.Test
@@ -15,10 +18,14 @@ import kotlinx.coroutines.test.runTest
 class SqlDelightPreferencesDatasourceTest {
 
     private val datasource = SqlDelightPreferencesDatasource(
-        driver = JdbcSqliteDriver(
-            url = JdbcSqliteDriver.IN_MEMORY,
-            schema = Database.Schema,
-            properties = Properties(),
+        db = Database(
+            driver = JdbcSqliteDriver(
+                url = JdbcSqliteDriver.IN_MEMORY,
+                schema = Database.Schema,
+                properties = Properties(),
+            ),
+            device_ssh_keysAdapter = Device_ssh_keys.Adapter(EnumColumnAdapter()),
+            vault_ssh_keysAdapter = Vault_ssh_keys.Adapter(EnumColumnAdapter()),
         ),
     )
 
