@@ -14,13 +14,6 @@ class MinaSshKeyServiceTest {
     private val scope = CoroutineScope(Dispatchers.Main)
 
     @Test
-    fun `generate private key pair`() {
-        Algorithm.entries.forEach {
-            println(service.generateSshKeyPair(it, "user@test.com"))
-        }
-    }
-
-    @Test
     fun `validate ED25519 key generated without passphrase returns true`() {
         scope.launch {
             val key = service.generate("user@test.com", Algorithm.ED25519)
