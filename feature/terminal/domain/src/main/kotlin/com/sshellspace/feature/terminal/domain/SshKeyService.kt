@@ -1,6 +1,7 @@
 package com.sshellspace.feature.terminal.domain
 
 import com.sshellspace.feature.terminal.domain.models.Algorithm
+import com.sshellspace.feature.terminal.domain.models.KeyPair
 import com.sshellspace.feature.terminal.domain.models.PrivateKey
 import com.sshellspace.feature.terminal.domain.models.PublicKey
 
@@ -11,7 +12,7 @@ interface SshKeyService {
         passphrase: String? = null,
         algorithm: Algorithm = Algorithm.ED25519,
         keySize: Int = 256,
-    ): Pair<PrivateKey, PublicKey>
+    ): KeyPair
 }
 
 sealed interface KeyValidationResult {

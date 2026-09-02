@@ -3,12 +3,11 @@ package com.sshellspace.feature.terminal.data
 import com.sshellspace.feature.terminal.domain.KeyValidationResult
 import com.sshellspace.feature.terminal.domain.SshKeyService
 import com.sshellspace.feature.terminal.domain.models.Algorithm
+import com.sshellspace.feature.terminal.domain.models.KeyPair
 import com.sshellspace.feature.terminal.domain.models.PrivateKey
-import com.sshellspace.feature.terminal.domain.models.PublicKey
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.security.Security
-import org.apache.sshd.common.cipher.BuiltinCiphers
 import org.apache.sshd.common.config.keys.FilePasswordProvider
 import org.apache.sshd.common.config.keys.KeyUtils
 import org.apache.sshd.common.config.keys.PublicKeyEntry
@@ -81,7 +80,7 @@ class MinaSshKeyService : SshKeyService {
         passphrase: String?,
         algorithm: Algorithm,
         keySize: Int,
-    ): Pair<PrivateKey, PublicKey> {
+    ): KeyPair {
         val keyPair = KeyUtils.generateKeyPair(algorithm.type, keySize)
         val publicKeyWithComment = "${PublicKeyEntry.toString(keyPair.public)} $comment"
 
