@@ -1,41 +1,46 @@
 package com.sshellspace.feature.terminal.domain.models
 
-import java.io.File
+import kotlin.uuid.Uuid
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import kotlinx.serialization.Serializable
 
-@Serializable
-data class SshCredentials(
-    val name: String,
-    val key: SshKey,
-)
-
-@Serializable
-sealed interface SshKey {
+sealed interface SshCredentials {
+    val name: String
+    val key: SshKey
+    val passphrase: String
     val algorithm: Algorithm
-    val passphrase: String?
-    val privateKey: String
+
+    data class Vault(
+        override val name: String,
+        override val key: SshKey,
+        override val passphrase: String,
+        override val algorithm: Algorithm,
+        val id: Uuid,
+    ) : SshCredentials
+
+    data class Device(
+        override val name: String,
+        override val passphrase: String,
+        override val algorithm: Algorithm,
+        val path: String,
+    ) : SshCredentials {
+        override val key: SshKey
+            get() = SshKey(
+                passphrase = passphrase,
+                algorithm = algorithm,
+                privateKey = SystemFileSystem.source(Path(path))
+                    .use { it.toString() },
+            )
+    }
 }
 
 @Serializable
-data class DeviceSshKey(
-    override val algorithm: Algorithm,
-    override val passphrase: String? = null,
-    val privateKeyFilePath: String,
-): SshKey {
-    override val privateKey: String
-        get() = SystemFileSystem.source(Path(privateKeyFilePath))
-            .use { it.toString() }
-}
-
-@Serializable
-data class VaultSshKey(
-    override val algorithm: Algorithm,
-    override val privateKey: String,
-): SshKey {
-    override val passphrase: String? = null
-}
+data class SshKey(
+    val algorithm: Algorithm,
+    val passphrase: String?,
+    val privateKey: String,
+)
 
 data class KeyPair(
     val private: String,

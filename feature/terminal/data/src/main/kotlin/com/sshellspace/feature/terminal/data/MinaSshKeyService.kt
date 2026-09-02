@@ -3,10 +3,8 @@ package com.sshellspace.feature.terminal.data
 import com.sshellspace.feature.terminal.domain.KeyValidationResult
 import com.sshellspace.feature.terminal.domain.SshKeyService
 import com.sshellspace.feature.terminal.domain.models.Algorithm
-import com.sshellspace.feature.terminal.domain.models.DeviceSshKey
 import com.sshellspace.feature.terminal.domain.models.KeyPair
 import com.sshellspace.feature.terminal.domain.models.SshKey
-import com.sshellspace.feature.terminal.domain.models.VaultSshKey
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.security.Security
@@ -78,20 +76,14 @@ class MinaSshKeyService : SshKeyService {
         }
     }
 
-    override suspend fun generateDeviceSshKey(
+    override suspend fun generate(
         comment: String,
         algorithm: Algorithm,
         passphrase: String?,
-    ): DeviceSshKey {
-        TODO("Not yet implemented")
-    }
-
-    override suspend fun generateVaultSshKey(
-        comment: String,
-        algorithm: Algorithm,
-    ): VaultSshKey = VaultSshKey(
+    ): SshKey = SshKey(
         algorithm = algorithm,
-        privateKey = generateSshKeyPair(algorithm, comment).private
+        privateKey = generateSshKeyPair(algorithm, comment, passphrase).private,
+        passphrase = passphrase,
     )
 
     fun generateSshKeyPair(

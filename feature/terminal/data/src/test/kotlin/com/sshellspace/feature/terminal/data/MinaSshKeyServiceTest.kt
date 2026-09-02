@@ -23,7 +23,7 @@ class MinaSshKeyServiceTest {
     @Test
     fun `validate ED25519 key generated without passphrase returns true`() {
         scope.launch {
-            val key = service.generateVaultSshKey("user@test.com", Algorithm.ED25519)
+            val key = service.generate("user@test.com", Algorithm.ED25519)
             assertEquals(service.validate(key), KeyValidationResult.Success(isEncrypted = false))
         }
     }
@@ -31,7 +31,7 @@ class MinaSshKeyServiceTest {
     @Test
     fun `validate RSA key generated without passphrase returns true`() {
         scope.launch {
-            val key = service.generateVaultSshKey("user@test.com", Algorithm.RSA)
+            val key = service.generate("user@test.com", Algorithm.RSA)
             assertEquals(service.validate(key), KeyValidationResult.Success(isEncrypted = false))
         }
     }

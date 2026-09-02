@@ -1,21 +1,15 @@
 package com.sshellspace.feature.terminal.domain
 
 import com.sshellspace.feature.terminal.domain.models.Algorithm
-import com.sshellspace.feature.terminal.domain.models.DeviceSshKey
 import com.sshellspace.feature.terminal.domain.models.SshKey
-import com.sshellspace.feature.terminal.domain.models.VaultSshKey
 
 interface SshKeyService {
     suspend fun validate(key: SshKey): KeyValidationResult
-    suspend fun generateDeviceSshKey(
+    suspend fun generate(
         comment: String,
         algorithm: Algorithm,
         passphrase: String? = null,
-    ): DeviceSshKey
-    suspend fun generateVaultSshKey(
-        comment: String,
-        algorithm: Algorithm,
-    ): VaultSshKey
+    ): SshKey
 }
 
 sealed interface KeyValidationResult {
