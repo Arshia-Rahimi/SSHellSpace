@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.combine
 class SqlDelightSshKeyDatasource(
     private val db: Database,
 ) : SshKeyDatasource {
-
     override fun index(): Flow<List<SshKeyInfo>> = combine(
         db.device_ssh_keyQueries.index().asFlow().mapToList(Dispatchers.IO),
         db.vault_ssh_keyQueries.index().asFlow().mapToList(Dispatchers.IO),
@@ -36,32 +35,28 @@ class SqlDelightSshKeyDatasource(
         algorithm: Algorithm,
         path: String,
         passphrase: String?,
-    ): SshKeyInfo {
-        val dao = Device_ssh_keys(
+    ): SshKeyInfo =
+        Device_ssh_keys(
             id = generateUuid().toString(),
             name = name,
             algorithm = algorithm,
             path = path,
             passphrase = passphrase,
-        )
-        db.device_ssh_keyQueries.insert(dao)
-        return dao.toSshKeyInfo()
-    }
+        ).also(db.device_ssh_keyQueries::insert)
+            .toSshKeyInfo()
 
     override suspend fun insertVaultKey(
         name: String,
         algorithm: Algorithm,
         privateKey: PrivateKey,
-    ): SshKeyInfo {
-        val dao = Vault_ssh_keys(
+    ): SshKeyInfo =
+        Vault_ssh_keys(
             id = generateUuid().toString(),
             name = name,
             algorithm = algorithm,
             private_key = privateKey,
-        )
-        db.vault_ssh_keyQueries.insert(dao)
-        return dao.toSshKeyInfo()
-    }
+        ).also(db.vault_ssh_keyQueries::insert)
+            .toSshKeyInfo()
 
     override suspend fun updateName(id: Uuid, name: String): SshKeyInfo? {
         db.vault_ssh_keyQueries.update(name, id.toString())
