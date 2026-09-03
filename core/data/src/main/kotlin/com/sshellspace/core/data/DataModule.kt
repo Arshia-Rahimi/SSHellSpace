@@ -13,7 +13,6 @@ import com.sshellspace.core.domain.repositories.CorePreferencesRepository
 import com.sshellspace.core.domain.repositories.PreferencesDatasource
 import org.koin.dsl.bind
 import org.koin.dsl.module
-import org.koin.plugin.module.dsl.create
 import org.koin.plugin.module.dsl.single
 
 val DataModule = module {
@@ -23,12 +22,10 @@ val DataModule = module {
     single<MinaSshKeyService>() bind SshKeyService::class
     //
     single {
-        create<Database> {
-            Database(
-                driver = get(),
-                device_ssh_keysAdapter = Device_ssh_keys.Adapter(EnumColumnAdapter()),
-                vault_ssh_keysAdapter = Vault_ssh_keys.Adapter(EnumColumnAdapter()),
-            )
-        }
+        Database(
+            driver = get(),
+            device_ssh_keysAdapter = Device_ssh_keys.Adapter(EnumColumnAdapter()),
+            vault_ssh_keysAdapter = Vault_ssh_keys.Adapter(EnumColumnAdapter()),
+        )
     }
 }
