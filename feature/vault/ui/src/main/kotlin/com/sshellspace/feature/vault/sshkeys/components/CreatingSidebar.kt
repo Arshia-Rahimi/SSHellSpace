@@ -15,17 +15,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledIcon
 import com.composeunstyled.UnstyledVerticalSeparator
+import com.composeunstyled.theme.Theme
 import com.sshellspace.core.domain.models.Algorithm
 import com.sshellspace.core.ui.designsystem.Icons
 import com.sshellspace.core.ui.designsystem.components.Button
 import com.sshellspace.core.ui.designsystem.components.Dropdown
 import com.sshellspace.core.ui.designsystem.components.IconButton
 import com.sshellspace.core.ui.designsystem.components.TextField
+import com.sshellspace.core.ui.designsystem.theme.colors
+import com.sshellspace.core.ui.designsystem.theme.onOverlay
+import com.sshellspace.core.ui.designsystem.theme.overlay
+import com.sshellspace.core.ui.designsystem.theme.separator
+import com.sshellspace.core.ui.designsystem.theme.surfaceElevated
 import com.sshellspace.feature.vault.sshkeys.CreationMethod
 import com.sshellspace.feature.vault.sshkeys.SidebarState
 import com.sshellspace.feature.vault.sshkeys.SshKeysPageAction
@@ -195,7 +200,7 @@ private fun SidebarShell(
         modifier = Modifier
             .fillMaxHeight()
             .width(360.dp)
-            .background(Color.Black.copy(alpha = 0.4f))
+            .background(Theme[colors][overlay])
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -211,7 +216,7 @@ private fun SidebarShell(
             )
             Text("New SSH key")
         }
-        UnstyledVerticalSeparator(thickness = 1.dp, color = Color.White)
+        UnstyledVerticalSeparator(thickness = 1.dp, color = Theme[colors][separator])
         content()
     }
 }
@@ -245,7 +250,7 @@ private fun AlgorithmDropdown(
 
 @Composable
 private fun SidebarSeparator() {
-    UnstyledVerticalSeparator(thickness = 1.dp, color = Color.White)
+    UnstyledVerticalSeparator(thickness = 1.dp, color = Theme[colors][separator])
 }
 
 @Composable
@@ -267,7 +272,7 @@ private fun SidebarFooter(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(6.dp))
-            .background(Color.White.copy(alpha = 0.15f))
+            .background(Theme[colors][surfaceElevated])
             .padding(vertical = 10.dp),
     ) {
         Row(
@@ -277,7 +282,7 @@ private fun SidebarFooter(
             UnstyledIcon(
                 imageVector = Icons.Check,
                 contentDescription = null,
-                tint = Color.White,
+                tint = Theme[colors][onOverlay],
             )
             Text(label)
         }

@@ -12,11 +12,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import com.composeunstyled.DialogPanel
 import com.composeunstyled.Scrim
 import com.composeunstyled.UnstyledDialog
+import com.composeunstyled.theme.Theme
 import com.sshellspace.core.domain.EventBus
+import com.sshellspace.core.ui.designsystem.theme.colors
+import com.sshellspace.core.ui.designsystem.theme.scrim
 import kotlinx.coroutines.flow.filterIsInstance
 
 @Composable
@@ -40,7 +42,7 @@ fun AppDialog() {
         visible = currentDialogEvent != null,
         onDismissRequest = { currentDialogEvent = null },
         overlay = {
-            Scrim(scrimColor = Color.Black.copy(0.3f), enter = fadeIn(), exit = fadeOut())
+            Scrim(scrimColor = Theme[colors][scrim], enter = fadeIn(), exit = fadeOut())
         },
     ) {
         currentDialogEvent?.content()

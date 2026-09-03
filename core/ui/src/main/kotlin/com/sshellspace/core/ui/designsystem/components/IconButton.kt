@@ -1,13 +1,14 @@
 package com.sshellspace.core.ui.designsystem.components
 
-import androidx.compose.material.LocalContentAlpha
-import androidx.compose.material.LocalContentColor
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.composeunstyled.UnstyledButton
 import com.composeunstyled.UnstyledIcon
+import com.composeunstyled.theme.Theme
+import com.sshellspace.core.ui.designsystem.theme.colors
+import com.sshellspace.core.ui.designsystem.theme.onSurface
 
 @Composable
 fun IconButton(
@@ -16,7 +17,7 @@ fun IconButton(
     enabled: Boolean = true,
     imageVector: ImageVector,
     contentDescription: String?,
-    tint: Color = LocalContentColor.current.copy(alpha = LocalContentAlpha.current),
+    tint: Color = Theme[colors][onSurface],
 ) {
     UnstyledButton(
         onClick = onClick,

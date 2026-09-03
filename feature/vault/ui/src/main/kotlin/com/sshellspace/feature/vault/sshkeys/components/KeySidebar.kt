@@ -14,15 +14,20 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledIcon
 import com.composeunstyled.UnstyledVerticalSeparator
+import com.composeunstyled.theme.Theme
 import com.sshellspace.core.ui.designsystem.Icons
 import com.sshellspace.core.ui.designsystem.components.Button
 import com.sshellspace.core.ui.designsystem.components.IconButton
 import com.sshellspace.core.ui.designsystem.components.TextField
+import com.sshellspace.core.ui.designsystem.theme.colors
+import com.sshellspace.core.ui.designsystem.theme.onOverlay
+import com.sshellspace.core.ui.designsystem.theme.overlay
+import com.sshellspace.core.ui.designsystem.theme.separator
+import com.sshellspace.core.ui.designsystem.theme.surfaceElevated
 import com.sshellspace.feature.vault.sshkeys.SidebarState
 import com.sshellspace.feature.vault.sshkeys.SshKeysPageAction
 
@@ -38,7 +43,7 @@ fun KeySidebar(
         modifier = Modifier
             .fillMaxHeight()
             .width(360.dp)
-            .background(Color.Black.copy(alpha = 0.4f))
+            .background(Theme[colors][overlay])
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -54,7 +59,7 @@ fun KeySidebar(
             )
             Text("Edit key")
         }
-        UnstyledVerticalSeparator(thickness = 1.dp, color = Color.White)
+        UnstyledVerticalSeparator(thickness = 1.dp, color = Theme[colors][separator])
         Text("Type: ${state.key.type.name}")
         Text("Algorithm: ${state.key.algorithm.name}")
         TextField(
@@ -80,7 +85,7 @@ fun KeySidebar(
                 onClick = { onAction(SshKeysPageAction.Editing.Save) },
                 enabled = !isSaveInFlight,
                 modifier = Modifier.weight(1f).clip(RoundedCornerShape(6.dp))
-                    .background(Color.White.copy(alpha = 0.15f))
+                    .background(Theme[colors][surfaceElevated])
                     .padding(vertical = 10.dp),
             ) {
                 Row(
@@ -90,7 +95,7 @@ fun KeySidebar(
                     UnstyledIcon(
                         imageVector = Icons.Check,
                         contentDescription = null,
-                        tint = Color.White,
+                        tint = Theme[colors][onOverlay],
                     )
                     Text("Save")
                 }

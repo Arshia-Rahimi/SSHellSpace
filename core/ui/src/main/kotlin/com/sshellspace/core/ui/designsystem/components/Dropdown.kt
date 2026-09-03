@@ -15,13 +15,15 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.DropdownMenuPanel
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledDropdownMenu
 import com.composeunstyled.UnstyledDropdownMenuItem
 import com.composeunstyled.UnstyledHorizontalSeparator
+import com.composeunstyled.theme.Theme
+import com.sshellspace.core.ui.designsystem.theme.border
+import com.sshellspace.core.ui.designsystem.theme.colors
 
 @Composable
 fun <T> Dropdown(
@@ -104,7 +106,7 @@ private fun <T> DropdownPanelContent(
         }
         if (index != options.lastIndex) {
             UnstyledHorizontalSeparator(
-                color = Color.Unspecified,
+                color = Theme[colors][border],
                 thickness = 1.dp,
             )
         }

@@ -18,8 +18,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledIcon
+import com.composeunstyled.theme.Theme
 import com.sshellspace.core.ui.designsystem.Icons
 import com.sshellspace.core.ui.designsystem.components.Button
+import com.sshellspace.core.ui.designsystem.theme.colors
+import com.sshellspace.core.ui.designsystem.theme.onSurface
+import com.sshellspace.core.ui.designsystem.theme.surface
 import com.sshellspace.feature.vault.sshkeys.SshKey
 
 @Composable
@@ -28,14 +32,14 @@ fun SshKeyCard(
     selected: Boolean,
     onClick: () -> Unit,
 ) {
-    val borderColor = if (selected) Color.White else Color.Transparent
+    val borderColor = if (selected) Theme[colors][onSurface] else Color.Transparent
     Button(
         onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
             .height(120.dp)
             .clip(RoundedCornerShape(8.dp))
-            .background(Color.White.copy(alpha = 0.05f))
+            .background(Theme[colors][surface])
             .border(width = 1.dp, color = borderColor, shape = RoundedCornerShape(8.dp))
             .padding(12.dp),
     ) {
@@ -51,7 +55,7 @@ fun SshKeyCard(
                 UnstyledIcon(
                     imageVector = Icons.Key,
                     contentDescription = null,
-                    tint = Color.White,
+                    tint = Theme[colors][onSurface],
                 )
                 Text(key.name)
             }

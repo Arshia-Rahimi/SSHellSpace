@@ -18,15 +18,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledVerticalSeparator
+import com.composeunstyled.theme.Theme
 import com.sshellspace.core.ui.designsystem.Icons
 import com.sshellspace.core.ui.designsystem.common.asString
 import com.sshellspace.core.ui.designsystem.components.IconButton
+import com.sshellspace.core.ui.designsystem.theme.colors
+import com.sshellspace.core.ui.designsystem.theme.separator
 import com.sshellspace.core.ui.tabs.TabId
 import com.sshellspace.core.ui.tabs.TabItem
 import com.sshellspace.core.ui.tabs.TabManager
@@ -75,7 +77,7 @@ fun DecoratedWindowScope.TitleBar(
             onSelected = { tabManager.setCurrentTab(it) },
             selectedKey = tabsState.currentTabId,
             tabModifier = Modifier.noWindowDrag(),
-            separator = { UnstyledVerticalSeparator(Color.Black, Modifier.padding(vertical = 4.dp)) },
+            separator = { UnstyledVerticalSeparator(Theme[colors][separator], Modifier.padding(vertical = 4.dp)) },
             tab = { modifier, tabId, isSelected, isFixed ->
                 Tab(
                     tab = tabsState.getTab(tabId) ?: return@ReorderableTabRow,
