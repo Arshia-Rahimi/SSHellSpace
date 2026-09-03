@@ -8,10 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import org.koin.core.annotation.InjectedParam
 
-class VaultTabViewModel(
-    @InjectedParam private val tabController: TabController,
-    private val sshKeyRepository: SshKeyRepository,
-) : ViewModel() {
+class VaultTabViewModel : ViewModel() {
     private val _page = MutableStateFlow(VaultTabPage.Vault)
     val page = _page.asStateFlow()
 

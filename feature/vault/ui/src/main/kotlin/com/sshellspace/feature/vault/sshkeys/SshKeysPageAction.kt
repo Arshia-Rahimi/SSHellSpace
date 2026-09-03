@@ -1,8 +1,40 @@
 package com.sshellspace.feature.vault.sshkeys
 
-import com.sshellspace.feature.vault.SshKey
+import com.sshellspace.core.domain.models.Algorithm
 
 sealed interface SshKeysPageAction {
     data class SelectKey(val key: SshKey) : SshKeysPageAction
-    data object OpenNewKeyDialog: SshKeysPageAction
+    data object CreateNewKey : SshKeysPageAction
+    data object CloseSidebar : SshKeysPageAction
+    data object DismissError : SshKeysPageAction
+
+    sealed interface Editing : SshKeysPageAction {
+        data class SetName(val value: String) : Editing
+        data object Save : Editing
+        data object Delete : Editing
+    }
+
+    sealed interface VaultKey : SshKeysPageAction {
+        data class SetName(val value: String) : VaultKey
+        data class SetComment(val value: String) : VaultKey
+        data class SetAlgorithm(val value: Algorithm) : VaultKey
+        data object Save : VaultKey
+    }
+
+    sealed interface DeviceKey : SshKeysPageAction {
+        data class SetName(val value: String) : DeviceKey
+        data class SetComment(val value: String) : DeviceKey
+        data class SetFileName(val value: String) : DeviceKey
+        data class SetPath(val value: String) : DeviceKey
+        data class SetAlgorithm(val value: Algorithm) : DeviceKey
+        data object Save : DeviceKey
+    }
+
+    sealed interface ImportKey : SshKeysPageAction {
+        data class SetName(val value: String) : ImportKey
+        data class SetPath(val value: String) : ImportKey
+        data class SetPassphrase(val value: String) : ImportKey
+        data class TogglePassphraseVisibility(val value: Boolean) : ImportKey
+        data object Save : ImportKey
+    }
 }
