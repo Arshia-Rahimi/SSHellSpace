@@ -8,8 +8,8 @@ import com.sshellspace.core.data.generated.Database
 import com.sshellspace.core.data.generated.Device_ssh_keys
 import com.sshellspace.core.data.generated.Vault_ssh_keys
 import com.sshellspace.core.domain.models.Algorithm
-import com.sshellspace.core.domain.models.PrivateKey
 import com.sshellspace.core.domain.models.SshKeyInfo
+import com.sshellspace.core.domain.models.SshKeySecret
 import com.sshellspace.core.domain.models.SshKeyType
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.Dispatchers
@@ -30,33 +30,28 @@ class SqlDelightSshKeyDatasource(
         db.device_ssh_keyQueries.get(id.toString()).executeAsOneOrNull()?.toSshKeyInfo()
             ?: db.vault_ssh_keyQueries.get(id.toString()).executeAsOneOrNull()?.toSshKeyInfo()
 
-    override suspend fun insertDeviceKey(
+    override suspend fun insert(
         name: String,
         algorithm: Algorithm,
-        path: String,
-        passphrase: String?,
-    ): SshKeyInfo =
-        Device_ssh_keys(
+        secret: SshKeySecret,
+    ): SshKeyInfo = when (secret) {
+        is SshKeySecret.Device -> Device_ssh_keys(
             id = generateUuid().toString(),
             name = name,
             algorithm = algorithm,
-            path = path,
-            passphrase = passphrase,
+            path = secret.path,
+            passphrase = secret.passphrase,
         ).also(db.device_ssh_keyQueries::insert)
             .toSshKeyInfo()
 
-    override suspend fun insertVaultKey(
-        name: String,
-        algorithm: Algorithm,
-        privateKey: PrivateKey,
-    ): SshKeyInfo =
-        Vault_ssh_keys(
+        is SshKeySecret.Vault -> Vault_ssh_keys(
             id = generateUuid().toString(),
             name = name,
             algorithm = algorithm,
-            private_key = privateKey,
+            private_key = secret.privateKey,
         ).also(db.vault_ssh_keyQueries::insert)
             .toSshKeyInfo()
+    }
 
     override suspend fun updateName(id: Uuid, name: String): SshKeyInfo? {
         db.vault_ssh_keyQueries.update(name, id.toString())

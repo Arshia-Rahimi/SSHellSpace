@@ -11,6 +11,7 @@ import com.sshellspace.feature.settings.SettingsUiModule
 import com.sshellspace.feature.terminal.data.TerminalDataModule
 import com.sshellspace.feature.terminal.ui.TerminalUiModule
 import com.sshellspace.feature.vault.VaultUiModule
+import com.sshellspace.feature.vault.data.VaultDataModule
 import org.koin.core.context.startKoin
 import org.koin.dsl.bind
 import org.koin.dsl.module
@@ -22,6 +23,7 @@ val AppModule = module {
     includes(
         DataModule,
         VaultUiModule,
+        VaultDataModule,
         SettingsUiModule,
         TerminalUiModule,
         TerminalDataModule,

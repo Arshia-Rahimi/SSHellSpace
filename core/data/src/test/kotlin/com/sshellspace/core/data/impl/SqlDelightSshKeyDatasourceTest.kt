@@ -6,12 +6,12 @@ import com.sshellspace.core.data.generated.Database
 import com.sshellspace.core.data.generated.Device_ssh_keys
 import com.sshellspace.core.data.generated.Vault_ssh_keys
 import com.sshellspace.core.domain.models.Algorithm
+import com.sshellspace.core.domain.models.SshKeySecret
 import com.sshellspace.core.domain.models.SshKeyType
 import java.util.Properties
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
-import kotlin.test.assertNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 
@@ -35,62 +35,47 @@ class SqlDelightSshKeyDatasourceTest {
     }
 
     @Test
-    fun `insertDeviceKey returns correct SshKeyInfo`() = runTest {
-        val result = datasource.insertDeviceKey(
+    fun `insert returns correct SshKeyInfo`() = runTest {
+        val result = datasource.insert(
             name = "my-key",
-            algorithm = Algorithm.ED25519,
-            path = "/home/user/.ssh/id_ed25519",
-            passphrase = null,
+            algorithm = Algorithm.Ed25519,
+            secret = SshKeySecret.Vault("alkfjadf"),
         )
 
         assertEquals("my-key", result.name)
-        assertEquals(Algorithm.ED25519, result.algorithm)
-        assertEquals(SshKeyType.DEVICE, result.type)
-        assertNotNull(result.id.toString())
-    }
-
-    @Test
-    fun `insertVaultKey returns correct SshKeyInfo`() = runTest {
-        val result = datasource.insertVaultKey(
-            name = "vault-key",
-            algorithm = Algorithm.RSA,
-            privateKey = "-----BEGIN OPENSSH PRIVATE KEY-----\nfake\n-----END OPENSSH PRIVATE KEY-----",
-        )
-
-        assertEquals("vault-key", result.name)
-        assertEquals(Algorithm.RSA, result.algorithm)
+        assertEquals(Algorithm.Ed25519, result.algorithm)
         assertEquals(SshKeyType.VAULT, result.type)
         assertNotNull(result.id.toString())
     }
 
     @Test
     fun `index combines device and vault keys`() = runTest {
-        val deviceKey = datasource.insertDeviceKey(
+        val deviceKey = datasource.insert(
             name = "device",
-            algorithm = Algorithm.ED25519,
-            path = "/path/to/key",
-            passphrase = null,
+            algorithm = Algorithm.Ed25519,
+            secret = SshKeySecret.Device(path = "/path/to/key", passphrase = null),
         )
-        val vaultKey = datasource.insertVaultKey(
+        val vaultKey = datasource.insert(
             name = "vault",
             algorithm = Algorithm.RSA,
-            privateKey = "private-key-data",
+            secret = SshKeySecret.Vault("private-key-data"),
         )
 
         val result = datasource.index().first()
 
         assertEquals(2, result.size)
         assertEquals(deviceKey, result[0])
+        assertEquals(SshKeyType.DEVICE, result[0].type)
         assertEquals(vaultKey, result[1])
+        assertEquals(SshKeyType.VAULT, result[1].type)
     }
 
     @Test
     fun `get returns correct key by id`() = runTest {
-        val inserted = datasource.insertDeviceKey(
+        val inserted = datasource.insert(
             name = "findme",
-            algorithm = Algorithm.ED25519,
-            path = "/path",
-            passphrase = "secret",
+            algorithm = Algorithm.Ed25519,
+            secret = SshKeySecret.Device(path = "/path", passphrase = "secret"),
         )
 
         val found = datasource.get(inserted.id)
@@ -102,16 +87,15 @@ class SqlDelightSshKeyDatasourceTest {
     fun `get returns null for non-existent id`() = runTest {
         val nonExistent = kotlin.uuid.Uuid.parse("00000000-0000-0000-0000-000000000000")
 
-        assertNull(datasource.get(nonExistent))
+        assertEquals(null, datasource.get(nonExistent))
     }
 
     @Test
     fun `updateName changes name and returns updated key`() = runTest {
-        val inserted = datasource.insertDeviceKey(
+        val inserted = datasource.insert(
             name = "old-name",
             algorithm = Algorithm.RSA,
-            path = "/path",
-            passphrase = null,
+            secret = SshKeySecret.Device(path = "/path", passphrase = null),
         )
 
         val updated = datasource.updateName(inserted.id, "new-name")
@@ -124,15 +108,15 @@ class SqlDelightSshKeyDatasourceTest {
 
     @Test
     fun `delete removes key`() = runTest {
-        val inserted = datasource.insertVaultKey(
+        val inserted = datasource.insert(
             name = "deleteme",
-            algorithm = Algorithm.ED25519,
-            privateKey = "key-data",
+            algorithm = Algorithm.Ed25519,
+            secret = SshKeySecret.Vault("key-data"),
         )
 
         datasource.delete(inserted.id)
 
-        assertNull(datasource.get(inserted.id))
+        assertEquals(null, datasource.get(inserted.id))
         assertEquals(emptyList(), datasource.index().first())
     }
 }

@@ -20,8 +20,6 @@ pty4j = "0.13.12"
 bossterm = "1.2.152"
 lifecycle = "2.11.0"
 mina = "2.19.0"
-java-keyring = "1.0.4"
-kotlinx-io = "0.9.1"
 bouncy-castle = "1.85.2"
 
 [libraries]
@@ -70,7 +68,6 @@ mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 kotlinx-datetime = { module = "org.jetbrains.kotlinx:kotlinx-datetime", version.ref = "kotlinx-datetime" }
 kotlinx-serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-json", version.ref = "serialization-json" }
 kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-swing", version.ref = "kotlinx-coroutines" }
-kotlinx-io = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.ref = "kotlinx-io" }
 #sqldelight
 sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight"}
 sqldelight-desktop = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight"}

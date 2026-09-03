@@ -5,23 +5,24 @@ import com.sshellspace.core.domain.models.KeyPair
 import com.sshellspace.core.domain.models.PrivateKey
 
 interface SshKeyService {
-    fun validate(key: PrivateKey, passphrase: String? = null): KeyValidationResult
+    fun validate(key: PrivateKey, passphrase: String? = null): SshKeyValidationResult
     fun generate(
         comment: String,
-        passphrase: String? = null,
-        algorithm: Algorithm = Algorithm.ED25519,
+        passphrase: String?,
+        algorithm: Algorithm,
         keySize: Int = 256,
     ): KeyPair
 }
 
-sealed interface KeyValidationResult {
+sealed interface SshKeyValidationResult {
     data class Success(
         val isEncrypted: Boolean,
-    ) : KeyValidationResult
+        val algorithm: Algorithm,
+    ) : SshKeyValidationResult
 
-    data object InvalidPassphrase : KeyValidationResult
+    data object InvalidPassphrase : SshKeyValidationResult
 
-    data class InvalidKeyFormat(
+    data class InvalidSshKeyFormat(
         val errorMessage: String
-    ) : KeyValidationResult
+    ) : SshKeyValidationResult
 }

@@ -1,6 +1,6 @@
 package com.sshellspace.core.data.impl
 
-import com.sshellspace.core.domain.KeyValidationResult
+import com.sshellspace.core.domain.SshKeyValidationResult
 import com.sshellspace.core.domain.SshKeyService
 import com.sshellspace.core.domain.models.Algorithm
 import com.sshellspace.core.domain.models.KeyPair
@@ -17,14 +17,14 @@ import org.apache.sshd.common.session.SessionContext
 import org.apache.sshd.common.util.security.SecurityUtils
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 
-class MinaSshKeyService : SshKeyService {
+internal class MinaSshKeyService : SshKeyService {
     init {
         if (Security.getProvider(BouncyCastleProvider.PROVIDER_NAME) == null) {
             Security.addProvider(BouncyCastleProvider())
         }
     }
 
-    override fun validate(key: PrivateKey, passphrase: String?): KeyValidationResult {
+    override fun validate(key: PrivateKey, passphrase: String?): SshKeyValidationResult {
         var detectedEncryption = false
         var passphraseAttempted = false
 
@@ -56,19 +56,26 @@ class MinaSshKeyService : SshKeyService {
             ).firstOrNull()
 
             if (keyPair != null) {
-                KeyValidationResult.Success(
-                    isEncrypted = detectedEncryption
+                val rawAlgorithm = keyPair.private.algorithm
+                val normalizedAlgorithm = when {
+                    rawAlgorithm.equals("EdDSA", ignoreCase = true) ||
+                            rawAlgorithm.equals("Ed25519", ignoreCase = true) -> Algorithm.Ed25519
+                    else -> Algorithm.RSA
+                }
+                SshKeyValidationResult.Success(
+                    isEncrypted = detectedEncryption,
+                    algorithm = normalizedAlgorithm,
                 )
             } else if (detectedEncryption && passphraseAttempted) {
-                KeyValidationResult.InvalidPassphrase
+                SshKeyValidationResult.InvalidPassphrase
             } else {
-                KeyValidationResult.InvalidKeyFormat("No valid key pairs could be parsed from the input.")
+                SshKeyValidationResult.InvalidSshKeyFormat("No valid key pairs could be parsed from the input.")
             }
         } catch (e: Exception) {
             if (detectedEncryption && passphraseAttempted) {
-                KeyValidationResult.InvalidPassphrase
+                SshKeyValidationResult.InvalidPassphrase
             } else {
-                KeyValidationResult.InvalidKeyFormat(
+                SshKeyValidationResult.InvalidSshKeyFormat(
                     errorMessage = e.message ?: "Failed to decode private key format."
                 )
             }
