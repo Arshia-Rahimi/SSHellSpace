@@ -45,6 +45,6 @@ include("feature:newtab:ui")
 include(":core:ui")
 include("core:tabs")
 
-include("core:common")
+include(":core:common")
 include(":core:data")
-include("core:domain")
+include(":core:domain")

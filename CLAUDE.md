@@ -1,0 +1,56 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
+SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform for Desktop. It has a terminal, a vault (SSH keys and credentials), settings, and a tabbed UI. It targets the JVM only, with no KMP targets: sources live in `src/main/kotlin` and tests in `src/test/kotlin`.
+
+## Commands
+
+- `./gradlew run` launches the app. `./gradlew build`, `./gradlew check` (tests + detekt), `./gradlew clean`.
+- Per module: `./gradlew :feature:vault:data:test`, `./gradlew :core:data:check`, `./gradlew :core:data:detekt`.
+- Single test: `./gradlew :core:data:test --tests "com.sshellspace.core.data.impl.MinaSshKeyServiceTest"` (append `.methodName`, or use a `*` pattern for backtick-named tests).
+- `./gradlew graphUpdate` regenerates each module's `DependencyGraph.md` (Mermaid). The task comes from the `project.root` plugin (`build-logic/src/main/kotlin/utils/Graph.kt`).
+- The project requires the JDK 25 toolchain (`jvmToolchain(25)`), which the foojay resolver auto-provisions.
+- `gradle.properties` turns on both the build cache and the **configuration cache**, so build-logic changes must stay configuration-cache compatible.
+
+## Build structure
+
+- `build-logic/` is a composite build of convention plugins: `project.root`, `project.kotlin.library`, `project.compose.library` (applies the kotlin library plugin plus Compose and the compose-unstyled components), and `project.sqldelight`. New modules apply a convention plugin instead of wiring plugins and dependencies by hand. The plugins already add coroutines, Koin, kotlinx-serialization, kotlinx-datetime, the Koin compiler plugin, detekt, and the test stack (JUnit Jupiter via `useJUnitPlatform()`, kotlin-test, mockk, coroutines-test).
+- Detekt is configured from the root `detekt.yml`.
+- Type-safe project accessors are enabled, so reference modules as `projects.feature.vault.ui`, never as string paths.
+- All dependency versions live in `gradle/libs.versions.toml`.
+
+## Architecture
+
+- Clean architecture modules: `core/{common,data,domain,tabs,ui}` and `feature/{vault,terminal,settings,newtab}/{data,domain,ui}`. `app/` is the assembly root (Koin wiring, SQLite driver, tab registration, packaging).
+- `core/domain` holds shared models and service interfaces (for example `SshKeyService`). `core/data` implements them with SQLDelight datasources and Apache MINA sshd (`MinaSshKeyService`). Feature `data` modules build repositories on top of the core datasources and services (for example `SshKeyRepositoryImpl`).
+- UI pattern: each page has a `ViewModel` that exposes a single `uiState: StateFlow<XxxUiState>` (assembled with `combine(...).stateIn(...)`) and an `execute(action: XxxAction)` entry point that takes a sealed action type.
+- The design system lives in `core/ui/.../designsystem`: theme and color tokens (`theme/AppTheme.kt`, `theme/ColorTokens.kt`) and wrapped components built on compose-unstyled.
+
+### DI (Koin 4 + Koin compiler plugin)
+
+- Modules are hand-written `module { }` blocks that use the DSL from `org.koin.plugin.module.dsl` (`single<T>()`, `viewModel<T>()`, `create(::fn)`), plus `bind` for interface bindings. The codebase does not use annotation-style Koin.
+- Each Gradle module exposes an `XxxModule` val, and **every** one must be added to `includes(...)` in `AppModule` (`app/src/main/kotlin/com/sshellspace/KoinInit.kt`).
+
+### SQLDelight
+
+- `.sq` files live under each module's `src/main/sqldelight/`. Most of the schema is in `core/data`.
+- The `project.sqldelight` convention sets the generated package to `com.sshellspace.<module.path.with.dots>.generated` (for example `com.sshellspace.core.data.generated`). `app` applies the raw plugin with package `com.sshellspace.generated`.
+- The SQLite DB lives in the OS user-data dir (appdirs, `SSHellSpace/sshellspace.db`). The schema comes from `Database.Schema`, with `foreign_keys=true` (`app/.../config/Database.kt`).
+
+### Tabs
+
+- `core/tabs` (package `com.sshellspace.core.ui.tabs`) defines `Tab`, which owns a `ViewModelStore` so its ViewModels are scoped per tab, along with `TabManager`, `TabController`, and `TabsState`. `TabManagerImpl` lives in `app`.
+- Fixed tabs are registered in `app/src/main/kotlin/com/sshellspace/config/Tabs.kt` (`fixedTabItems`). New-tab flows go through `NewTabDialogEvent`.
+
+### Terminal
+
+- Terminal emulators implement the `Terminal` interface (`feature/terminal/ui/.../screen/emulators/Terminal.kt`). BossTerm is the concrete emulator. `BossTermSshProcessHandleAdapter` bridges it to Apache MINA sshd (ssh-common/sftp/scp) for remote sessions, and pty4j handles local PTYs.
+
+### Packaging
+
+- The nucleus plugin packages the app (`app/build.gradle.kts`): main class `com.sshellspace.MainKt`, Tao backend, GraalVM native image enabled, and Dmg/Msi/AppImage target formats.
+
+## Tests
+
+- Tests exist in `core/data` and `feature/vault/data`. They use `kotlin.test` assertions, mockk, and `runTest`, with backtick-named test functions.
