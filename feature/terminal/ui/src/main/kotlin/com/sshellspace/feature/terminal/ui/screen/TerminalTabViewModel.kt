@@ -6,11 +6,10 @@ import com.sshellspace.feature.terminal.domain.TerminalPreferencesRepository
 import com.sshellspace.feature.terminal.domain.models.Shell
 import com.sshellspace.feature.terminal.ui.screen.emulators.Terminal
 import com.sshellspace.feature.terminal.ui.screen.emulators.bossterm.BossTermTerminal
-import org.koin.core.annotation.InjectedParam
 
 class TerminalTabViewModel(
-    @InjectedParam private val tabController: TabController,
-    @InjectedParam private val shell: Shell,
+    private val tabController: TabController,
+    private val shell: Shell,
     terminalPreferencesRepository: TerminalPreferencesRepository,
 ) : ViewModel() {
     private val terminalPrefs = terminalPreferencesRepository.get().value
