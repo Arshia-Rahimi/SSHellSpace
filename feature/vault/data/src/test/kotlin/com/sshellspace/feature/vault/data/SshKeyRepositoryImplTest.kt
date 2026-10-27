@@ -10,9 +10,11 @@ import com.sshellspace.core.domain.models.SshKeyInfo
 import com.sshellspace.core.domain.models.SshKeySecret
 import com.sshellspace.core.domain.models.SshKeyType
 import com.sshellspace.feature.vault.domain.CreateSshKeyResult
+import com.sshellspace.feature.vault.domain.SshKeyDetails
 import java.io.File
 import java.nio.file.Files
 import kotlin.test.Test
+import kotlin.test.assertNotNull
 import kotlin.test.assertEquals
 import kotlin.test.assertIs
 import kotlin.test.assertTrue
@@ -261,5 +263,74 @@ class SshKeyRepositoryImplTest {
         repository.delete(id)
 
         coVerify { datasource.delete(id) }
+    }
+
+    @Test
+    fun `importVaultKey stores decrypted key on success`() = runTest {
+        every { service.validate("encrypted", "secret") } returns
+            SshKeyValidationResult.Success(isEncrypted = true, algorithm = Algorithm.RSA)
+        every { service.load("encrypted", "secret") } returns ("decrypted" to "public")
+        coEvery { datasource.insert("name", Algorithm.RSA, SshKeySecret.Vault("decrypted")) } returns mockk()
+
+        val result = repository.importVaultKey("name", "encrypted", "secret")
+
+        assertEquals(CreateSshKeyResult.Success, result)
+        coVerify { datasource.insert("name", Algorithm.RSA, SshKeySecret.Vault("decrypted")) }
+    }
+
+    @Test
+    fun `importVaultKey returns error on invalid passphrase`() = runTest {
+        every { service.validate("encrypted", "wrong") } returns SshKeyValidationResult.InvalidPassphrase
+
+        val result = repository.importVaultKey("name", "encrypted", "wrong")
+
+        assertIs<CreateSshKeyResult.Error>(result)
+        assertEquals("Invalid Passphrase", result.message)
+        coVerify { datasource wasNot Called }
+    }
+
+    @Test
+    fun `importVaultKey returns error on invalid key format`() = runTest {
+        every { service.validate("garbage", null) } returns SshKeyValidationResult.InvalidSshKeyFormat("bad")
+
+        val result = repository.importVaultKey("name", "garbage", null)
+
+        assertIs<CreateSshKeyResult.Error>(result)
+        assertEquals("Key format is not correct", result.message)
+        coVerify { datasource wasNot Called }
+    }
+
+    @Test
+    fun `getDetails returns public key for vault key`() = runTest {
+        val info = SshKeyInfo(Uuid.random(), "key", Algorithm.Ed25519, SshKeyType.VAULT)
+        coEvery { datasource.get(info.id) } returns info
+        coEvery { datasource.getSecret(info.id) } returns SshKeySecret.Vault("private")
+        every { service.load("private", null) } returns ("private" to "ssh-ed25519 AAAA")
+
+        val result = repository.getDetails(info.id)
+
+        assertEquals(SshKeyDetails(info, publicKey = "ssh-ed25519 AAAA", path = null), result)
+    }
+
+    @Test
+    fun `getDetails returns error when device file is missing`() = runTest {
+        val info = SshKeyInfo(Uuid.random(), "key", Algorithm.Ed25519, SshKeyType.DEVICE)
+        coEvery { datasource.get(info.id) } returns info
+        coEvery { datasource.getSecret(info.id) } returns SshKeySecret.Device("/nonexistent/key", null)
+
+        val result = repository.getDetails(info.id)
+
+        assertNotNull(result)
+        assertEquals(null, result.publicKey)
+        assertEquals("/nonexistent/key", result.path)
+        assertNotNull(result.error)
+    }
+
+    @Test
+    fun `getDetails returns null for unknown key`() = runTest {
+        val id = Uuid.random()
+        coEvery { datasource.get(id) } returns null
+
+        assertEquals(null, repository.getDetails(id))
     }
 }

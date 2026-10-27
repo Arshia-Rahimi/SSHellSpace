@@ -9,6 +9,7 @@ import kotlinx.coroutines.flow.Flow
 interface SshKeyDatasource {
     fun index(): Flow<List<SshKeyInfo>>
     suspend fun get(id: Uuid): SshKeyInfo?
+    suspend fun getSecret(id: Uuid): SshKeySecret?
     suspend fun insert(
         name: String,
         algorithm: Algorithm,

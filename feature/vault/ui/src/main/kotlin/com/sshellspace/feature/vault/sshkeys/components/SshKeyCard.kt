@@ -24,6 +24,9 @@ import com.sshellspace.core.ui.designsystem.components.Button
 import com.sshellspace.core.ui.designsystem.theme.colors
 import com.sshellspace.core.ui.designsystem.theme.onSurface
 import com.sshellspace.core.ui.designsystem.theme.surface
+import com.sshellspace.core.ui.designsystem.theme.surfaceElevated
+import com.sshellspace.core.ui.designsystem.theme.textSecondary
+import com.sshellspace.core.domain.models.SshKeyType
 import com.sshellspace.feature.vault.sshkeys.SshKey
 
 @Composable
@@ -64,9 +67,24 @@ fun SshKeyCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text(key.algorithm.name)
-                Text(key.type.name)
+                Text(key.algorithm.name, color = Theme[colors][textSecondary])
+                TypeBadge(key.type)
             }
         }
     }
+}
+
+@Composable
+fun TypeBadge(type: SshKeyType) {
+    Text(
+        text = when (type) {
+            SshKeyType.VAULT -> "Vault"
+            SshKeyType.DEVICE -> "Device"
+        },
+        color = Theme[colors][textSecondary],
+        modifier = Modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(Theme[colors][surfaceElevated])
+            .padding(horizontal = 6.dp, vertical = 2.dp),
+    )
 }

@@ -4,6 +4,7 @@ import com.sshellspace.core.domain.SshKeyValidationResult
 import com.sshellspace.core.domain.models.Algorithm
 import kotlin.random.Random
 import kotlin.test.Test
+import kotlin.test.assertFails
 import kotlin.test.assertEquals
 
 class MinaSshKeyServiceTest {
@@ -37,5 +38,29 @@ class MinaSshKeyServiceTest {
             val key = service.generate("user@test.com", passphrase, Algorithm.RSA)
             assertEquals(service.validate(key.first, passphrase), SshKeyValidationResult.Success(isEncrypted = true, algorithm = Algorithm.RSA))
         }
+    }
+
+    @Test
+    fun `load decrypts key and returns matching public key`() {
+        Algorithm.entries.forEach { algorithm ->
+            val key = service.generate("user@test.com", "secret", algorithm)
+
+            val loaded = service.load(key.first, "secret")
+
+            assertEquals(SshKeyValidationResult.Success(isEncrypted = false, algorithm = algorithm), service.validate(loaded.first))
+            assertEquals(key.second.substringBeforeLast(" "), loaded.second)
+        }
+    }
+
+    @Test
+    fun `load throws on wrong passphrase`() {
+        val key = service.generate("user@test.com", "secret", Algorithm.Ed25519)
+
+        assertFails { service.load(key.first, "wrong") }
+    }
+
+    @Test
+    fun `load throws on invalid key`() {
+        assertFails { service.load("not a key", null) }
     }
 }

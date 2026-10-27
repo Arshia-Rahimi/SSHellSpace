@@ -8,6 +8,7 @@ import com.sshellspace.core.domain.models.PrivateKey
 import com.sshellspace.core.domain.models.SshKeyInfo
 import com.sshellspace.core.domain.models.SshKeySecret
 import com.sshellspace.feature.vault.domain.CreateSshKeyResult
+import com.sshellspace.feature.vault.domain.SshKeyDetails
 import com.sshellspace.feature.vault.domain.SshKeyRepository
 import java.io.File
 import kotlin.uuid.Uuid
@@ -86,6 +87,35 @@ class SshKeyRepositoryImpl(
                 return@withContext CreateSshKeyResult.Error(e.message.toString())
             }
         }
+
+    override suspend fun importVaultKey(name: String, privateKey: PrivateKey, passphrase: String?): CreateSshKeyResult =
+        withContext(Dispatchers.IO) {
+            try {
+                when (val validationResult = validate(privateKey, passphrase)) {
+                    SshKeyValidationResult.InvalidPassphrase -> CreateSshKeyResult.Error("Invalid Passphrase")
+                    is SshKeyValidationResult.InvalidSshKeyFormat -> CreateSshKeyResult.Error("Key format is not correct")
+                    is SshKeyValidationResult.Success -> {
+                        val decrypted = sshKeyService.load(privateKey, passphrase).first
+                        sshKeyDatasource.insert(name, validationResult.algorithm, SshKeySecret.Vault(decrypted))
+                        CreateSshKeyResult.Success
+                    }
+                }
+            } catch (e: Exception) {
+                CreateSshKeyResult.Error(e.message.toString())
+            }
+        }
+
+    override suspend fun getDetails(id: Uuid): SshKeyDetails? = withContext(Dispatchers.IO) {
+        val info = sshKeyDatasource.get(id) ?: return@withContext null
+        val secret = sshKeyDatasource.getSecret(id) ?: return@withContext null
+        val path = (secret as? SshKeySecret.Device)?.path
+        val passphrase = (secret as? SshKeySecret.Device)?.passphrase
+        try {
+            SshKeyDetails(info, sshKeyService.load(secret.privateKey, passphrase).second, path)
+        } catch (e: Exception) {
+            SshKeyDetails(info, publicKey = null, path = path, error = e.message ?: "Failed to read key")
+        }
+    }
 
     override suspend fun updateName(id: Uuid, name: String) {
         sshKeyDatasource.updateName(id, name)

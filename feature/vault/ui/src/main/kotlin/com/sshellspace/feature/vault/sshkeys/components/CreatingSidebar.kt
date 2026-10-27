@@ -8,13 +8,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledIcon
@@ -27,6 +30,7 @@ import com.sshellspace.core.ui.designsystem.components.Dropdown
 import com.sshellspace.core.ui.designsystem.components.IconButton
 import com.sshellspace.core.ui.designsystem.components.TextField
 import com.sshellspace.core.ui.designsystem.theme.colors
+import com.sshellspace.core.ui.designsystem.theme.error
 import com.sshellspace.core.ui.designsystem.theme.onOverlay
 import com.sshellspace.core.ui.designsystem.theme.overlay
 import com.sshellspace.core.ui.designsystem.theme.separator
@@ -34,19 +38,24 @@ import com.sshellspace.core.ui.designsystem.theme.surfaceElevated
 import com.sshellspace.feature.vault.sshkeys.CreationMethod
 import com.sshellspace.feature.vault.sshkeys.SidebarState
 import com.sshellspace.feature.vault.sshkeys.SshKeysPageAction
+import io.github.vinceglb.filekit.FileKit
+import io.github.vinceglb.filekit.absolutePath
+import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
+import io.github.vinceglb.filekit.dialogs.openFilePicker
+import kotlinx.coroutines.launch
 
 object CreatingSidebar {
 
     @Composable
     fun VaultKey(
         state: SidebarState.VaultKeyCreating,
-        onAction: (SshKeysPageAction.VaultKey) -> Unit,
+        onAction: (SshKeysPageAction) -> Unit,
         onClose: () -> Unit,
         isSaveInFlight: Boolean,
         errorMessage: String?,
     ) {
         SidebarShell(onClose = onClose) {
-            MethodSelector(selected = CreationMethod.CreateVault)
+            MethodSelector(selected = CreationMethod.CreateVault, onSelected = { onAction(SshKeysPageAction.SwitchMethod(it)) })
             SidebarSeparator()
             SidebarError(errorMessage)
             TextField(
@@ -56,9 +65,7 @@ object CreatingSidebar {
                 placeholder = "my-key",
                 enabled = !isSaveInFlight,
             )
-            if (state.nameFieldError != null) {
-                Text(state.nameFieldError)
-            }
+            ErrorText(state.nameFieldError)
             TextField(
                 value = state.comment,
                 onValueChange = { onAction(SshKeysPageAction.VaultKey.SetComment(it)) },
@@ -82,13 +89,13 @@ object CreatingSidebar {
     @Composable
     fun DeviceKey(
         state: SidebarState.DeviceKeyCreating,
-        onAction: (SshKeysPageAction.DeviceKey) -> Unit,
+        onAction: (SshKeysPageAction) -> Unit,
         onClose: () -> Unit,
         isSaveInFlight: Boolean,
         errorMessage: String?,
     ) {
         SidebarShell(onClose = onClose) {
-            MethodSelector(selected = CreationMethod.CreateDevice)
+            MethodSelector(selected = CreationMethod.CreateDevice, onSelected = { onAction(SshKeysPageAction.SwitchMethod(it)) })
             SidebarSeparator()
             SidebarError(errorMessage)
             TextField(
@@ -98,9 +105,7 @@ object CreatingSidebar {
                 placeholder = "my-key",
                 enabled = !isSaveInFlight,
             )
-            if (state.nameFieldError != null) {
-                Text(state.nameFieldError)
-            }
+            ErrorText(state.nameFieldError)
             TextField(
                 value = state.fileName,
                 onValueChange = { onAction(SshKeysPageAction.DeviceKey.SetFileName(it)) },
@@ -108,12 +113,15 @@ object CreatingSidebar {
                 placeholder = "optional, defaults to SSHellSpace_<name>",
                 enabled = !isSaveInFlight,
             )
-            TextField(
+            PathField(
                 value = state.path,
                 onValueChange = { onAction(SshKeysPageAction.DeviceKey.SetPath(it)) },
                 label = "Folder path",
                 placeholder = "/home/user/.ssh",
                 enabled = !isSaveInFlight,
+                browseDescription = "Browse folders",
+                icon = Icons.Folder,
+                pick = { FileKit.openDirectoryPicker()?.file?.absolutePath },
             )
             TextField(
                 value = state.comment,
@@ -138,13 +146,13 @@ object CreatingSidebar {
     @Composable
     fun ImportKey(
         state: SidebarState.ImportKeyCreating,
-        onAction: (SshKeysPageAction.ImportKey) -> Unit,
+        onAction: (SshKeysPageAction) -> Unit,
         onClose: () -> Unit,
         isSaveInFlight: Boolean,
         errorMessage: String?,
     ) {
         SidebarShell(onClose = onClose) {
-            MethodSelector(selected = CreationMethod.Import)
+            MethodSelector(selected = CreationMethod.Import, onSelected = { onAction(SshKeysPageAction.SwitchMethod(it)) })
             SidebarSeparator()
             SidebarError(errorMessage)
             TextField(
@@ -154,33 +162,24 @@ object CreatingSidebar {
                 placeholder = "my-key",
                 enabled = !isSaveInFlight,
             )
-            if (state.nameFieldError != null) {
-                Text(state.nameFieldError)
-            }
-            TextField(
+            ErrorText(state.nameFieldError)
+            PathField(
                 value = state.path,
                 onValueChange = { onAction(SshKeysPageAction.ImportKey.SetPath(it)) },
                 label = "File path",
                 placeholder = "/home/user/.ssh/id_ed25519",
                 enabled = !isSaveInFlight,
+                browseDescription = "Browse files",
+                icon = Icons.File,
+                pick = { FileKit.openFilePicker()?.file?.absolutePath },
             )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                TextField(
-                    value = state.passphrase,
-                    onValueChange = { onAction(SshKeysPageAction.ImportKey.SetPassphrase(it)) },
-                    label = "Passphrase",
-                    placeholder = "optional",
-                    enabled = !isSaveInFlight,
-                )
-                IconButton(
-                    onClick = { onAction(SshKeysPageAction.ImportKey.TogglePassphraseVisibility(!state.passphraseVisible)) },
-                    imageVector = if (state.passphraseVisible) Icons.EyeClosed else Icons.EyeOpen,
-                    contentDescription = if (state.passphraseVisible) "Hide passphrase" else "Show passphrase",
-                )
-            }
+            PassphraseField(
+                value = state.passphrase,
+                onValueChange = { onAction(SshKeysPageAction.ImportKey.SetPassphrase(it)) },
+                visible = state.passphraseVisible,
+                onToggleVisible = { onAction(SshKeysPageAction.ImportKey.TogglePassphraseVisibility(it)) },
+                enabled = !isSaveInFlight,
+            )
             Spacer(modifier = Modifier.weight(1f))
             SidebarFooter(
                 label = "Import",
@@ -188,6 +187,113 @@ object CreatingSidebar {
                 onSave = { onAction(SshKeysPageAction.ImportKey.Save) },
             )
         }
+    }
+
+    @Composable
+    fun PasteKey(
+        state: SidebarState.PasteKeyCreating,
+        onAction: (SshKeysPageAction) -> Unit,
+        onClose: () -> Unit,
+        isSaveInFlight: Boolean,
+        errorMessage: String?,
+    ) {
+        SidebarShell(onClose = onClose) {
+            MethodSelector(selected = CreationMethod.Paste, onSelected = { onAction(SshKeysPageAction.SwitchMethod(it)) })
+            SidebarSeparator()
+            SidebarError(errorMessage)
+            TextField(
+                value = state.nameField,
+                onValueChange = { onAction(SshKeysPageAction.PasteKey.SetName(it)) },
+                label = "Name",
+                placeholder = "my-key",
+                enabled = !isSaveInFlight,
+            )
+            ErrorText(state.nameFieldError)
+            TextField(
+                value = state.privateKey,
+                onValueChange = { onAction(SshKeysPageAction.PasteKey.SetPrivateKey(it)) },
+                modifier = Modifier.height(160.dp),
+                label = "Private key",
+                placeholder = "-----BEGIN OPENSSH PRIVATE KEY-----",
+                enabled = !isSaveInFlight,
+                singleLine = false,
+            )
+            PassphraseField(
+                value = state.passphrase,
+                onValueChange = { onAction(SshKeysPageAction.PasteKey.SetPassphrase(it)) },
+                visible = state.passphraseVisible,
+                onToggleVisible = { onAction(SshKeysPageAction.PasteKey.TogglePassphraseVisibility(it)) },
+                enabled = !isSaveInFlight,
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            SidebarFooter(
+                label = "Import",
+                isSaveInFlight = isSaveInFlight,
+                onSave = { onAction(SshKeysPageAction.PasteKey.Save) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun PathField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    placeholder: String,
+    enabled: Boolean,
+    browseDescription: String,
+    icon: ImageVector,
+    pick: suspend () -> String?,
+) {
+    val scope = rememberCoroutineScope()
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        TextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.weight(1f),
+            label = label,
+            placeholder = placeholder,
+            enabled = enabled,
+        )
+        IconButton(
+            onClick = { scope.launch { pick()?.let(onValueChange) } },
+            enabled = enabled,
+            imageVector = icon,
+            contentDescription = browseDescription,
+        )
+    }
+}
+
+@Composable
+private fun PassphraseField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    visible: Boolean,
+    onToggleVisible: (Boolean) -> Unit,
+    enabled: Boolean,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.Bottom,
+    ) {
+        TextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.weight(1f),
+            label = "Passphrase",
+            placeholder = "optional",
+            isPassword = !visible,
+            enabled = enabled,
+        )
+        IconButton(
+            onClick = { onToggleVisible(!visible) },
+            imageVector = if (visible) Icons.EyeClosed else Icons.EyeOpen,
+            contentDescription = if (visible) "Hide passphrase" else "Show passphrase",
+        )
     }
 }
 
@@ -224,11 +330,12 @@ private fun SidebarShell(
 @Composable
 private fun MethodSelector(
     selected: CreationMethod,
+    onSelected: (CreationMethod) -> Unit,
 ) {
     Dropdown(
         options = CreationMethod.entries.toList(),
         selected = selected,
-        onSelected = {},
+        onSelected = onSelected,
         label = "Method",
         optionLabel = { it.label },
     )
@@ -255,8 +362,13 @@ private fun SidebarSeparator() {
 
 @Composable
 private fun SidebarError(errorMessage: String?) {
-    if (errorMessage != null) {
-        Text(errorMessage)
+    ErrorText(errorMessage)
+}
+
+@Composable
+private fun ErrorText(message: String?) {
+    if (message != null) {
+        Text(message, color = Theme[colors][error])
     }
 }
 

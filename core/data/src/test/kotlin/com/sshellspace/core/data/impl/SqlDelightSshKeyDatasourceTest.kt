@@ -119,4 +119,33 @@ class SqlDelightSshKeyDatasourceTest {
         assertEquals(null, datasource.get(inserted.id))
         assertEquals(emptyList(), datasource.index().first())
     }
+
+    @Test
+    fun `getSecret returns device secret`() = runTest {
+        val inserted = datasource.insert(
+            name = "device",
+            algorithm = Algorithm.Ed25519,
+            secret = SshKeySecret.Device(path = "/path", passphrase = "secret"),
+        )
+
+        assertEquals(SshKeySecret.Device(path = "/path", passphrase = "secret"), datasource.getSecret(inserted.id))
+    }
+
+    @Test
+    fun `getSecret returns vault secret`() = runTest {
+        val inserted = datasource.insert(
+            name = "vault",
+            algorithm = Algorithm.RSA,
+            secret = SshKeySecret.Vault("private-key-data"),
+        )
+
+        assertEquals(SshKeySecret.Vault("private-key-data"), datasource.getSecret(inserted.id))
+    }
+
+    @Test
+    fun `getSecret returns null for non-existent id`() = runTest {
+        val nonExistent = kotlin.uuid.Uuid.parse("00000000-0000-0000-0000-000000000000")
+
+        assertEquals(null, datasource.getSecret(nonExistent))
+    }
 }

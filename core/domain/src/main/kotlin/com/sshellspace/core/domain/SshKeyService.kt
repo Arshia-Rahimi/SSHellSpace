@@ -12,6 +12,12 @@ interface SshKeyService {
         algorithm: Algorithm,
         keySize: Int = 256,
     ): KeyPair
+
+    /**
+     * Parses [privateKey] and returns it re-encoded without encryption, paired with its public key.
+     * Throws when the key cannot be parsed or [passphrase] is wrong.
+     */
+    fun load(privateKey: PrivateKey, passphrase: String?): KeyPair
 }
 
 sealed interface SshKeyValidationResult {

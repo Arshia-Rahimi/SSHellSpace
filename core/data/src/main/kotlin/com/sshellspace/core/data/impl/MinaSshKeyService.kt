@@ -87,9 +87,24 @@ internal class MinaSshKeyService : SshKeyService {
         passphrase: String?,
         algorithm: Algorithm,
         keySize: Int,
+    ): KeyPair = encode(KeyUtils.generateKeyPair(algorithm.type, keySize), comment, passphrase)
+
+    override fun load(privateKey: PrivateKey, passphrase: String?): KeyPair {
+        val keyPair = SecurityUtils.getKeyPairResourceParser().loadKeyPairs(
+            null,
+            null,
+            FilePasswordProvider.of(passphrase),
+            ByteArrayInputStream(privateKey.toByteArray(Charsets.UTF_8)),
+        ).firstOrNull() ?: throw IllegalArgumentException("No valid key pairs could be parsed from the input.")
+        return encode(keyPair, comment = "", passphrase = null)
+    }
+
+    private fun encode(
+        keyPair: java.security.KeyPair,
+        comment: String,
+        passphrase: String?,
     ): KeyPair {
-        val keyPair = KeyUtils.generateKeyPair(algorithm.type, keySize)
-        val publicKeyWithComment = "${PublicKeyEntry.toString(keyPair.public)} $comment"
+        val publicKeyWithComment = "${PublicKeyEntry.toString(keyPair.public)} $comment".trimEnd()
 
         val outputStream = ByteArrayOutputStream()
         val writer = OpenSSHKeyPairResourceWriter.INSTANCE

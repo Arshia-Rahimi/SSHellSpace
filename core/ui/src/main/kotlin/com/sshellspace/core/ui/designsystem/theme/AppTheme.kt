@@ -16,7 +16,7 @@ fun DecoratedWindowScope.SSHellSpaceTheme(content: @Composable () -> Unit) {
     val theme = buildPlatformTheme {
         name = "SSHellSpaceTheme"
         applyThemeColors(isDark)
-        defaultContentColor = Theme[colors][onBackground]
+        defaultContentColor = themeColors(isDark).getValue(onBackground)
     }
 
     theme {

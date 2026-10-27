@@ -1,14 +1,18 @@
 package com.sshellspace.core.ui.designsystem
 
 import com.composables.icons.radix.ArrowLeft
+import com.composables.icons.radix.Archive
 import com.composables.icons.radix.Check
 import com.composables.icons.radix.ChevronLeft
+import com.composables.icons.radix.Copy
 import com.composables.icons.radix.Cross2
 import com.composables.icons.radix.EyeClosed
 import com.composables.icons.radix.EyeOpen
+import com.composables.icons.radix.File
 import com.composables.icons.radix.IdCard
 import com.composables.icons.radix.Keyboard
 import com.composables.icons.radix.LockClosed
+import com.composables.icons.radix.MagnifyingGlass
 import com.composables.icons.radix.Pencil1
 import com.composables.icons.radix.Plus
 import com.composables.icons.radix.Radix
@@ -29,4 +33,8 @@ object Icons {
     val EyeOpen = Radix.EyeOpen
     val EyeClosed = Radix.EyeClosed
     val Key = Radix.Keyboard
+    val Copy = Radix.Copy
+    val Search = Radix.MagnifyingGlass
+    val Folder = Radix.Archive
+    val File = Radix.File
 }

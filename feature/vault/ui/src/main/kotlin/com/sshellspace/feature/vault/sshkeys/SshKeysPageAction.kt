@@ -4,14 +4,16 @@ import com.sshellspace.core.domain.models.Algorithm
 
 sealed interface SshKeysPageAction {
     data class SelectKey(val key: SshKey) : SshKeysPageAction
-    data object CreateNewKey : SshKeysPageAction
+    data class SetSearch(val value: String) : SshKeysPageAction
+    data class OpenCreate(val method: CreationMethod) : SshKeysPageAction
+    data class SwitchMethod(val method: CreationMethod) : SshKeysPageAction
     data object CloseSidebar : SshKeysPageAction
     data object DismissError : SshKeysPageAction
 
     sealed interface Editing : SshKeysPageAction {
         data class SetName(val value: String) : Editing
         data object Save : Editing
-        data object Delete : Editing
+        data object RequestDelete : Editing
     }
 
     sealed interface VaultKey : SshKeysPageAction {
@@ -36,5 +38,13 @@ sealed interface SshKeysPageAction {
         data class SetPassphrase(val value: String) : ImportKey
         data class TogglePassphraseVisibility(val value: Boolean) : ImportKey
         data object Save : ImportKey
+    }
+
+    sealed interface PasteKey : SshKeysPageAction {
+        data class SetName(val value: String) : PasteKey
+        data class SetPrivateKey(val value: String) : PasteKey
+        data class SetPassphrase(val value: String) : PasteKey
+        data class TogglePassphraseVisibility(val value: Boolean) : PasteKey
+        data object Save : PasteKey
     }
 }

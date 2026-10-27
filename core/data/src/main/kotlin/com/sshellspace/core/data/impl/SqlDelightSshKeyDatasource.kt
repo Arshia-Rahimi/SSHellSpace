@@ -30,6 +30,12 @@ class SqlDelightSshKeyDatasource(
         db.device_ssh_keyQueries.get(id.toString()).executeAsOneOrNull()?.toSshKeyInfo()
             ?: db.vault_ssh_keyQueries.get(id.toString()).executeAsOneOrNull()?.toSshKeyInfo()
 
+    override suspend fun getSecret(id: Uuid): SshKeySecret? =
+        db.device_ssh_keyQueries.get(id.toString()).executeAsOneOrNull()
+            ?.let { SshKeySecret.Device(it.path, it.passphrase) }
+            ?: db.vault_ssh_keyQueries.get(id.toString()).executeAsOneOrNull()
+                ?.let { SshKeySecret.Vault(it.private_key) }
+
     override suspend fun insert(
         name: String,
         algorithm: Algorithm,
