@@ -83,6 +83,13 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
   - `SshTerminalTabViewModel` implements it by showing a prompt state and waiting for the answer.
   - MINA's callbacks are blocking, so `ConnectionContext.ask` uses `runBlocking` on the MINA thread.
 - The SSH tab hands BossTerm a custom `PlatformServices` (`SshPlatformServices`) whose `spawnProcess` opens a shell channel in place of a local PTY.
+
+### Port forwarding
+
+- Saved forwards (`PortForward` in core/domain, `port_forwards` table) reference a connection by id. The table has **no foreign key**, because the `ssh_connections` upsert is `INSERT OR REPLACE` and a cascade would delete forwards on every connection edit. `SshConnectionRepositoryImpl.delete` removes them instead.
+- `MinaPortForwardingService` (feature/terminal/data, Koin `single`) runs forwards via `ShellSession.Ssh.startForward`. Forwards on the same connection share one session, which closes when the last forward stops. A dropped session marks its forwards failed, and deleted forwards are stopped.
+- The client's `forwardingFilter` must allow TCP. MINA's default rejects the server's `forwarded-tcpip` channels, which breaks remote (`-R`) forwards.
+- The Port Forwarding page (`feature/vault/ui/.../portforwarding`) is the `SshPrompter` for starting forwards. Its login questions render with the shared cards in `feature/terminal/ui/.../ssh/SshPromptCards.kt`. Stopping a forward mid-login answers `null`, because cancelling the coroutine doesn't unblock the MINA thread.
 - `MinaSshConnectionServiceTest` runs real connections against an embedded MINA `SshServer`. The agent test uses a real `ssh-agent` and is skipped when OpenSSH isn't installed.
 
 ### Terminal
@@ -95,4 +102,4 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 
 ## Tests
 
-- Tests exist in `core/data`, `feature/vault/data`, `feature/terminal/data` and `feature/terminal/ui`. They use `kotlin.test` assertions, mockk, and `runTest`, with backtick-named test functions.
+- Tests exist in `core/data`, `feature/vault/data`, `feature/vault/ui`, `feature/terminal/data` and `feature/terminal/ui`. They use `kotlin.test` assertions, mockk, and `runTest`, with backtick-named test functions.
