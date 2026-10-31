@@ -7,6 +7,7 @@ import com.composables.icons.radix.ChevronDown
 import com.composables.icons.radix.ChevronLeft
 import com.composables.icons.radix.Copy
 import com.composables.icons.radix.Cross2
+import com.composables.icons.radix.Desktop
 import com.composables.icons.radix.EyeClosed
 import com.composables.icons.radix.EyeOpen
 import com.composables.icons.radix.File
@@ -41,4 +42,6 @@ object Icons {
     val Folder = Radix.Archive
     val File = Radix.File
     val Settings = Radix.Gear
+    val Host = Radix.Desktop
+    val Duplicate = Radix.Copy
 }

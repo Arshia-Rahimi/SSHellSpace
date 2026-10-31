@@ -7,6 +7,7 @@ import com.sshellspace.core.data.generated.Vault_ssh_keys
 import com.sshellspace.core.data.impl.CorePreferencesRepositoryImpl
 import com.sshellspace.core.data.impl.MinaSshKeyService
 import com.sshellspace.core.data.impl.SqlDelightPreferencesDatasource
+import com.sshellspace.core.data.impl.SqlDelightSshConnectionDatasource
 import com.sshellspace.core.data.impl.SqlDelightSshKeyDatasource
 import com.sshellspace.core.domain.SshKeyService
 import com.sshellspace.core.domain.repositories.CorePreferencesRepository
@@ -18,6 +19,7 @@ import org.koin.plugin.module.dsl.single
 val DataModule = module {
     single<SqlDelightPreferencesDatasource>() bind PreferencesDatasource::class
     single<SqlDelightSshKeyDatasource>() bind SshKeyDatasource::class
+    single<SqlDelightSshConnectionDatasource>() bind SshConnectionDatasource::class
     single<CorePreferencesRepositoryImpl>() bind CorePreferencesRepository::class
     single<MinaSshKeyService>() bind SshKeyService::class
     //

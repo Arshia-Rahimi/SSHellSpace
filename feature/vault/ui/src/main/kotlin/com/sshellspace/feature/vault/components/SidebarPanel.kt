@@ -1,4 +1,4 @@
-package com.sshellspace.feature.vault.sshkeys.components
+package com.sshellspace.feature.vault.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -26,7 +26,7 @@ import com.sshellspace.core.ui.designsystem.theme.separator
 
 internal val SidebarWidth = 340.dp
 
-/** Shared frame for the key sidebars: a header, a scrolling body and a footer that stays pinned to the bottom. */
+/** Shared frame for the vault sidebars: a header, a scrolling body and a footer that stays pinned to the bottom. */
 @Composable
 internal fun SidebarPanel(
     title: String,

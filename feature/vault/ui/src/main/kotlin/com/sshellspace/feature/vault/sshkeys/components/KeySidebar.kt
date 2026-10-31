@@ -35,6 +35,7 @@ import com.sshellspace.core.ui.designsystem.theme.error
 import com.sshellspace.core.ui.designsystem.theme.onOverlay
 import com.sshellspace.core.ui.designsystem.theme.surfaceElevated
 import com.sshellspace.core.ui.designsystem.theme.textSecondary
+import com.sshellspace.feature.vault.components.SidebarPanel
 import com.sshellspace.feature.vault.sshkeys.SidebarState
 import com.sshellspace.feature.vault.sshkeys.SshKeysPageAction
 import java.awt.datatransfer.StringSelection

@@ -32,6 +32,7 @@ import com.sshellspace.core.ui.designsystem.theme.separator
 import com.sshellspace.core.ui.designsystem.theme.textSecondary
 import com.sshellspace.core.ui.designsystem.theme.surfaceElevated
 import com.sshellspace.feature.vault.sshkeys.CreationMethod
+import com.sshellspace.feature.vault.components.SidebarPanel
 import com.sshellspace.feature.vault.sshkeys.SidebarState
 import com.sshellspace.feature.vault.sshkeys.SshKeysPageAction
 import io.github.vinceglb.filekit.FileKit

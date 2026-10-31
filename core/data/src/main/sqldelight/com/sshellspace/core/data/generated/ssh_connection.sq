@@ -1,0 +1,26 @@
+CREATE TABLE ssh_connections (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    host TEXT NOT NULL,
+    port INTEGER NOT NULL,
+    username TEXT NOT NULL,
+    -- JSON-encoded SshConnectionAuth
+    auth TEXT NOT NULL,
+    -- JSON-encoded SshConnectionOptions
+    options TEXT NOT NULL
+);
+
+index:
+SELECT * FROM ssh_connections
+ORDER BY name COLLATE NOCASE;
+
+get:
+SELECT * FROM ssh_connections
+WHERE id = ?;
+
+upsert:
+INSERT OR REPLACE INTO ssh_connections VALUES ?;
+
+delete:
+DELETE FROM ssh_connections
+WHERE id = ?;
