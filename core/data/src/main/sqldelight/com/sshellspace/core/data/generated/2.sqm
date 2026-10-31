@@ -1,0 +1,10 @@
+CREATE TABLE port_forwards (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    connection_id TEXT NOT NULL,
+    type TEXT NOT NULL,
+    bind_host TEXT NOT NULL,
+    bind_port INTEGER NOT NULL,
+    destination_host TEXT NOT NULL,
+    destination_port INTEGER NOT NULL
+);

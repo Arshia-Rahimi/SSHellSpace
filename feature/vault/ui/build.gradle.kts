@@ -8,6 +8,7 @@ dependencies {
     implementation(projects.core.ui)
     implementation(projects.feature.vault.domain)
     implementation(projects.feature.terminal.domain)
+    implementation(projects.feature.terminal.ui)
     //
     implementation(libs.filekit.core)
     implementation(libs.filekit.dialogs)

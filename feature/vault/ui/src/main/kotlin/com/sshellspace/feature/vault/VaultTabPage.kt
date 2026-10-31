@@ -1,17 +1,10 @@
 package com.sshellspace.feature.vault
 
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import com.composeunstyled.Text
-import com.composeunstyled.theme.Theme
-import com.sshellspace.core.ui.designsystem.theme.colors
-import com.sshellspace.core.ui.designsystem.theme.textSecondary
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.sshellspace.core.ui.designsystem.Icons
 import com.sshellspace.feature.vault.connections.ConnectionsPage
+import com.sshellspace.feature.vault.portforwarding.PortForwardingPage
 import com.sshellspace.feature.vault.settings.SettingsPage
 import com.sshellspace.feature.vault.sshkeys.SshKeysPage
 
@@ -22,16 +15,6 @@ enum class VaultTabPage(
 ) {
     Vault("Vault", Icons.Vault, ::ConnectionsPage),
     SshKeys("Ssh Keys", Icons.SshKeys, ::SshKeysPage),
-    PortForwarding("Port Forwarding", Icons.PortForwarding, { ComingSoon() }),
+    PortForwarding("Port Forwarding", Icons.PortForwarding, ::PortForwardingPage),
     Settings("Settings", Icons.Settings, ::SettingsPage),
-}
-
-@Composable
-private fun ComingSoon() {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center,
-    ) {
-        Text("Coming soon", color = Theme[colors][textSecondary])
-    }
 }

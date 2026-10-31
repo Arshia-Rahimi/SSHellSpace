@@ -4,6 +4,7 @@ import app.cash.sqldelight.EnumColumnAdapter
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.sshellspace.core.data.generated.Database
 import com.sshellspace.core.data.generated.Device_ssh_keys
+import com.sshellspace.core.data.generated.Port_forwards
 import com.sshellspace.core.data.generated.Vault_ssh_keys
 import com.sshellspace.core.domain.models.StoredPreference
 import java.util.Properties
@@ -26,6 +27,7 @@ class SqlDelightPreferencesDatasourceTest {
             ),
             device_ssh_keysAdapter = Device_ssh_keys.Adapter(EnumColumnAdapter()),
             vault_ssh_keysAdapter = Vault_ssh_keys.Adapter(EnumColumnAdapter()),
+            port_forwardsAdapter = Port_forwards.Adapter(EnumColumnAdapter()),
         ),
     )
 

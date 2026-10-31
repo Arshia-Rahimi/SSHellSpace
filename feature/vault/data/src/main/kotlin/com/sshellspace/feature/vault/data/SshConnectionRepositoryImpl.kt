@@ -1,5 +1,6 @@
 package com.sshellspace.feature.vault.data
 
+import com.sshellspace.core.data.PortForwardDatasource
 import com.sshellspace.core.data.SshConnectionDatasource
 import com.sshellspace.core.data.SshKeyDatasource
 import com.sshellspace.core.data.generateUuid
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.first
 class SshConnectionRepositoryImpl(
     private val connectionDatasource: SshConnectionDatasource,
     private val sshKeyDatasource: SshKeyDatasource,
+    private val portForwardDatasource: PortForwardDatasource,
 ) : SshConnectionRepository {
     override fun getConnections(): Flow<List<SshConnection>> =
         connectionDatasource.index()
@@ -47,6 +49,7 @@ class SshConnectionRepositoryImpl(
         connectionDatasource.index().first()
             .filter { it.options.jumpHostId == id }
             .forEach { connectionDatasource.upsert(it.copy(options = it.options.copy(jumpHostId = null))) }
+        portForwardDatasource.deleteForConnection(id)
         connectionDatasource.delete(id)
     }
 

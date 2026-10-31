@@ -13,7 +13,9 @@ interface SshConnectionRepository {
     /** Creates a connection when [id] is null, otherwise replaces the connection with that id. */
     suspend fun save(id: Uuid?, draft: SshConnectionDraft): SaveSshConnectionResult
 
-    /** Deletes the connection and clears it as the jump host of any connection that used it. */
+    /**
+     * Deletes the connection and its port forwards, and clears it as the jump host of any connection that used it.
+     */
     suspend fun delete(id: Uuid)
 }
 

@@ -1,0 +1,32 @@
+import com.sshellspace.core.domain.models.PortForwardType;
+
+-- No foreign key to ssh_connections: its upsert is INSERT OR REPLACE, which would cascade-delete the forwards.
+CREATE TABLE port_forwards (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    connection_id TEXT NOT NULL,
+    type TEXT AS PortForwardType NOT NULL,
+    bind_host TEXT NOT NULL,
+    bind_port INTEGER NOT NULL,
+    destination_host TEXT NOT NULL,
+    destination_port INTEGER NOT NULL
+);
+
+index:
+SELECT * FROM port_forwards
+ORDER BY name COLLATE NOCASE;
+
+get:
+SELECT * FROM port_forwards
+WHERE id = ?;
+
+upsert:
+INSERT OR REPLACE INTO port_forwards VALUES ?;
+
+delete:
+DELETE FROM port_forwards
+WHERE id = ?;
+
+deleteForConnection:
+DELETE FROM port_forwards
+WHERE connection_id = ?;

@@ -4,6 +4,8 @@ import com.sshellspace.core.data.SshConnectionDatasource
 import com.sshellspace.core.data.SshKeyDatasource
 import com.sshellspace.core.domain.SshKeyService
 import com.sshellspace.core.domain.SshKeyValidationResult
+import com.sshellspace.core.domain.models.PortForward
+import com.sshellspace.core.domain.models.PortForwardType
 import com.sshellspace.core.domain.models.SshConnection
 import com.sshellspace.core.domain.models.SshConnectionAuth
 import com.sshellspace.feature.terminal.data.ssh.ConnectionContext
@@ -12,6 +14,7 @@ import com.sshellspace.feature.terminal.domain.SecretPrompt
 import com.sshellspace.feature.terminal.domain.ShellSession
 import com.sshellspace.feature.terminal.domain.SshConnectResult
 import com.sshellspace.feature.terminal.domain.SshConnectionService
+import com.sshellspace.feature.terminal.domain.SshForwardHandle
 import com.sshellspace.feature.terminal.domain.SshPrompter
 import com.sshellspace.feature.terminal.domain.SshShellHandle
 import java.io.File
@@ -275,6 +278,24 @@ private class MinaSshSession(private val sessions: List<ClientSession>) : ShellS
         channel.ptyLines = rows
         channel.open().verify(10L, TimeUnit.SECONDS)
         return MinaSshShellHandle(this, channel)
+    }
+
+    override fun startForward(forward: PortForward): SshForwardHandle {
+        val bind = SshdSocketAddress(forward.bindHost, forward.bindPort)
+        val destination = SshdSocketAddress(forward.destinationHost, forward.destinationPort)
+        val tracker = when (forward.type) {
+            PortForwardType.Local -> target.createLocalPortForwardingTracker(bind, destination)
+            PortForwardType.Remote -> target.createRemotePortForwardingTracker(bind, destination)
+            PortForwardType.Dynamic -> target.createDynamicPortForwardingTracker(bind)
+        }
+        return object : SshForwardHandle {
+            override val boundAddress: String = tracker.boundAddress.let { "${it.hostName}:${it.port}" }
+            override fun close() = tracker.close()
+        }
+    }
+
+    override fun onClose(listener: () -> Unit) {
+        target.addCloseFutureListener { listener() }
     }
 
     override fun close() {

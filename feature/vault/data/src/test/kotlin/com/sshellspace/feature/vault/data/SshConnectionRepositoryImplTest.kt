@@ -1,5 +1,6 @@
 package com.sshellspace.feature.vault.data
 
+import com.sshellspace.core.data.PortForwardDatasource
 import com.sshellspace.core.data.SshConnectionDatasource
 import com.sshellspace.core.data.SshKeyDatasource
 import com.sshellspace.core.domain.models.SshConnection
@@ -22,7 +23,8 @@ class SshConnectionRepositoryImplTest {
 
     private val connectionDatasource = mockk<SshConnectionDatasource>(relaxUnitFun = true)
     private val keyDatasource = mockk<SshKeyDatasource>()
-    private val repository = SshConnectionRepositoryImpl(connectionDatasource, keyDatasource)
+    private val forwardDatasource = mockk<PortForwardDatasource>(relaxUnitFun = true)
+    private val repository = SshConnectionRepositoryImpl(connectionDatasource, keyDatasource, forwardDatasource)
 
     private fun draft(
         name: String = "server",
@@ -89,7 +91,7 @@ class SshConnectionRepositoryImplTest {
     }
 
     @Test
-    fun `delete clears the deleted connection as a jump host`() = runTest {
+    fun `delete clears the deleted connection as a jump host and removes its forwards`() = runTest {
         val bastion = stored("bastion")
         val inner = stored("inner", jumpHostId = bastion.id)
         givenStored(bastion, inner)
@@ -97,6 +99,7 @@ class SshConnectionRepositoryImplTest {
         repository.delete(bastion.id)
 
         coVerify { connectionDatasource.upsert(inner.copy(options = inner.options.copy(jumpHostId = null))) }
+        coVerify { forwardDatasource.deleteForConnection(bastion.id) }
         coVerify { connectionDatasource.delete(bastion.id) }
     }
 }

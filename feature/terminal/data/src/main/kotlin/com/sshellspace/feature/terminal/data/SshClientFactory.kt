@@ -11,6 +11,8 @@ import org.apache.sshd.client.config.hosts.HostConfigEntryResolver
 import org.apache.sshd.client.keyverifier.RejectAllServerKeyVerifier
 import org.apache.sshd.common.keyprovider.KeyIdentityProvider
 import org.apache.sshd.core.CoreModuleProperties
+import org.apache.sshd.server.forward.ForwardingFilter
+import org.apache.sshd.server.forward.TcpForwardingFilter
 
 /** The OpenSSH known_hosts file, shared with the `ssh` command line tool. */
 val DefaultKnownHostsPath: Path = Path.of(System.getProperty("user.home"), ".ssh", "known_hosts")
@@ -29,6 +31,9 @@ fun createSshClient(
     // Sessions without a connection context aren't ours, so they get no trust.
     serverKeyVerifier = RejectAllServerKeyVerifier.INSTANCE
     agentFactory = SystemSshAgentFactory(agentLocator)
+    // The default rejects the server's `forwarded-tcpip` channels, which breaks remote forwards. The client only
+    // accepts those channels, and only for ports it asked to forward, so allowing TCP lets nothing else in.
+    forwardingFilter = ForwardingFilter.asForwardingFilter(null, null, TcpForwardingFilter.DEFAULT)
     // Try the plain password method before keyboard-interactive, so a password connection doesn't run into a
     // 2FA challenge first. Methods a connection didn't pick have nothing to offer and are skipped quickly.
     CoreModuleProperties.PREFERRED_AUTHS.set(this, "publickey,password,keyboard-interactive")

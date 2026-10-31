@@ -1,5 +1,6 @@
 package com.sshellspace.feature.terminal.data
 
+import com.sshellspace.feature.terminal.domain.PortForwardingService
 import com.sshellspace.feature.terminal.domain.ShellDiscoveryService
 import com.sshellspace.feature.terminal.domain.SshConnectionService
 import com.sshellspace.feature.terminal.domain.TerminalPreferencesRepository
@@ -16,4 +17,5 @@ val TerminalDataModule = module {
     single { SshAgentLocator() }
     single<SshClient> { createSshClient(agentLocator = get()) }
     factory<MinaSshConnectionService>() bind SshConnectionService::class
+    single<PortForwardingService> { MinaPortForwardingService(connectionService = get(), forwardDatasource = get()) }
 }

@@ -20,6 +20,7 @@ import com.composables.icons.radix.Pencil1
 import com.composables.icons.radix.Play
 import com.composables.icons.radix.Plus
 import com.composables.icons.radix.Radix
+import com.composables.icons.radix.Stop
 import com.composables.icons.radix.Trash
 import dev.nucleusframework.window.MacOSLargeCornerRadiusNode
 
@@ -46,4 +47,6 @@ object Icons {
     val Host = Radix.Desktop
     val Duplicate = Radix.Copy
     val Connect = Radix.Play
+    val Start = Radix.Play
+    val Stop = Radix.Stop
 }

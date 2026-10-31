@@ -5,6 +5,7 @@ import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.sshellspace.core.common.JsonSerializer
 import com.sshellspace.core.data.generated.Database
 import com.sshellspace.core.data.generated.Device_ssh_keys
+import com.sshellspace.core.data.generated.Port_forwards
 import com.sshellspace.core.data.generated.Vault_ssh_keys
 import com.sshellspace.core.domain.models.CorePreference
 import com.sshellspace.core.domain.models.DEFAULT_COLOR_SCHEME_ID
@@ -27,6 +28,7 @@ class CorePreferencesRepositoryImplTest {
             ),
             device_ssh_keysAdapter = Device_ssh_keys.Adapter(EnumColumnAdapter()),
             vault_ssh_keysAdapter = Vault_ssh_keys.Adapter(EnumColumnAdapter()),
+            port_forwardsAdapter = Port_forwards.Adapter(EnumColumnAdapter()),
         ),
     )
     private val repository = CorePreferencesRepositoryImpl(datasource)
