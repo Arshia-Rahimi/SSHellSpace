@@ -6,6 +6,7 @@ import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -39,6 +40,7 @@ import androidx.compose.ui.unit.dp
 import com.composeunstyled.Text
 import com.composeunstyled.theme.Theme
 import com.sshellspace.core.domain.models.ThemePreference
+import com.sshellspace.core.ui.designsystem.adaptive.currentWindowClass
 import com.sshellspace.core.ui.designsystem.components.Button
 import com.sshellspace.core.ui.designsystem.components.Dropdown
 import com.sshellspace.core.ui.designsystem.theme.AppColorScheme
@@ -53,6 +55,8 @@ import com.sshellspace.core.ui.shortcuts.label
 import com.sshellspace.core.ui.shortcuts.toKeyChord
 import org.koin.compose.viewmodel.koinViewModel
 
+private val SettingsMaxWidth = 720.dp
+
 @Composable
 fun SettingsPage() {
     val viewModel = koinViewModel<SettingsPageViewModel>()
@@ -65,55 +69,71 @@ internal fun SettingsPageContent(
     uiState: SettingsPageUiState,
     onAction: (SettingsPageAction) -> Unit,
 ) {
+    val compact = currentWindowClass.isCompact
+
     Column(
         modifier = Modifier.fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(horizontal = 24.dp, vertical = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
+            .padding(horizontal = if (compact) 16.dp else 24.dp, vertical = 16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        Text("Settings")
-
-        SettingsSection(
-            title = "Appearance",
-            description = "Choose light or dark mode and the accent color used across the app.",
+        Column(
+            // Keep lines readable on wide windows instead of stretching sections edge to edge.
+            modifier = Modifier.widthIn(max = SettingsMaxWidth).fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(if (compact) 16.dp else 24.dp),
         ) {
-            ThemeSelector(
-                selected = uiState.themePreference,
-                onSelected = { onAction(SettingsPageAction.SetTheme(it)) },
-            )
-            ColorSchemeSelector(
-                selected = uiState.colorScheme,
-                onSelected = { onAction(SettingsPageAction.SetColorScheme(it)) },
-            )
+            SettingsSections(uiState, onAction)
         }
+    }
+}
 
-        SettingsSection(
-            title = "Terminal",
-            description = "The shell that new local terminal tabs start with.",
-        ) {
-            Dropdown(
-                options = uiState.shells,
-                selected = uiState.defaultShell,
-                onSelected = { onAction(SettingsPageAction.SetDefaultShell(it)) },
-                modifier = Modifier.widthIn(max = 480.dp),
-                optionLabel = { it.label },
-            )
-            if (uiState.isDiscoveringShells) {
-                Text("Looking for installed shells…", color = Theme[colors][textSecondary])
-            }
+@Composable
+private fun SettingsSections(
+    uiState: SettingsPageUiState,
+    onAction: (SettingsPageAction) -> Unit,
+) {
+    Text("Settings")
+
+    SettingsSection(
+        title = "Appearance",
+        description = "Choose light or dark mode and the accent color used across the app.",
+    ) {
+        ThemeSelector(
+            selected = uiState.themePreference,
+            onSelected = { onAction(SettingsPageAction.SetTheme(it)) },
+        )
+        ColorSchemeSelector(
+            selected = uiState.colorScheme,
+            onSelected = { onAction(SettingsPageAction.SetColorScheme(it)) },
+        )
+    }
+
+    SettingsSection(
+        title = "Terminal",
+        description = "The shell that new local terminal tabs start with.",
+    ) {
+        Dropdown(
+            options = uiState.shells,
+            selected = uiState.defaultShell,
+            onSelected = { onAction(SettingsPageAction.SetDefaultShell(it)) },
+            modifier = Modifier.widthIn(max = 480.dp),
+            optionLabel = { it.label },
+        )
+        if (uiState.isDiscoveringShells) {
+            Text("Looking for installed shells…", color = Theme[colors][textSecondary])
         }
+    }
 
-        SettingsSection(
-            title = "Shortcuts",
-            description = "Click a shortcut, then press the new key combination. Esc cancels.",
-        ) {
-            uiState.shortcuts.forEach { binding ->
-                ShortcutRow(
-                    binding = binding,
-                    recording = uiState.recording?.takeIf { it.shortcut == binding.shortcut },
-                    onAction = onAction,
-                )
-            }
+    SettingsSection(
+        title = "Shortcuts",
+        description = "Click a shortcut, then press the new key combination. Esc cancels.",
+    ) {
+        uiState.shortcuts.forEach { binding ->
+            ShortcutRow(
+                binding = binding,
+                recording = uiState.recording?.takeIf { it.shortcut == binding.shortcut },
+                onAction = onAction,
+            )
         }
     }
 }
@@ -219,7 +239,10 @@ private fun ThemeSelector(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text("Theme", color = Theme[colors][textSecondary])
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             ThemePreference.entries.forEach { theme ->
                 OptionButton(
                     selected = theme == selected,
@@ -239,7 +262,10 @@ private fun ColorSchemeSelector(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text("Color scheme", color = Theme[colors][textSecondary])
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             AppColorScheme.entries.forEach { scheme ->
                 OptionButton(
                     selected = scheme == selected,

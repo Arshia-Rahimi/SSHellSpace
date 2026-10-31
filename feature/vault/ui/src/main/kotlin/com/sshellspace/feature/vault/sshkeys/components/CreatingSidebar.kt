@@ -5,11 +5,8 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
@@ -31,7 +28,6 @@ import com.sshellspace.core.ui.designsystem.components.TextField
 import com.sshellspace.core.ui.designsystem.theme.colors
 import com.sshellspace.core.ui.designsystem.theme.error
 import com.sshellspace.core.ui.designsystem.theme.onOverlay
-import com.sshellspace.core.ui.designsystem.theme.overlay
 import com.sshellspace.core.ui.designsystem.theme.separator
 import com.sshellspace.core.ui.designsystem.theme.textSecondary
 import com.sshellspace.core.ui.designsystem.theme.surfaceElevated
@@ -54,7 +50,16 @@ object CreatingSidebar {
         isSaveInFlight: Boolean,
         errorMessage: String?,
     ) {
-        SidebarShell(onClose = onClose) {
+        SidebarShell(
+            onClose = onClose,
+            footer = {
+                SidebarFooter(
+                    label = "Create",
+                    isSaveInFlight = isSaveInFlight,
+                    onSave = { onAction(SshKeysPageAction.VaultKey.Save) },
+                )
+            },
+        ) {
             MethodSelector(selected = CreationMethod.CreateVault, onSelected = { onAction(SshKeysPageAction.SwitchMethod(it)) })
             SidebarSeparator()
             SidebarError(errorMessage)
@@ -77,12 +82,6 @@ object CreatingSidebar {
                 selected = state.algorithm,
                 onSelected = { onAction(SshKeysPageAction.VaultKey.SetAlgorithm(it)) },
             )
-            Spacer(modifier = Modifier.weight(1f))
-            SidebarFooter(
-                label = "Create",
-                isSaveInFlight = isSaveInFlight,
-                onSave = { onAction(SshKeysPageAction.VaultKey.Save) },
-            )
         }
     }
 
@@ -94,7 +93,16 @@ object CreatingSidebar {
         isSaveInFlight: Boolean,
         errorMessage: String?,
     ) {
-        SidebarShell(onClose = onClose) {
+        SidebarShell(
+            onClose = onClose,
+            footer = {
+                SidebarFooter(
+                    label = "Create",
+                    isSaveInFlight = isSaveInFlight,
+                    onSave = { onAction(SshKeysPageAction.DeviceKey.Save) },
+                )
+            },
+        ) {
             MethodSelector(selected = CreationMethod.CreateDevice, onSelected = { onAction(SshKeysPageAction.SwitchMethod(it)) })
             SidebarSeparator()
             SidebarError(errorMessage)
@@ -134,12 +142,6 @@ object CreatingSidebar {
                 selected = state.algorithm,
                 onSelected = { onAction(SshKeysPageAction.DeviceKey.SetAlgorithm(it)) },
             )
-            Spacer(modifier = Modifier.weight(1f))
-            SidebarFooter(
-                label = "Create",
-                isSaveInFlight = isSaveInFlight,
-                onSave = { onAction(SshKeysPageAction.DeviceKey.Save) },
-            )
         }
     }
 
@@ -151,7 +153,16 @@ object CreatingSidebar {
         isSaveInFlight: Boolean,
         errorMessage: String?,
     ) {
-        SidebarShell(onClose = onClose) {
+        SidebarShell(
+            onClose = onClose,
+            footer = {
+                SidebarFooter(
+                    label = "Import",
+                    isSaveInFlight = isSaveInFlight,
+                    onSave = { onAction(SshKeysPageAction.ImportKey.Save) },
+                )
+            },
+        ) {
             MethodSelector(selected = CreationMethod.Import, onSelected = { onAction(SshKeysPageAction.SwitchMethod(it)) })
             SidebarSeparator()
             SidebarError(errorMessage)
@@ -180,12 +191,6 @@ object CreatingSidebar {
                 onToggleVisible = { onAction(SshKeysPageAction.ImportKey.TogglePassphraseVisibility(it)) },
                 enabled = !isSaveInFlight,
             )
-            Spacer(modifier = Modifier.weight(1f))
-            SidebarFooter(
-                label = "Import",
-                isSaveInFlight = isSaveInFlight,
-                onSave = { onAction(SshKeysPageAction.ImportKey.Save) },
-            )
         }
     }
 
@@ -197,7 +202,16 @@ object CreatingSidebar {
         isSaveInFlight: Boolean,
         errorMessage: String?,
     ) {
-        SidebarShell(onClose = onClose) {
+        SidebarShell(
+            onClose = onClose,
+            footer = {
+                SidebarFooter(
+                    label = "Import",
+                    isSaveInFlight = isSaveInFlight,
+                    onSave = { onAction(SshKeysPageAction.PasteKey.Save) },
+                )
+            },
+        ) {
             MethodSelector(selected = CreationMethod.Paste, onSelected = { onAction(SshKeysPageAction.SwitchMethod(it)) })
             SidebarSeparator()
             SidebarError(errorMessage)
@@ -224,12 +238,6 @@ object CreatingSidebar {
                 visible = state.passphraseVisible,
                 onToggleVisible = { onAction(SshKeysPageAction.PasteKey.TogglePassphraseVisibility(it)) },
                 enabled = !isSaveInFlight,
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            SidebarFooter(
-                label = "Import",
-                isSaveInFlight = isSaveInFlight,
-                onSave = { onAction(SshKeysPageAction.PasteKey.Save) },
             )
         }
     }
@@ -294,31 +302,10 @@ private fun PassphraseField(
 @Composable
 private fun SidebarShell(
     onClose: () -> Unit,
+    footer: @Composable ColumnScope.() -> Unit,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxHeight()
-            .width(360.dp)
-            .background(Theme[colors][overlay])
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            IconButton(
-                onClick = onClose,
-                imageVector = Icons.Back,
-                contentDescription = "Close sidebar",
-            )
-            Text("New SSH key")
-        }
-        UnstyledHorizontalSeparator(thickness = 1.dp, color = Theme[colors][separator])
-        content()
-    }
+    SidebarPanel(title = "New SSH key", onClose = onClose, footer = footer, content = content)
 }
 
 @Composable

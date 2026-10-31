@@ -4,11 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.runtime.Composable
@@ -28,7 +25,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledIcon
-import com.composeunstyled.UnstyledHorizontalSeparator
 import com.composeunstyled.theme.Theme
 import com.sshellspace.core.ui.designsystem.Icons
 import com.sshellspace.core.ui.designsystem.components.Button
@@ -37,8 +33,6 @@ import com.sshellspace.core.ui.designsystem.components.TextField
 import com.sshellspace.core.ui.designsystem.theme.colors
 import com.sshellspace.core.ui.designsystem.theme.error
 import com.sshellspace.core.ui.designsystem.theme.onOverlay
-import com.sshellspace.core.ui.designsystem.theme.overlay
-import com.sshellspace.core.ui.designsystem.theme.separator
 import com.sshellspace.core.ui.designsystem.theme.surfaceElevated
 import com.sshellspace.core.ui.designsystem.theme.textSecondary
 import com.sshellspace.feature.vault.sshkeys.SidebarState
@@ -55,27 +49,46 @@ fun KeySidebar(
     isSaveInFlight: Boolean,
     errorMessage: String?,
 ) {
-    Column(
-        modifier = Modifier
-            .fillMaxHeight()
-            .width(360.dp)
-            .background(Theme[colors][overlay])
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp),
+    SidebarPanel(
+        title = "Edit key",
+        onClose = onClose,
+        footer = {
+            if (errorMessage != null) {
+                Text(errorMessage, color = Theme[colors][error])
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Button(
+                    onClick = { onAction(SshKeysPageAction.Editing.Save) },
+                    enabled = !isSaveInFlight && state.nameFieldError == null,
+                    modifier = Modifier.weight(1f).clip(RoundedCornerShape(6.dp))
+                        .background(Theme[colors][surfaceElevated])
+                        .padding(vertical = 10.dp),
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        UnstyledIcon(
+                            imageVector = Icons.Check,
+                            contentDescription = null,
+                            tint = Theme[colors][onOverlay],
+                        )
+                        Text("Save")
+                    }
+                }
+                IconButton(
+                    onClick = { onAction(SshKeysPageAction.Editing.RequestDelete) },
+                    enabled = !isSaveInFlight,
+                    imageVector = Icons.Trash,
+                    contentDescription = "Delete key",
+                )
+            }
+        },
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            IconButton(
-                onClick = onClose,
-                imageVector = Icons.Back,
-                contentDescription = "Close sidebar",
-            )
-            Text("Edit key")
-        }
-        UnstyledHorizontalSeparator(thickness = 1.dp, color = Theme[colors][separator])
         Text("Type: ${state.key.type.name.lowercase().replaceFirstChar { it.uppercase() }}")
         Text("Algorithm: ${state.key.algorithm.name}")
         state.details?.path?.let { Text("Path: $it") }
@@ -90,41 +103,6 @@ fun KeySidebar(
             Text(state.nameFieldError, color = Theme[colors][error])
         }
         PublicKeyBox(state)
-        Spacer(modifier = Modifier.weight(1f))
-        if (errorMessage != null) {
-            Text(errorMessage, color = Theme[colors][error])
-        }
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Button(
-                onClick = { onAction(SshKeysPageAction.Editing.Save) },
-                enabled = !isSaveInFlight && state.nameFieldError == null,
-                modifier = Modifier.weight(1f).clip(RoundedCornerShape(6.dp))
-                    .background(Theme[colors][surfaceElevated])
-                    .padding(vertical = 10.dp),
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(6.dp),
-                ) {
-                    UnstyledIcon(
-                        imageVector = Icons.Check,
-                        contentDescription = null,
-                        tint = Theme[colors][onOverlay],
-                    )
-                    Text("Save")
-                }
-            }
-            IconButton(
-                onClick = { onAction(SshKeysPageAction.Editing.RequestDelete) },
-                enabled = !isSaveInFlight,
-                imageVector = Icons.Trash,
-                contentDescription = "Delete key",
-            )
-        }
     }
 }
 

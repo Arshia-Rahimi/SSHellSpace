@@ -26,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.AnchorAlignment
 import com.composeunstyled.Text
@@ -33,6 +34,7 @@ import com.composeunstyled.UnstyledDropdownMenu
 import com.composeunstyled.UnstyledIcon
 import com.composeunstyled.theme.Theme
 import com.sshellspace.core.ui.designsystem.Icons
+import com.sshellspace.core.ui.designsystem.adaptive.currentWindowClass
 import com.sshellspace.core.ui.designsystem.components.Button
 import com.sshellspace.core.ui.designsystem.components.MenuItem
 import com.sshellspace.core.ui.designsystem.components.MenuPanel
@@ -59,86 +61,122 @@ internal fun SshKeysPageContent(
     uiState: SshKeysPageUiState,
     onAction: (SshKeysPageAction) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxSize(),
-    ) {
-        Column(
-            modifier = Modifier.fillMaxHeight().weight(1f),
-        ) {
-            SshKeysHeader(
-                searchQuery = uiState.searchQuery,
-                onSearch = { onAction(SshKeysPageAction.SetSearch(it)) },
-                onNewKey = { onAction(SshKeysPageAction.OpenCreate(it)) },
+    val compact = currentWindowClass.isCompact
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Row(modifier = Modifier.fillMaxSize()) {
+            KeyList(
+                uiState = uiState,
+                onAction = onAction,
+                compact = compact,
+                modifier = Modifier.fillMaxHeight().weight(1f),
             )
-            when {
-                uiState.keys.isEmpty() -> EmptyState(
-                    onGenerate = { onAction(SshKeysPageAction.OpenCreate(CreationMethod.CreateVault)) },
-                    onImport = { onAction(SshKeysPageAction.OpenCreate(CreationMethod.Import)) },
-                )
-                uiState.filteredKeys.isEmpty() -> CenteredMessage("No keys match \"${uiState.searchQuery.trim()}\"")
-                else -> LazyVerticalGrid(
-                    columns = GridCells.Adaptive(180.dp),
-                    modifier = Modifier.fillMaxSize().padding(16.dp),
-                    contentPadding = PaddingValues(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    items(
-                        items = uiState.filteredKeys,
-                        key = { it.id },
-                    ) { key ->
-                        SshKeyCard(
-                            key = key,
-                            selected = uiState.sidebarState is SidebarState.Editing &&
-                                    (uiState.sidebarState as SidebarState.Editing).key.id == key.id,
-                            onClick = { onAction(SshKeysPageAction.SelectKey(key)) },
-                        )
-                    }
+            if (!compact) {
+                Sidebar(uiState, onAction)
+            }
+        }
+        // Not enough room for the list and the sidebar side by side, so the sidebar floats over the list.
+        if (compact) {
+            Sidebar(
+                uiState = uiState,
+                onAction = onAction,
+                modifier = Modifier.align(Alignment.CenterEnd).shadow(16.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun KeyList(
+    uiState: SshKeysPageUiState,
+    onAction: (SshKeysPageAction) -> Unit,
+    compact: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier = modifier) {
+        SshKeysHeader(
+            searchQuery = uiState.searchQuery,
+            onSearch = { onAction(SshKeysPageAction.SetSearch(it)) },
+            onNewKey = { onAction(SshKeysPageAction.OpenCreate(it)) },
+            compact = compact,
+        )
+        when {
+            uiState.keys.isEmpty() -> EmptyState(
+                onGenerate = { onAction(SshKeysPageAction.OpenCreate(CreationMethod.CreateVault)) },
+                onImport = { onAction(SshKeysPageAction.OpenCreate(CreationMethod.Import)) },
+            )
+            uiState.filteredKeys.isEmpty() -> CenteredMessage("No keys match \"${uiState.searchQuery.trim()}\"")
+            else -> LazyVerticalGrid(
+                columns = GridCells.Adaptive(180.dp),
+                modifier = Modifier.fillMaxSize().padding(horizontal = if (compact) 8.dp else 16.dp),
+                contentPadding = PaddingValues(8.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                items(
+                    items = uiState.filteredKeys,
+                    key = { it.id },
+                ) { key ->
+                    SshKeyCard(
+                        key = key,
+                        selected = uiState.sidebarState is SidebarState.Editing &&
+                                (uiState.sidebarState as SidebarState.Editing).key.id == key.id,
+                        onClick = { onAction(SshKeysPageAction.SelectKey(key)) },
+                    )
                 }
             }
         }
-        AnimatedContent(
-            targetState = uiState.sidebarState,
-            contentKey = { it.contentKey() },
-        ) { state ->
-            when (state) {
-                SidebarState.None -> Spacer(modifier = Modifier.fillMaxHeight())
-                is SidebarState.Editing -> KeySidebar(
-                    state = state,
-                    onAction = { onAction(it) },
-                    onClose = { onAction(SshKeysPageAction.CloseSidebar) },
-                    isSaveInFlight = uiState.isSaveInFlight,
-                    errorMessage = uiState.errorMessage,
-                )
-                is SidebarState.VaultKeyCreating -> CreatingSidebar.VaultKey(
-                    state = state,
-                    onAction = { onAction(it) },
-                    onClose = { onAction(SshKeysPageAction.CloseSidebar) },
-                    isSaveInFlight = uiState.isSaveInFlight,
-                    errorMessage = uiState.errorMessage,
-                )
-                is SidebarState.DeviceKeyCreating -> CreatingSidebar.DeviceKey(
-                    state = state,
-                    onAction = { onAction(it) },
-                    onClose = { onAction(SshKeysPageAction.CloseSidebar) },
-                    isSaveInFlight = uiState.isSaveInFlight,
-                    errorMessage = uiState.errorMessage,
-                )
-                is SidebarState.ImportKeyCreating -> CreatingSidebar.ImportKey(
-                    state = state,
-                    onAction = { onAction(it) },
-                    onClose = { onAction(SshKeysPageAction.CloseSidebar) },
-                    isSaveInFlight = uiState.isSaveInFlight,
-                    errorMessage = uiState.errorMessage,
-                )
-                is SidebarState.PasteKeyCreating -> CreatingSidebar.PasteKey(
-                    state = state,
-                    onAction = { onAction(it) },
-                    onClose = { onAction(SshKeysPageAction.CloseSidebar) },
-                    isSaveInFlight = uiState.isSaveInFlight,
-                    errorMessage = uiState.errorMessage,
-                )
-            }
+    }
+}
+
+@Composable
+private fun Sidebar(
+    uiState: SshKeysPageUiState,
+    onAction: (SshKeysPageAction) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    AnimatedContent(
+        targetState = uiState.sidebarState,
+        modifier = modifier,
+        contentKey = { it.contentKey() },
+    ) { state ->
+        when (state) {
+            SidebarState.None -> Spacer(modifier = Modifier.fillMaxHeight())
+            is SidebarState.Editing -> KeySidebar(
+                state = state,
+                onAction = { onAction(it) },
+                onClose = { onAction(SshKeysPageAction.CloseSidebar) },
+                isSaveInFlight = uiState.isSaveInFlight,
+                errorMessage = uiState.errorMessage,
+            )
+            is SidebarState.VaultKeyCreating -> CreatingSidebar.VaultKey(
+                state = state,
+                onAction = { onAction(it) },
+                onClose = { onAction(SshKeysPageAction.CloseSidebar) },
+                isSaveInFlight = uiState.isSaveInFlight,
+                errorMessage = uiState.errorMessage,
+            )
+            is SidebarState.DeviceKeyCreating -> CreatingSidebar.DeviceKey(
+                state = state,
+                onAction = { onAction(it) },
+                onClose = { onAction(SshKeysPageAction.CloseSidebar) },
+                isSaveInFlight = uiState.isSaveInFlight,
+                errorMessage = uiState.errorMessage,
+            )
+            is SidebarState.ImportKeyCreating -> CreatingSidebar.ImportKey(
+                state = state,
+                onAction = { onAction(it) },
+                onClose = { onAction(SshKeysPageAction.CloseSidebar) },
+                isSaveInFlight = uiState.isSaveInFlight,
+                errorMessage = uiState.errorMessage,
+            )
+            is SidebarState.PasteKeyCreating -> CreatingSidebar.PasteKey(
+                state = state,
+                onAction = { onAction(it) },
+                onClose = { onAction(SshKeysPageAction.CloseSidebar) },
+                isSaveInFlight = uiState.isSaveInFlight,
+                errorMessage = uiState.errorMessage,
+            )
         }
     }
 }
@@ -148,9 +186,10 @@ private fun SshKeysHeader(
     searchQuery: String,
     onSearch: (String) -> Unit,
     onNewKey: (CreationMethod) -> Unit,
+    compact: Boolean,
 ) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 16.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = if (compact) 16.dp else 24.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp),
     ) {
@@ -161,12 +200,12 @@ private fun SshKeysHeader(
             modifier = Modifier.weight(1f),
             placeholder = "Search keys",
         )
-        NewKeyMenu(onNewKey)
+        NewKeyMenu(onSelected = onNewKey, iconOnly = compact)
     }
 }
 
 @Composable
-private fun NewKeyMenu(onSelected: (CreationMethod) -> Unit) {
+private fun NewKeyMenu(onSelected: (CreationMethod) -> Unit, iconOnly: Boolean) {
     var expanded by remember { mutableStateOf(false) }
     UnstyledDropdownMenu(
         expanded = expanded,
@@ -187,10 +226,12 @@ private fun NewKeyMenu(onSelected: (CreationMethod) -> Unit) {
                 ) {
                     UnstyledIcon(
                         imageVector = Icons.Plus,
-                        contentDescription = null,
+                        contentDescription = if (iconOnly) "New key" else null,
                         tint = Theme[colors][onPrimary],
                     )
-                    Text("Key", color = Theme[colors][onPrimary])
+                    if (!iconOnly) {
+                        Text("Key", color = Theme[colors][onPrimary])
+                    }
                 }
             }
         },

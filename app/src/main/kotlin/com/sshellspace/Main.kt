@@ -8,12 +8,16 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.window.rememberWindowState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.sshellspace.core.domain.emit
 import com.sshellspace.core.domain.models.DEFAULT_COLOR_SCHEME_ID
 import com.sshellspace.core.domain.models.ThemePreference
 import com.sshellspace.core.domain.repositories.CorePreferencesRepository
+import com.sshellspace.core.ui.designsystem.adaptive.DefaultWindowSize
+import com.sshellspace.core.ui.designsystem.adaptive.MinWindowSize
+import com.sshellspace.core.ui.designsystem.adaptive.ProvideWindowClass
 import com.sshellspace.core.ui.designsystem.common.asString
 import com.sshellspace.core.ui.designsystem.dialog.AppDialog
 import com.sshellspace.core.ui.designsystem.theme.AppColorScheme
@@ -38,7 +42,9 @@ fun main() {
 
         DecoratedWindow(
             onCloseRequest = ::exitApplication,
+            state = rememberWindowState(size = DefaultWindowSize),
             title = Res.string.title.asString(),
+            minimumSize = MinWindowSize,
             onPreviewKeyEvent = shortcutHandler::onKeyEvent,
         ) {
             val preferences = koinInject<CorePreferencesRepository>()
@@ -51,13 +57,15 @@ fun main() {
                 themePreference = themePreference,
                 colorScheme = AppColorScheme.fromId(colorSchemeId),
             ) {
-                WindowScaffold(
-                    titleBar = { TitleBar(NewTabDialogEvent::emit) },
-                    modifier = Modifier.fillMaxSize(),
-                ) { ip ->
-                    AppDialog()
+                ProvideWindowClass(Modifier.fillMaxSize()) {
+                    WindowScaffold(
+                        titleBar = { TitleBar(NewTabDialogEvent::emit) },
+                        modifier = Modifier.fillMaxSize(),
+                    ) { ip ->
+                        AppDialog()
 
-                    TabHost(Modifier.fillMaxSize().padding(ip))
+                        TabHost(Modifier.fillMaxSize().padding(ip))
+                    }
                 }
             }
         }
