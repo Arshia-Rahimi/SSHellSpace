@@ -27,17 +27,19 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import com.composeunstyled.DropdownMenuPanel
+import com.composeunstyled.AnchorAlignment
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledDropdownMenu
-import com.composeunstyled.UnstyledDropdownMenuItem
 import com.composeunstyled.UnstyledIcon
 import com.composeunstyled.theme.Theme
 import com.sshellspace.core.ui.designsystem.Icons
 import com.sshellspace.core.ui.designsystem.components.Button
+import com.sshellspace.core.ui.designsystem.components.MenuItem
+import com.sshellspace.core.ui.designsystem.components.MenuPanel
 import com.sshellspace.core.ui.designsystem.components.TextField
 import com.sshellspace.core.ui.designsystem.theme.colors
-import com.sshellspace.core.ui.designsystem.theme.onSurface
+import com.sshellspace.core.ui.designsystem.theme.onPrimary
+import com.sshellspace.core.ui.designsystem.theme.primary
 import com.sshellspace.core.ui.designsystem.theme.surfaceElevated
 import com.sshellspace.core.ui.designsystem.theme.textSecondary
 import com.sshellspace.feature.vault.sshkeys.components.CreatingSidebar
@@ -169,8 +171,15 @@ private fun NewKeyMenu(onSelected: (CreationMethod) -> Unit) {
     UnstyledDropdownMenu(
         expanded = expanded,
         onExpandedChange = { expanded = it },
+        alignment = AnchorAlignment.End,
+        sideOffset = 4.dp,
         anchor = {
-            Button(onClick = { expanded = !expanded }) {
+            Button(
+                onClick = { expanded = !expanded },
+                modifier = Modifier
+                    .clip(RoundedCornerShape(6.dp))
+                    .background(Theme[colors][primary]),
+            ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -179,26 +188,17 @@ private fun NewKeyMenu(onSelected: (CreationMethod) -> Unit) {
                     UnstyledIcon(
                         imageVector = Icons.Plus,
                         contentDescription = null,
-                        tint = Theme[colors][onSurface],
+                        tint = Theme[colors][onPrimary],
                     )
-                    Text("Key")
+                    Text("Key", color = Theme[colors][onPrimary])
                 }
             }
         },
         panel = {
-            DropdownMenuPanel(Modifier.width(200.dp)) {
+            MenuPanel(width = 200.dp) {
                 CreationMethod.entries.forEach { method ->
-                    UnstyledDropdownMenuItem(
-                        onClick = {
-                            expanded = false
-                            onSelected(method)
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                    ) {
-                        Text(
-                            text = method.label,
-                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                        )
+                    MenuItem(onClick = { onSelected(method) }) {
+                        Text(method.label)
                     }
                 }
             }

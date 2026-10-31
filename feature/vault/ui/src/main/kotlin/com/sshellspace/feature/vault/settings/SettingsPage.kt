@@ -95,9 +95,7 @@ internal fun SettingsPageContent(
                 options = uiState.shells,
                 selected = uiState.defaultShell,
                 onSelected = { onAction(SettingsPageAction.SetDefaultShell(it)) },
-                modifier = Modifier.widthIn(max = 480.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(Theme[colors][surfaceElevated]),
+                modifier = Modifier.widthIn(max = 480.dp),
                 optionLabel = { it.label },
             )
             if (uiState.isDiscoveringShells) {

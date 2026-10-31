@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,6 +33,7 @@ import com.sshellspace.core.ui.designsystem.theme.error
 import com.sshellspace.core.ui.designsystem.theme.onOverlay
 import com.sshellspace.core.ui.designsystem.theme.overlay
 import com.sshellspace.core.ui.designsystem.theme.separator
+import com.sshellspace.core.ui.designsystem.theme.textSecondary
 import com.sshellspace.core.ui.designsystem.theme.surfaceElevated
 import com.sshellspace.feature.vault.sshkeys.CreationMethod
 import com.sshellspace.feature.vault.sshkeys.SidebarState
@@ -212,11 +212,11 @@ object CreatingSidebar {
             TextField(
                 value = state.privateKey,
                 onValueChange = { onAction(SshKeysPageAction.PasteKey.SetPrivateKey(it)) },
-                modifier = Modifier.height(160.dp),
                 label = "Private key",
                 placeholder = "-----BEGIN OPENSSH PRIVATE KEY-----",
                 enabled = !isSaveInFlight,
                 singleLine = false,
+                minLines = 6,
             )
             PassphraseField(
                 value = state.passphrase,
@@ -247,25 +247,22 @@ private fun PathField(
     pick: suspend () -> String?,
 ) {
     val scope = rememberCoroutineScope()
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Bottom,
-    ) {
-        TextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = Modifier.weight(1f),
-            label = label,
-            placeholder = placeholder,
-            enabled = enabled,
-        )
-        IconButton(
-            onClick = { scope.launch { pick()?.let(onValueChange) } },
-            enabled = enabled,
-            imageVector = icon,
-            contentDescription = browseDescription,
-        )
-    }
+    TextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = label,
+        placeholder = placeholder,
+        enabled = enabled,
+        trailing = {
+            IconButton(
+                onClick = { scope.launch { pick()?.let(onValueChange) } },
+                enabled = enabled,
+                imageVector = icon,
+                contentDescription = browseDescription,
+                tint = Theme[colors][textSecondary],
+            )
+        },
+    )
 }
 
 @Composable
@@ -276,25 +273,22 @@ private fun PassphraseField(
     onToggleVisible: (Boolean) -> Unit,
     enabled: Boolean,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.Bottom,
-    ) {
-        TextField(
-            value = value,
-            onValueChange = onValueChange,
-            modifier = Modifier.weight(1f),
-            label = "Passphrase",
-            placeholder = "optional",
-            isPassword = !visible,
-            enabled = enabled,
-        )
-        IconButton(
-            onClick = { onToggleVisible(!visible) },
-            imageVector = if (visible) Icons.EyeClosed else Icons.EyeOpen,
-            contentDescription = if (visible) "Hide passphrase" else "Show passphrase",
-        )
-    }
+    TextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = "Passphrase",
+        placeholder = "optional",
+        isPassword = !visible,
+        enabled = enabled,
+        trailing = {
+            IconButton(
+                onClick = { onToggleVisible(!visible) },
+                imageVector = if (visible) Icons.EyeClosed else Icons.EyeOpen,
+                contentDescription = if (visible) "Hide passphrase" else "Show passphrase",
+                tint = Theme[colors][textSecondary],
+            )
+        },
+    )
 }
 
 @Composable
