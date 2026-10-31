@@ -12,6 +12,7 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 - `./gradlew graphUpdate` regenerates each module's `DependencyGraph.md` (Mermaid). The task comes from the `project.root` plugin (`build-logic/src/main/kotlin/utils/Graph.kt`).
 - The project requires the JDK 25 toolchain (`jvmToolchain(25)`), which the foojay resolver auto-provisions.
 - `gradle.properties` turns on both the build cache and the **configuration cache**, so build-logic changes must stay configuration-cache compatible.
+- If the Kotlin compiler fails with "Java heap space", run `./gradlew --stop` and rebuild.
 
 ## Build structure
 
@@ -42,6 +43,30 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 
 - `core/tabs` (package `com.sshellspace.core.ui.tabs`) defines `Tab`, which owns a `ViewModelStore` so its ViewModels are scoped per tab, along with `TabManager`, `TabController`, and `TabsState`. `TabManagerImpl` lives in `app`.
 - Fixed tabs are registered in `app/src/main/kotlin/com/sshellspace/config/Tabs.kt` (`fixedTabItems`). New-tab flows go through `NewTabDialogEvent`.
+
+### UI conventions (core/ui)
+
+- Use the design-system wrappers in `designsystem/components` (`TextField`, `Dropdown`, `MenuPanel`/`MenuItem`, `Tooltip`, `Button`, `IconButton`) rather than raw compose-unstyled components. The raw components draw nothing: `DropdownMenuPanel` has no background, and the `UnstyledDropdownMenu` anchor isn't clickable (only the keyboard opens it), so a custom menu needs a `Button` anchor that toggles `expanded`. Input styling is shared through `Modifier.fieldContainer(...)`.
+- **Colors:**
+  - Read them as `Theme[colors][token]`. Tokens live in `theme/ColorTokens.kt`; `theme/ColorSchemes.kt` (`AppColorScheme`) overrides the surface and brand tokens per scheme.
+  - Use `primary` for selection and focus accents. Otherwise the color scheme has no visible effect.
+- **Dark mode:**
+  - `SSHellSpaceTheme` resolves `SYSTEM_DEFAULT` with Nucleus's `isSystemInDarkMode()`. Don't use Compose's `isSystemInDarkTheme()`, because it doesn't report the real OS appearance under the Tao backend.
+  - The theme also installs the `TooltipHost` that `Tooltip` needs.
+- **Adaptive layout** (`designsystem/adaptive/WindowClass.kt`):
+  - The window minimum size is `MinWindowSize` (720×480dp).
+  - `ProvideWindowClass` in `Main.kt` exposes `currentWindowClass`: `Compact` below 960dp wide, `Expanded` at 960dp and above.
+  - In Compact, the vault nav shows icons only and side panels float over the content. Tall content must scroll, so it still fits at 480dp height.
+- **Shortcuts:**
+  - Global shortcuts are `AppShortcut` entries (`core/ui/.../shortcuts`), with default chords from `primaryChord()` (Cmd on macOS, Ctrl elsewhere).
+  - Actions are registered in `app/.../config/Shortcuts.kt` (`Koin.registerShortcuts()`).
+  - `ShortcutHandler` is wired into `DecoratedWindow(onPreviewKeyEvent = ...)`. It reads user overrides from `CorePreferencesRepository`, so shortcuts can be rebound in Settings.
+
+### Preferences
+
+- `CorePreferencesRepository` (theme, color scheme, shortcuts) and `TerminalPreferencesRepository` (default shell) each store one `@Serializable` object as JSON in the SQLDelight preferences table, keyed by its qualified class name.
+- Implementations keep a **single** `stateIn` StateFlow and build updates from `preference.value.copy(...)`. If you create a new `stateIn` per `get()` call, it returns the defaults, not the stored value.
+- The user-facing Settings UI is the **Settings page inside the Vault tab** (`feature/vault/ui/.../settings`). `feature/settings` is currently only a placeholder tab.
 
 ### Terminal
 
