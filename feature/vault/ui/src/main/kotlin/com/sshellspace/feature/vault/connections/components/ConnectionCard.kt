@@ -23,6 +23,8 @@ import com.composeunstyled.theme.Theme
 import com.sshellspace.core.domain.models.SshConnection
 import com.sshellspace.core.ui.designsystem.Icons
 import com.sshellspace.core.ui.designsystem.components.Button
+import com.sshellspace.core.ui.designsystem.components.IconButton
+import com.sshellspace.core.ui.designsystem.components.Tooltip
 import com.sshellspace.core.ui.designsystem.theme.colors
 import com.sshellspace.core.ui.designsystem.theme.onSurface
 import com.sshellspace.core.ui.designsystem.theme.primary
@@ -40,6 +42,7 @@ fun ConnectionCard(
     jumpHostName: String?,
     selected: Boolean,
     onClick: () -> Unit,
+    onConnect: () -> Unit,
 ) {
     Button(
         onClick = onClick,
@@ -65,7 +68,20 @@ fun ConnectionCard(
                         contentDescription = null,
                         tint = if (selected) Theme[colors][primary] else Theme[colors][onSurface],
                     )
-                    Text(connection.name, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(
+                        text = connection.name,
+                        modifier = Modifier.weight(1f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Tooltip(text = "Connect") {
+                        IconButton(
+                            onClick = onConnect,
+                            imageVector = Icons.Connect,
+                            contentDescription = "Connect to ${connection.name}",
+                            tint = Theme[colors][primary],
+                        )
+                    }
                 }
                 Text(
                     text = connection.address,

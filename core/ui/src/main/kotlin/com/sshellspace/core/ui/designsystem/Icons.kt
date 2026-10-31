@@ -17,6 +17,7 @@ import com.composables.icons.radix.Keyboard
 import com.composables.icons.radix.LockClosed
 import com.composables.icons.radix.MagnifyingGlass
 import com.composables.icons.radix.Pencil1
+import com.composables.icons.radix.Play
 import com.composables.icons.radix.Plus
 import com.composables.icons.radix.Radix
 import com.composables.icons.radix.Trash
@@ -44,4 +45,5 @@ object Icons {
     val Settings = Radix.Gear
     val Host = Radix.Desktop
     val Duplicate = Radix.Copy
+    val Connect = Radix.Play
 }

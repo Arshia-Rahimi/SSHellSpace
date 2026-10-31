@@ -1,77 +1,61 @@
 package com.sshellspace.feature.terminal.domain
 
-import kotlinx.coroutines.flow.Flow
+import com.sshellspace.core.domain.models.SshConnection
+import kotlin.uuid.Uuid
 
 interface SshConnectionService {
-    val status: Flow<SshConnectionStatus>
-    suspend fun connect()
+    /**
+     * Connects to the saved connection [connectionId], going through its jump hosts, and authenticates every hop.
+     * Anything that needs the user (unknown host keys, missing passwords, 2FA codes) goes through [prompter].
+     */
+    suspend fun connect(connectionId: Uuid, prompter: SshPrompter): SshConnectResult
 }
 
-data class SshConnectionConfig(
-    val host: String,
-    val port: Int = 22,
-    val username: String,
-    val auth: SshAuthMethod,
-    val knownHostsPath: String,
-    val connectTimeoutSeconds: Long = 10,
-    val authTimeoutSeconds: Long = 30,
-    val onHostKeyPrompt: suspend (HostKeyPrompt) -> Boolean,
-)
-
-sealed class SshAuthMethod {
-    data class PrivateKey(
-        val path: String,
-        val passphrase: CharArray? = null,
-    ) : SshAuthMethod() {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as PrivateKey
-
-            if (path != other.path) return false
-            if (!passphrase.contentEquals(other.passphrase)) return false
-
-            return true
-        }
-
-        override fun hashCode(): Int {
-            var result = path.hashCode()
-            result = 31 * result + (passphrase?.contentHashCode() ?: 0)
-            return result
-        }
-    }
-
-    data class Password(val password: CharArray) : SshAuthMethod() {
-        override fun equals(other: Any?): Boolean {
-            if (this === other) return true
-            if (javaClass != other?.javaClass) return false
-
-            other as Password
-
-            return password.contentEquals(other.password)
-        }
-
-        override fun hashCode(): Int {
-            return password.contentHashCode()
-        }
-    }
-
-    data object Agent : SshAuthMethod()
+/** Questions the connection flow can ask the user. A null answer means the user cancelled. */
+interface SshPrompter {
+    suspend fun confirmHostKey(prompt: HostKeyPrompt): Boolean
+    suspend fun askSecret(prompt: SecretPrompt): String?
+    suspend fun answerChallenge(challenge: AuthChallenge): List<String>?
 }
 
 data class HostKeyPrompt(
     val host: String,
     val port: Int,
-    val fingerprint: String,
     val keyType: String,
-    val isChangedKey: Boolean,
+    val fingerprint: String,
+    /** Set when known_hosts has a different key for this host, which can mean a man-in-the-middle attack. */
+    val expectedFingerprint: String? = null,
+) {
+    val isChangedKey: Boolean get() = expectedFingerprint != null
+}
+
+data class SecretPrompt(
+    val title: String,
+    val message: String,
+    val label: String,
+    /** Set when an earlier answer was rejected. */
+    val error: String? = null,
 )
 
-sealed interface SshConnectionStatus {
-    data object Idle : SshConnectionStatus
-    data class Success(val session: ShellSession.Ssh) : SshConnectionStatus
-    data class HostKeyRejected(val prompt: HostKeyPrompt) : SshConnectionStatus
-    data class AuthFailed(val reason: String) : SshConnectionStatus
-    data class ConnectFailed(val cause: Throwable) : SshConnectionStatus
+/** A keyboard-interactive round from the server, e.g. a one-time code. */
+data class AuthChallenge(
+    val title: String,
+    val instruction: String,
+    val prompts: List<ChallengePrompt>,
+)
+
+data class ChallengePrompt(
+    val text: String,
+    /** False for secrets that shouldn't be shown while typing. */
+    val echo: Boolean,
+)
+
+sealed interface SshConnectResult {
+    data class Success(
+        val session: ShellSession.Ssh,
+        val connection: SshConnection,
+    ) : SshConnectResult
+
+    data object Cancelled : SshConnectResult
+    data class Failed(val message: String) : SshConnectResult
 }

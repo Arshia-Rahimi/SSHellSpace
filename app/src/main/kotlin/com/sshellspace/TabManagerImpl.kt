@@ -6,7 +6,9 @@ import com.sshellspace.core.ui.tabs.TabItem
 import com.sshellspace.core.ui.tabs.TabManager
 import com.sshellspace.core.ui.tabs.TabsState
 import com.sshellspace.core.ui.tabs.contains
+import com.sshellspace.feature.terminal.domain.models.SshTerminalParams
 import com.sshellspace.feature.terminal.domain.models.TerminalParams
+import com.sshellspace.feature.terminal.ui.SshTerminalTabFactory
 import com.sshellspace.feature.terminal.ui.TerminalTabFactory
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,6 +26,7 @@ class TabManagerImpl(
     override fun createNewTab(params: TabParams) {
         val newTab = when (params) {
             is TerminalParams -> TerminalTabFactory.create(params)
+            is SshTerminalParams -> SshTerminalTabFactory.create(params)
             else -> throw IllegalArgumentException("Unknown tab param type")
         }
         _tabsState.update {

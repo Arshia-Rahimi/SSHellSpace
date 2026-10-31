@@ -111,6 +111,7 @@ private fun ConnectionList(
                         jumpHostName = connection.options.jumpHostId?.let(uiState::connectionName),
                         selected = uiState.sidebar?.editingId == connection.id,
                         onClick = { onAction(ConnectionsPageAction.Select(connection)) },
+                        onConnect = { onAction(ConnectionsPageAction.Connect(connection)) },
                     )
                 }
             }

@@ -307,6 +307,15 @@ private fun Footer(
                 Text(if (isNew) "Create" else "Save", color = Theme[colors][onPrimary])
             }
         }
+        Tooltip(text = if (isNew) "Create and connect" else "Save and connect", side = AnchorSide.Top) {
+            IconButton(
+                onClick = { onAction(ConnectionsPageAction.SaveAndConnect) },
+                enabled = enabled,
+                imageVector = Icons.Connect,
+                contentDescription = if (isNew) "Create and connect" else "Save and connect",
+                tint = Theme[colors][primary],
+            )
+        }
         if (!isNew) {
             Tooltip(text = "Duplicate", side = AnchorSide.Top) {
                 IconButton(

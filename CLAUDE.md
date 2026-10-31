@@ -68,6 +68,23 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 - Implementations keep a **single** `stateIn` StateFlow and build updates from `preference.value.copy(...)`. If you create a new `stateIn` per `get()` call, it returns the defaults, not the stored value.
 - The user-facing Settings UI is the **Settings page inside the Vault tab** (`feature/vault/ui/.../settings`). `feature/settings` is currently only a placeholder tab.
 
+### SSH connections
+
+- Saved connections (`SshConnection` in core/domain) live in the `ssh_connections` table. `auth` and `options` are stored as JSON columns, and the Vault page (`feature/vault/ui/.../connections`) edits them.
+- **Schema changes need a `.sqm` migration.** Users already have databases, so a new table also needs a numbered migration such as `core/data/.../1.sqm`.
+- `MinaSshConnectionService` (feature/terminal/data) connects to a saved connection:
+  - **Jump hosts:** it resolves the jump-host chain and tunnels each hop through the previous one with a local port forward.
+  - **Per-connection settings:** a single shared `SshClient` from `createSshClient()` serves every connection. Each connection's settings go into a `ConnectionContext`, attached as the MINA connection context. `SessionConfigurer`, a `SessionListener`, applies that context to the session in `sessionCreated`, which runs before key exchange.
+  - **Auth method choice:** `PREFERRED_AUTHS` can't be set per session, because MINA reads it in the session constructor. Auth methods are limited instead through the identities and prompts each session gets.
+  - **Host keys:** host keys are checked against `~/.ssh/known_hosts` by `PromptingKnownHostsVerifier`. It matches by the saved host name, even when going through a tunnel.
+  - **SSH agent:** the agent client (`ssh/agent/SystemSshAgent.kt`) uses JDK Unix sockets or Windows named pipes. MINA's `agent.unix` client needs Tomcat's native APR library, so it isn't used.
+  - **`~/.ssh/config` is ignored on purpose.**
+- User questions (host key, password, passphrase, 2FA) go through `SshPrompter`.
+  - `SshTerminalTabViewModel` implements it by showing a prompt state and waiting for the answer.
+  - MINA's callbacks are blocking, so `ConnectionContext.ask` uses `runBlocking` on the MINA thread.
+- The SSH tab hands BossTerm a custom `PlatformServices` (`SshPlatformServices`) whose `spawnProcess` opens a shell channel in place of a local PTY.
+- `MinaSshConnectionServiceTest` runs real connections against an embedded MINA `SshServer`. The agent test uses a real `ssh-agent` and is skipped when OpenSSH isn't installed.
+
 ### Terminal
 
 - Terminal emulators implement the `Terminal` interface (`feature/terminal/ui/.../screen/emulators/Terminal.kt`). BossTerm is the concrete emulator. `BossTermSshProcessHandleAdapter` bridges it to Apache MINA sshd (ssh-common/sftp/scp) for remote sessions, and pty4j handles local PTYs.
@@ -78,4 +95,4 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 
 ## Tests
 
-- Tests exist in `core/data` and `feature/vault/data`. They use `kotlin.test` assertions, mockk, and `runTest`, with backtick-named test functions.
+- Tests exist in `core/data`, `feature/vault/data`, `feature/terminal/data` and `feature/terminal/ui`. They use `kotlin.test` assertions, mockk, and `runTest`, with backtick-named test functions.

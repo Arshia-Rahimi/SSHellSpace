@@ -4,10 +4,12 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sshellspace.core.domain.emit
 import com.sshellspace.core.domain.models.SshConnection
+import com.sshellspace.core.ui.tabs.TabManager
 import com.sshellspace.feature.vault.connections.components.DeleteConnectionDialogEvent
 import com.sshellspace.feature.vault.domain.SaveSshConnectionResult
 import com.sshellspace.feature.vault.domain.SshConnectionRepository
 import com.sshellspace.feature.vault.domain.SshKeyRepository
+import com.sshellspace.feature.terminal.domain.models.SshTerminalParams
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -19,6 +21,7 @@ import kotlinx.coroutines.launch
 class ConnectionsPageViewModel(
     private val connectionRepository: SshConnectionRepository,
     sshKeyRepository: SshKeyRepository,
+    private val tabManager: TabManager,
 ) : ViewModel() {
     private val connections = connectionRepository.getConnections()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
@@ -49,7 +52,9 @@ class ConnectionsPageViewModel(
             is ConnectionsPageAction.EditForm -> updateSidebar { copy(form = action.update(form)) }
             ConnectionsPageAction.ToggleAdvanced -> updateSidebar { copy(showAdvanced = !showAdvanced) }
             ConnectionsPageAction.ToggleSecretVisible -> updateSidebar { copy(secretVisible = !secretVisible) }
-            ConnectionsPageAction.Save -> save()
+            is ConnectionsPageAction.Connect -> connect(action.connection)
+            ConnectionsPageAction.Save -> save(connectAfter = false)
+            ConnectionsPageAction.SaveAndConnect -> save(connectAfter = true)
             ConnectionsPageAction.Duplicate -> duplicate()
             ConnectionsPageAction.RequestDelete -> requestDelete()
         }
@@ -69,7 +74,11 @@ class ConnectionsPageViewModel(
         sidebar.update { it?.transform() }
     }
 
-    private fun save() {
+    private fun connect(connection: SshConnection) {
+        tabManager.createNewTab(SshTerminalParams(connectionId = connection.id, title = connection.name))
+    }
+
+    private fun save(connectAfter: Boolean) {
         val state = sidebar.value ?: return
         val withRequired = state.copy(showRequiredErrors = true)
         val errors = withRequired.form.validate(connections.value, state.editingId, showRequired = true)
@@ -81,7 +90,10 @@ class ConnectionsPageViewModel(
         isSaveInFlight.update { true }
         viewModelScope.launch {
             when (val result = connectionRepository.save(state.editingId, state.form.toDraft())) {
-                is SaveSshConnectionResult.Success -> closeSidebar()
+                is SaveSshConnectionResult.Success -> {
+                    closeSidebar()
+                    if (connectAfter) connect(result.connection)
+                }
                 is SaveSshConnectionResult.Error -> errorMessage.update { result.message }
             }
             isSaveInFlight.update { false }

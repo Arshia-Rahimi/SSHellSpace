@@ -13,7 +13,13 @@ sealed interface ConnectionsPageAction {
     data object ToggleAdvanced : ConnectionsPageAction
     data object ToggleSecretVisible : ConnectionsPageAction
 
+    /** Opens a terminal tab connected to the saved [connection]. */
+    data class Connect(val connection: SshConnection) : ConnectionsPageAction
+
     data object Save : ConnectionsPageAction
+
+    /** Saves the open form, then connects to it. */
+    data object SaveAndConnect : ConnectionsPageAction
     data object Duplicate : ConnectionsPageAction
     data object RequestDelete : ConnectionsPageAction
 }

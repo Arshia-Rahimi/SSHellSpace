@@ -21,7 +21,14 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.Text
@@ -49,6 +56,9 @@ fun TextField(
     isError: Boolean = false,
     keyboardType: KeyboardType = KeyboardType.Text,
     contentPadding: PaddingValues = PaddingValues(horizontal = 12.dp, vertical = 10.dp),
+    focusRequester: FocusRequester? = null,
+    /** Called with the current text when Enter is pressed in a single-line field. */
+    onSubmit: ((String) -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = null,
 ) {
     val state = rememberTextFieldState(initialText = value)
@@ -84,7 +94,18 @@ fun TextField(
         }
         UnstyledTextField(
             state = state,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .then(focusRequester?.let { Modifier.focusRequester(it) } ?: Modifier)
+                .onPreviewKeyEvent { event ->
+                    val submit = onSubmit?.takeIf { singleLine } ?: return@onPreviewKeyEvent false
+                    if (event.type == KeyEventType.KeyDown && (event.key == Key.Enter || event.key == Key.NumPadEnter)) {
+                        submit(state.text.toString())
+                        true
+                    } else {
+                        false
+                    }
+                },
             enabled = enabled,
             cursorBrush = SolidColor(primaryColor),
             selectionColors = TextSelectionColors(
