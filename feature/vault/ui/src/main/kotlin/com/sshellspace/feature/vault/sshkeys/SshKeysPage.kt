@@ -49,8 +49,14 @@ import org.koin.compose.viewmodel.koinViewModel
 fun SshKeysPage() {
     val viewModel = koinViewModel<SshKeysPageViewModel>()
     val uiState by viewModel.uiState.collectAsState()
-    val onAction = viewModel::execute
+    SshKeysPageContent(uiState, viewModel::execute)
+}
 
+@Composable
+internal fun SshKeysPageContent(
+    uiState: SshKeysPageUiState,
+    onAction: (SshKeysPageAction) -> Unit,
+) {
     Row(
         modifier = Modifier.fillMaxSize(),
     ) {
@@ -91,6 +97,7 @@ fun SshKeysPage() {
         }
         AnimatedContent(
             targetState = uiState.sidebarState,
+            contentKey = { it.contentKey() },
         ) { state ->
             when (state) {
                 SidebarState.None -> Spacer(modifier = Modifier.fillMaxHeight())
@@ -163,17 +170,19 @@ private fun NewKeyMenu(onSelected: (CreationMethod) -> Unit) {
         expanded = expanded,
         onExpandedChange = { expanded = it },
         anchor = {
-            Row(
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-            ) {
-                UnstyledIcon(
-                    imageVector = Icons.Plus,
-                    contentDescription = null,
-                    tint = Theme[colors][onSurface],
-                )
-                Text("Key")
+            Button(onClick = { expanded = !expanded }) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    UnstyledIcon(
+                        imageVector = Icons.Plus,
+                        contentDescription = null,
+                        tint = Theme[colors][onSurface],
+                    )
+                    Text("Key")
+                }
             }
         },
         panel = {
@@ -237,4 +246,10 @@ private fun CenteredMessage(message: String) {
     ) {
         Text(message, color = Theme[colors][textSecondary])
     }
+}
+
+private fun SidebarState.contentKey(): Any = when (this) {
+    SidebarState.None -> "none"
+    is SidebarState.Editing -> key.id
+    is SidebarState.Creating -> method
 }

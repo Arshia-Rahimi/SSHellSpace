@@ -106,9 +106,9 @@ private val lightColorTokens = mapOf(
     onOverlay to Color.White,
 )
 
-internal fun themeColors(isDark: Boolean): Map<ThemeToken<Color>, Color> =
-    if (isDark) darkColorTokens else lightColorTokens
+internal fun themeColors(isDark: Boolean, scheme: AppColorScheme): Map<ThemeToken<Color>, Color> =
+    if (isDark) darkColorTokens + scheme.dark else lightColorTokens + scheme.light
 
-internal fun ThemeBuilder.applyThemeColors(isDark: Boolean) {
-    properties[colors] = themeColors(isDark)
+internal fun ThemeBuilder.applyThemeColors(isDark: Boolean, scheme: AppColorScheme) {
+    properties[colors] = themeColors(isDark, scheme)
 }

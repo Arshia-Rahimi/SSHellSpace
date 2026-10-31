@@ -28,7 +28,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledIcon
-import com.composeunstyled.UnstyledVerticalSeparator
+import com.composeunstyled.UnstyledHorizontalSeparator
 import com.composeunstyled.theme.Theme
 import com.sshellspace.core.ui.designsystem.Icons
 import com.sshellspace.core.ui.designsystem.components.Button
@@ -75,7 +75,7 @@ fun KeySidebar(
             )
             Text("Edit key")
         }
-        UnstyledVerticalSeparator(thickness = 1.dp, color = Theme[colors][separator])
+        UnstyledHorizontalSeparator(thickness = 1.dp, color = Theme[colors][separator])
         Text("Type: ${state.key.type.name.lowercase().replaceFirstChar { it.uppercase() }}")
         Text("Algorithm: ${state.key.algorithm.name}")
         state.details?.path?.let { Text("Path: $it") }

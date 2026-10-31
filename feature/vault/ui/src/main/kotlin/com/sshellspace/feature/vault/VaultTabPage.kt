@@ -11,6 +11,7 @@ import com.sshellspace.core.ui.designsystem.theme.colors
 import com.sshellspace.core.ui.designsystem.theme.textSecondary
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.sshellspace.core.ui.designsystem.Icons
+import com.sshellspace.feature.vault.settings.SettingsPage
 import com.sshellspace.feature.vault.sshkeys.SshKeysPage
 
 enum class VaultTabPage(
@@ -21,6 +22,7 @@ enum class VaultTabPage(
     Vault("Vault", Icons.Vault, { ComingSoon() }),
     SshKeys("Ssh Keys", Icons.SshKeys, ::SshKeysPage),
     PortForwarding("Port Forwarding", Icons.PortForwarding, { ComingSoon() }),
+    Settings("Settings", Icons.Settings, ::SettingsPage),
 }
 
 @Composable

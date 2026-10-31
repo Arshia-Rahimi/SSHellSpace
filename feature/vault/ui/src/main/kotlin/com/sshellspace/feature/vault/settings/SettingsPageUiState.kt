@@ -1,0 +1,45 @@
+package com.sshellspace.feature.vault.settings
+
+import com.sshellspace.core.domain.models.KeyChord
+import com.sshellspace.core.domain.models.ThemePreference
+import com.sshellspace.core.ui.designsystem.theme.AppColorScheme
+import com.sshellspace.core.ui.shortcuts.AppShortcut
+import com.sshellspace.feature.terminal.domain.models.Shell
+
+data class SettingsPageUiState(
+    val themePreference: ThemePreference = ThemePreference.SYSTEM_DEFAULT,
+    val colorScheme: AppColorScheme = AppColorScheme.Default,
+    val shells: List<Shell> = listOf(SYSTEM_DEFAULT_SHELL),
+    val defaultShell: Shell = SYSTEM_DEFAULT_SHELL,
+    val isDiscoveringShells: Boolean = true,
+    val shortcuts: List<ShortcutBinding> = emptyList(),
+    val recording: ShortcutRecording? = null,
+)
+
+data class ShortcutBinding(
+    val shortcut: AppShortcut,
+    val chord: KeyChord,
+) {
+    val isDefault: Boolean get() = chord == shortcut.defaultChord
+}
+
+data class ShortcutRecording(
+    val shortcut: AppShortcut,
+    val error: String? = null,
+)
+
+val SYSTEM_DEFAULT_SHELL = Shell(name = "", isDeviceDefault = true)
+
+val ThemePreference.label: String
+    get() = when (this) {
+        ThemePreference.SYSTEM_DEFAULT -> "System"
+        ThemePreference.LIGHT -> "Light"
+        ThemePreference.DARK -> "Dark"
+    }
+
+val Shell.label: String
+    get() = when {
+        command == null -> "System default"
+        isDeviceDefault -> "$name (system default) — $command"
+        else -> "$name — $command"
+    }

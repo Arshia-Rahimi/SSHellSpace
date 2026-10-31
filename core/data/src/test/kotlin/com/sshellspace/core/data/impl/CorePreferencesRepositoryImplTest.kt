@@ -7,6 +7,8 @@ import com.sshellspace.core.data.generated.Database
 import com.sshellspace.core.data.generated.Device_ssh_keys
 import com.sshellspace.core.data.generated.Vault_ssh_keys
 import com.sshellspace.core.domain.models.CorePreference
+import com.sshellspace.core.domain.models.DEFAULT_COLOR_SCHEME_ID
+import com.sshellspace.core.domain.models.KeyChord
 import com.sshellspace.core.domain.models.ThemePreference
 import java.util.Properties
 import kotlin.test.Test
@@ -44,5 +46,32 @@ class CorePreferencesRepositoryImplTest {
         assertEquals(CorePreference::class.qualifiedName, stored.key)
         val decoded = JsonSerializer.decodeFromString(CorePreference.serializer(), stored.value)
         assertEquals(CorePreference(themePreference = ThemePreference.DARK), decoded)
+    }
+
+    @Test
+    fun `getColorScheme defaults to the default scheme when nothing stored`() = runTest {
+        assertEquals(DEFAULT_COLOR_SCHEME_ID, repository.getColorScheme().first())
+    }
+
+    @Test
+    fun `setColorScheme keeps the stored theme preference`() = runTest {
+        repository.setTheme(ThemePreference.LIGHT)
+        repository.getTheme().first { it == ThemePreference.LIGHT }
+
+        repository.setColorScheme("violet")
+
+        assertEquals("violet", repository.getColorScheme().first { it == "violet" })
+        assertEquals(ThemePreference.LIGHT, repository.getTheme().first())
+    }
+
+    @Test
+    fun `setShortcut stores an override and null restores the default`() = runTest {
+        val chord = KeyChord(keyCode = 42L, ctrl = true, shift = true)
+
+        repository.setShortcut("new_tab", chord)
+        assertEquals(mapOf("new_tab" to chord), repository.getShortcuts().first { it.isNotEmpty() })
+
+        repository.setShortcut("new_tab", null)
+        assertEquals(emptyMap(), repository.getShortcuts().first { it.isEmpty() })
     }
 }

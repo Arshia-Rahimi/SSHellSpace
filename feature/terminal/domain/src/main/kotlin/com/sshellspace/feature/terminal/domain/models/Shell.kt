@@ -11,3 +11,12 @@ data class Shell(
     val environment: Map<String, String> = emptyMap(),
     val isDeviceDefault: Boolean = false,
 )
+
+/**
+ * The concrete shell to launch for the [preferred] default: itself when it names a command,
+ * otherwise the device's default shell from this list of discovered shells.
+ */
+fun List<Shell>.resolveDefault(preferred: Shell): Shell {
+    if (preferred.command != null) return preferred
+    return firstOrNull { it.isDeviceDefault } ?: firstOrNull() ?: preferred
+}

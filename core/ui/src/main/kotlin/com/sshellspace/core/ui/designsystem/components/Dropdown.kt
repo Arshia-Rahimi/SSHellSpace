@@ -21,7 +21,9 @@ import com.composeunstyled.Text
 import com.composeunstyled.UnstyledDropdownMenu
 import com.composeunstyled.UnstyledDropdownMenuItem
 import com.composeunstyled.UnstyledHorizontalSeparator
+import com.composeunstyled.UnstyledIcon
 import com.composeunstyled.theme.Theme
+import com.sshellspace.core.ui.designsystem.Icons
 import com.sshellspace.core.ui.designsystem.theme.border
 import com.sshellspace.core.ui.designsystem.theme.colors
 
@@ -56,13 +58,20 @@ fun <T> Dropdown(
                 onExpandedChange = { expanded = it },
                 modifier = Modifier.fillMaxWidth(),
                 anchor = {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(contentPadding),
-                        verticalAlignment = Alignment.CenterVertically,
+                    Button(
+                        onClick = { expanded = !expanded },
+                        modifier = Modifier.fillMaxWidth(),
+                        contentAlignment = Alignment.CenterStart,
                     ) {
-                        Text(optionLabel(selected))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(contentPadding),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(optionLabel(selected), modifier = Modifier.weight(1f))
+                            UnstyledIcon(Icons.ChevronDown, contentDescription = null)
+                        }
                     }
                 },
                 panel = {

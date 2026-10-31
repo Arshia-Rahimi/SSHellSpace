@@ -25,6 +25,8 @@ import com.composeunstyled.UnstyledIcon
 import com.composeunstyled.theme.Theme
 import com.sshellspace.core.ui.designsystem.components.Button
 import com.sshellspace.core.ui.designsystem.theme.colors
+import com.sshellspace.core.ui.designsystem.theme.onSurface
+import com.sshellspace.core.ui.designsystem.theme.primary
 import com.sshellspace.core.ui.designsystem.theme.surfaceElevated
 
 @Composable
@@ -73,8 +75,9 @@ private fun PageColumn(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    UnstyledIcon(it.icon, it.title)
-                    Text(it.title)
+                    val tint = if (it == currentPage) Theme[colors][primary] else Theme[colors][onSurface]
+                    UnstyledIcon(it.icon, it.title, tint = tint)
+                    Text(it.title, color = tint)
                 }
             }
         }

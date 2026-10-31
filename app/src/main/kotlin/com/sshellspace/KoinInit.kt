@@ -4,7 +4,9 @@ import app.cash.sqldelight.db.SqlDriver
 import com.sshellspace.config.DEFAULT_TAB_ID
 import com.sshellspace.config.createSqliteDriver
 import com.sshellspace.config.fixedTabItems
+import com.sshellspace.config.registerShortcuts
 import com.sshellspace.core.data.DataModule
+import com.sshellspace.core.ui.CoreUiModule
 import com.sshellspace.core.ui.tabs.TabManager
 import com.sshellspace.feature.newtab.ui.NewTabUiModule
 import com.sshellspace.feature.settings.SettingsUiModule
@@ -17,11 +19,14 @@ import org.koin.dsl.bind
 import org.koin.dsl.module
 import org.koin.plugin.module.dsl.create
 
-fun initKoin() = startKoin { modules(AppModule) }
+fun initKoin() {
+    startKoin { modules(AppModule) }.koin.registerShortcuts()
+}
 
 val AppModule = module {
     includes(
         DataModule,
+        CoreUiModule,
         VaultUiModule,
         VaultDataModule,
         SettingsUiModule,

@@ -21,7 +21,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledIcon
-import com.composeunstyled.UnstyledVerticalSeparator
+import com.composeunstyled.UnstyledHorizontalSeparator
 import com.composeunstyled.theme.Theme
 import com.sshellspace.core.domain.models.Algorithm
 import com.sshellspace.core.ui.designsystem.Icons
@@ -322,7 +322,7 @@ private fun SidebarShell(
             )
             Text("New SSH key")
         }
-        UnstyledVerticalSeparator(thickness = 1.dp, color = Theme[colors][separator])
+        UnstyledHorizontalSeparator(thickness = 1.dp, color = Theme[colors][separator])
         content()
     }
 }
@@ -357,7 +357,7 @@ private fun AlgorithmDropdown(
 
 @Composable
 private fun SidebarSeparator() {
-    UnstyledVerticalSeparator(thickness = 1.dp, color = Theme[colors][separator])
+    UnstyledHorizontalSeparator(thickness = 1.dp, color = Theme[colors][separator])
 }
 
 @Composable
