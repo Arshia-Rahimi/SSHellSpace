@@ -43,9 +43,7 @@ import com.sshellspace.feature.vault.connections.ConnectionFormErrors
 import com.sshellspace.feature.vault.connections.ConnectionsPageAction
 import com.sshellspace.feature.vault.connections.ConnectionsPageUiState
 import com.sshellspace.feature.vault.sshkeys.DEFAULT_SSH_DIR
-import io.github.vinceglb.filekit.FileKit
-import io.github.vinceglb.filekit.absolutePath
-import io.github.vinceglb.filekit.dialogs.openFilePicker
+import com.sshellspace.feature.vault.sshkeys.pickSshKeyFile
 import java.io.File
 import kotlinx.coroutines.launch
 
@@ -430,7 +428,7 @@ private fun KeyFileField(
         isError = isError,
         trailing = {
             IconButton(
-                onClick = { scope.launch { FileKit.openFilePicker()?.file?.absolutePath?.let(onValueChange) } },
+                onClick = { scope.launch { pickSshKeyFile()?.let(onValueChange) } },
                 enabled = enabled,
                 imageVector = Icons.File,
                 contentDescription = "Browse files",

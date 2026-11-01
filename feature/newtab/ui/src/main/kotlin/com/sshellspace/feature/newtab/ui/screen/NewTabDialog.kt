@@ -25,6 +25,8 @@ import androidx.compose.ui.unit.dp
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledHorizontalSeparator
 import com.composeunstyled.theme.Theme
+import com.sshellspace.core.domain.models.DEFAULT_SSH_PORT
+import com.sshellspace.core.domain.models.SshConnection
 import com.sshellspace.core.ui.designsystem.components.Button
 import com.sshellspace.core.ui.designsystem.theme.border
 import com.sshellspace.core.ui.designsystem.theme.colors
@@ -41,20 +43,23 @@ fun NewTabDialog(
     onCloseDialog: (() -> Unit)?,
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val select = { action: NewTabDialogAction ->
+        viewModel.execute(action)
+        onCloseDialog?.invoke()
+    }
 
     NewTabDialogContent(
         uiState = uiState,
-        onSelect = { shell ->
-            viewModel.execute(NewTabDialogAction.CreateNewTab(shell))
-            onCloseDialog?.invoke()
-        },
+        onSelectShell = { select(NewTabDialogAction.CreateNewTab(it)) },
+        onSelectConnection = { select(NewTabDialogAction.Connect(it)) },
     )
 }
 
 @Composable
 private fun NewTabDialogContent(
     uiState: NewTabDialogState,
-    onSelect: (Shell) -> Unit,
+    onSelectShell: (Shell) -> Unit,
+    onSelectConnection: (SshConnection) -> Unit,
 ) {
     val shape = RoundedCornerShape(8.dp)
 
@@ -79,32 +84,56 @@ private fun NewTabDialogContent(
                 uiState.defaultShell == null -> SectionLabel("No shells found")
                 else -> {
                     SectionLabel("Default")
-                    ShellRow(
-                        shell = uiState.defaultShell,
+                    OptionRow(
+                        title = uiState.defaultShell.name,
+                        subtitle = uiState.defaultShell.command,
                         highlighted = true,
                         trailing = uiState.newTabShortcutLabel,
-                        onClick = { onSelect(uiState.defaultShell) },
+                        onClick = { onSelectShell(uiState.defaultShell) },
                     )
-                    if (uiState.otherShells.isNotEmpty()) {
-                        UnstyledHorizontalSeparator(
-                            color = Theme[colors][separator],
-                            thickness = 1.dp,
-                            modifier = Modifier.padding(vertical = 4.dp),
-                        )
-                        SectionLabel("Other shells")
-                        uiState.otherShells.forEach { shell ->
-                            ShellRow(
-                                shell = shell,
-                                highlighted = false,
-                                trailing = null,
-                                onClick = { onSelect(shell) },
-                            )
-                        }
-                    }
+                }
+            }
+            if (uiState.connections.isNotEmpty()) {
+                Separator()
+                SectionLabel("Connections")
+                uiState.connections.forEach { connection ->
+                    OptionRow(
+                        title = connection.name,
+                        subtitle = connection.address,
+                        highlighted = false,
+                        trailing = null,
+                        onClick = { onSelectConnection(connection) },
+                    )
+                }
+            }
+            if (!uiState.isLoading && uiState.otherShells.isNotEmpty()) {
+                Separator()
+                SectionLabel("Other shells")
+                uiState.otherShells.forEach { shell ->
+                    OptionRow(
+                        title = shell.name,
+                        subtitle = shell.command,
+                        highlighted = false,
+                        trailing = null,
+                        onClick = { onSelectShell(shell) },
+                    )
                 }
             }
         }
     }
+}
+
+/** `user@host`, plus the port when it isn't 22. */
+private val SshConnection.address: String
+    get() = if (port == DEFAULT_SSH_PORT) "$username@$host" else "$username@$host:$port"
+
+@Composable
+private fun Separator() {
+    UnstyledHorizontalSeparator(
+        color = Theme[colors][separator],
+        thickness = 1.dp,
+        modifier = Modifier.padding(vertical = 4.dp),
+    )
 }
 
 @Composable
@@ -117,8 +146,9 @@ private fun SectionLabel(text: String) {
 }
 
 @Composable
-private fun ShellRow(
-    shell: Shell,
+private fun OptionRow(
+    title: String,
+    subtitle: String?,
     highlighted: Boolean,
     trailing: String?,
     onClick: () -> Unit,
@@ -139,8 +169,8 @@ private fun ShellRow(
             horizontalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(shell.name)
-                shell.command?.let { Text(it, color = Theme[colors][textSecondary]) }
+                Text(title)
+                subtitle?.let { Text(it, color = Theme[colors][textSecondary]) }
             }
             if (trailing != null) {
                 Text(trailing, color = Theme[colors][textSecondary])

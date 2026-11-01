@@ -16,8 +16,8 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.Text
-import com.composeunstyled.UnstyledIcon
 import com.composeunstyled.UnstyledHorizontalSeparator
+import com.composeunstyled.UnstyledIcon
 import com.composeunstyled.theme.Theme
 import com.sshellspace.core.domain.models.Algorithm
 import com.sshellspace.core.ui.designsystem.Icons
@@ -29,16 +29,14 @@ import com.sshellspace.core.ui.designsystem.theme.colors
 import com.sshellspace.core.ui.designsystem.theme.error
 import com.sshellspace.core.ui.designsystem.theme.onOverlay
 import com.sshellspace.core.ui.designsystem.theme.separator
-import com.sshellspace.core.ui.designsystem.theme.textSecondary
 import com.sshellspace.core.ui.designsystem.theme.surfaceElevated
-import com.sshellspace.feature.vault.sshkeys.CreationMethod
+import com.sshellspace.core.ui.designsystem.theme.textSecondary
 import com.sshellspace.feature.vault.components.SidebarPanel
+import com.sshellspace.feature.vault.sshkeys.CreationMethod
 import com.sshellspace.feature.vault.sshkeys.SidebarState
 import com.sshellspace.feature.vault.sshkeys.SshKeysPageAction
-import io.github.vinceglb.filekit.FileKit
-import io.github.vinceglb.filekit.absolutePath
-import io.github.vinceglb.filekit.dialogs.openDirectoryPicker
-import io.github.vinceglb.filekit.dialogs.openFilePicker
+import com.sshellspace.feature.vault.sshkeys.pickSshKeyDirectory
+import com.sshellspace.feature.vault.sshkeys.pickSshKeyFile
 import kotlinx.coroutines.launch
 
 object CreatingSidebar {
@@ -130,7 +128,7 @@ object CreatingSidebar {
                 enabled = !isSaveInFlight,
                 browseDescription = "Browse folders",
                 icon = Icons.Folder,
-                pick = { FileKit.openDirectoryPicker()?.file?.absolutePath },
+                pick = ::pickSshKeyDirectory,
             )
             TextField(
                 value = state.comment,
@@ -183,7 +181,7 @@ object CreatingSidebar {
                 enabled = !isSaveInFlight,
                 browseDescription = "Browse files",
                 icon = Icons.File,
-                pick = { FileKit.openFilePicker()?.file?.absolutePath },
+                pick = ::pickSshKeyFile,
             )
             PassphraseField(
                 value = state.passphrase,

@@ -7,4 +7,5 @@ dependencies {
     implementation(projects.core.ui)
     implementation(projects.core.domain)
     implementation(projects.feature.terminal.domain)
+    implementation(projects.feature.vault.domain)
 }
