@@ -11,4 +11,6 @@ dependencies {
     implementation(libs.bossterm.compose)
     implementation(libs.bossterm.core)
     implementation(libs.pty4j)
+    implementation(libs.filekit.core)
+    implementation(libs.filekit.dialogs)
 }

@@ -10,6 +10,7 @@ import com.sshellspace.feature.vault.domain.SaveSshConnectionResult
 import com.sshellspace.feature.vault.domain.SshConfigImporter
 import com.sshellspace.feature.vault.domain.SshConnectionRepository
 import com.sshellspace.feature.vault.domain.SshKeyRepository
+import com.sshellspace.feature.terminal.domain.models.SftpParams
 import com.sshellspace.feature.terminal.domain.models.SshTerminalParams
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -76,6 +77,9 @@ class ConnectionsPageViewModel(
             ConnectionsPageAction.ToggleAdvanced -> updateSidebar { copy(showAdvanced = !showAdvanced) }
             ConnectionsPageAction.ToggleSecretVisible -> updateSidebar { copy(secretVisible = !secretVisible) }
             is ConnectionsPageAction.Connect -> connect(action.connection)
+            is ConnectionsPageAction.BrowseFiles -> tabManager.createNewTab(
+                SftpParams(connectionId = action.connection.id, title = action.connection.name),
+            )
             ConnectionsPageAction.Save -> save(connectAfter = false)
             ConnectionsPageAction.SaveAndConnect -> save(connectAfter = true)
             ConnectionsPageAction.Duplicate -> duplicate()

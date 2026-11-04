@@ -8,6 +8,7 @@ import com.sshellspace.feature.terminal.domain.ShellDiscoveryService
 import com.sshellspace.feature.terminal.domain.TerminalPreferencesRepository
 import com.sshellspace.feature.terminal.domain.models.SavedSession
 import com.sshellspace.feature.terminal.domain.models.SavedTab
+import com.sshellspace.feature.terminal.domain.models.SftpParams
 import com.sshellspace.feature.terminal.domain.models.SshTerminalParams
 import com.sshellspace.feature.terminal.domain.models.TerminalParams
 import com.sshellspace.feature.vault.domain.SshConnectionRepository
@@ -71,6 +72,7 @@ class SessionRestore(
     private suspend fun SavedTab.toParams(allowedShells: Set<String?>): TabParams? = when (this) {
         is SavedTab.Local -> TerminalParams(shell).takeIf { shell.command in allowedShells }
         is SavedTab.Ssh -> connections.get(connectionId)?.let { SshTerminalParams(it.id, it.name) }
+        is SavedTab.Sftp -> connections.get(connectionId)?.let { SftpParams(it.id, it.name) }
     }
 
     private fun currentSession(): SavedSession {
@@ -80,6 +82,7 @@ class SessionRestore(
             tabs = open.mapNotNull { (_, params) ->
                 when (params) {
                     is SshTerminalParams -> SavedTab.Ssh(params.connectionId, params.title)
+                    is SftpParams -> SavedTab.Sftp(params.connectionId, params.title)
                     is TerminalParams -> SavedTab.Local(params.shell)
                     else -> null
                 }

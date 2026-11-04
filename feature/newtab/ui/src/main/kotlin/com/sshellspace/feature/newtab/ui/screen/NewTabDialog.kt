@@ -27,7 +27,10 @@ import com.composeunstyled.UnstyledHorizontalSeparator
 import com.composeunstyled.theme.Theme
 import com.sshellspace.core.domain.models.DEFAULT_SSH_PORT
 import com.sshellspace.core.domain.models.SshConnection
+import com.sshellspace.core.ui.designsystem.Icons
 import com.sshellspace.core.ui.designsystem.components.Button
+import com.sshellspace.core.ui.designsystem.components.IconButton
+import com.sshellspace.core.ui.designsystem.components.Tooltip
 import com.sshellspace.core.ui.designsystem.theme.border
 import com.sshellspace.core.ui.designsystem.theme.colors
 import com.sshellspace.core.ui.designsystem.theme.primary
@@ -52,6 +55,7 @@ fun NewTabDialog(
         uiState = uiState,
         onSelectShell = { select(NewTabDialogAction.CreateNewTab(it)) },
         onSelectConnection = { select(NewTabDialogAction.Connect(it)) },
+        onBrowseFiles = { select(NewTabDialogAction.BrowseFiles(it)) },
     )
 }
 
@@ -60,6 +64,7 @@ private fun NewTabDialogContent(
     uiState: NewTabDialogState,
     onSelectShell: (Shell) -> Unit,
     onSelectConnection: (SshConnection) -> Unit,
+    onBrowseFiles: (SshConnection) -> Unit,
 ) {
     val shape = RoundedCornerShape(8.dp)
 
@@ -103,6 +108,15 @@ private fun NewTabDialogContent(
                         highlighted = false,
                         trailing = null,
                         onClick = { onSelectConnection(connection) },
+                        action = {
+                            Tooltip(text = "Browse files") {
+                                IconButton(
+                                    onClick = { onBrowseFiles(connection) },
+                                    imageVector = Icons.Folder,
+                                    contentDescription = "Browse files on ${connection.name}",
+                                )
+                            }
+                        },
                     )
                 }
             }
@@ -152,6 +166,7 @@ private fun OptionRow(
     highlighted: Boolean,
     trailing: String?,
     onClick: () -> Unit,
+    action: (@Composable () -> Unit)? = null,
 ) {
     val shape = RoundedCornerShape(6.dp)
     Button(
@@ -175,6 +190,7 @@ private fun OptionRow(
             if (trailing != null) {
                 Text(trailing, color = Theme[colors][textSecondary])
             }
+            action?.invoke()
         }
     }
 }

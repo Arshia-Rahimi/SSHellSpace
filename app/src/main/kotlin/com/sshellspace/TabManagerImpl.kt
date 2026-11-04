@@ -6,8 +6,10 @@ import com.sshellspace.core.ui.tabs.TabItem
 import com.sshellspace.core.ui.tabs.TabManager
 import com.sshellspace.core.ui.tabs.TabsState
 import com.sshellspace.core.ui.tabs.contains
+import com.sshellspace.feature.terminal.domain.models.SftpParams
 import com.sshellspace.feature.terminal.domain.models.SshTerminalParams
 import com.sshellspace.feature.terminal.domain.models.TerminalParams
+import com.sshellspace.feature.terminal.ui.SftpTabFactory
 import com.sshellspace.feature.terminal.ui.SshTerminalTabFactory
 import com.sshellspace.feature.terminal.ui.TerminalTabFactory
 import java.util.concurrent.ConcurrentHashMap
@@ -28,6 +30,7 @@ class TabManagerImpl(
         val newTab = when (params) {
             is TerminalParams -> TerminalTabFactory.create(params)
             is SshTerminalParams -> SshTerminalTabFactory.create(params)
+            is SftpParams -> SftpTabFactory.create(params)
             else -> throw IllegalArgumentException("Unknown tab param type")
         }
         paramsByTab[newTab.tab.id] = params

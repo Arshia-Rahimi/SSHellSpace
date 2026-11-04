@@ -66,7 +66,7 @@ fun SshTerminalTabScreen(viewModel: SshTerminalTabViewModel) {
 }
 
 @Composable
-private fun StatusCard(
+internal fun StatusCard(
     title: String,
     message: String? = null,
     isError: Boolean = false,

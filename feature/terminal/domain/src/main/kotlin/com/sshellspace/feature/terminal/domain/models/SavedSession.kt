@@ -19,6 +19,10 @@ sealed interface SavedTab {
     data class Ssh(val connectionId: Uuid, val title: String) : SavedTab
 
     @Serializable
+    @SerialName("sftp")
+    data class Sftp(val connectionId: Uuid, val title: String) : SavedTab
+
+    @Serializable
     @SerialName("local")
     data class Local(val shell: Shell) : SavedTab
 }

@@ -9,9 +9,12 @@ import com.sshellspace.core.domain.models.PortForwardType
 import com.sshellspace.core.domain.models.SshConnection
 import com.sshellspace.core.domain.models.SshConnectionAuth
 import com.sshellspace.feature.terminal.data.ssh.ConnectionContext
+import com.sshellspace.feature.terminal.data.sftp.MinaSftpSession
 import com.sshellspace.feature.terminal.data.ssh.agent.SshAgentLocator
 import com.sshellspace.feature.terminal.domain.SESSION_LOST_EXIT_CODE
 import com.sshellspace.feature.terminal.domain.SecretPrompt
+import com.sshellspace.feature.terminal.domain.SftpFailure
+import com.sshellspace.feature.terminal.domain.SftpSession
 import com.sshellspace.feature.terminal.domain.ShellSession
 import com.sshellspace.feature.terminal.domain.SshConnectResult
 import com.sshellspace.feature.terminal.domain.SshConnectionService
@@ -44,6 +47,7 @@ import org.apache.sshd.common.config.keys.FilePasswordProvider
 import org.apache.sshd.common.session.SessionHeartbeatController
 import org.apache.sshd.common.util.net.SshdSocketAddress
 import org.apache.sshd.common.util.security.SecurityUtils
+import org.apache.sshd.sftp.client.SftpClientFactory
 
 class MinaSshConnectionService(
     private val sshClient: SshClient,
@@ -295,6 +299,15 @@ private class MinaSshSession(private val sessions: List<ClientSession>) : ShellS
             override val boundAddress: String = tracker.boundAddress.let { "${it.hostName}:${it.port}" }
             override fun close() = tracker.close()
         }
+    }
+
+    override fun openSftp(): SftpSession = try {
+        MinaSftpSession(SftpClientFactory.instance().createSftpClient(target))
+    } catch (e: java.io.IOException) {
+        throw SftpFailure(
+            "Connected, but the server wouldn't start SFTP. Check for a Subsystem sftp line in its sshd_config, " +
+                "and that the login doesn't print text from its shell profile. (${e.message})",
+        )
     }
 
     override fun onClose(listener: () -> Unit) {

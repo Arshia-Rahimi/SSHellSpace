@@ -1,6 +1,7 @@
 package com.sshellspace.core.ui.designsystem
 
 import com.composables.icons.radix.ArrowLeft
+import com.composables.icons.radix.ArrowUp
 import com.composables.icons.radix.Archive
 import com.composables.icons.radix.Check
 import com.composables.icons.radix.ChevronDown
@@ -10,20 +11,25 @@ import com.composables.icons.radix.Copy
 import com.composables.icons.radix.Cross2
 import com.composables.icons.radix.Desktop
 import com.composables.icons.radix.DotsHorizontal
+import com.composables.icons.radix.Download
 import com.composables.icons.radix.EyeClosed
 import com.composables.icons.radix.EyeOpen
 import com.composables.icons.radix.File
+import com.composables.icons.radix.Home
 import com.composables.icons.radix.Gear
 import com.composables.icons.radix.IdCard
 import com.composables.icons.radix.Keyboard
+import com.composables.icons.radix.Link2
 import com.composables.icons.radix.LockClosed
 import com.composables.icons.radix.MagnifyingGlass
 import com.composables.icons.radix.Pencil1
 import com.composables.icons.radix.Play
 import com.composables.icons.radix.Plus
 import com.composables.icons.radix.Radix
+import com.composables.icons.radix.Reload
 import com.composables.icons.radix.Stop
 import com.composables.icons.radix.Trash
+import com.composables.icons.radix.Upload
 import dev.nucleusframework.window.MacOSLargeCornerRadiusNode
 
 object Icons {
@@ -53,4 +59,10 @@ object Icons {
     val Connect = Radix.Play
     val Start = Radix.Play
     val Stop = Radix.Stop
+    val Up = Radix.ArrowUp
+    val Home = Radix.Home
+    val Refresh = Radix.Reload
+    val Upload = Radix.Upload
+    val Download = Radix.Download
+    val Link = Radix.Link2
 }

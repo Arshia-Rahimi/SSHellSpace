@@ -44,6 +44,7 @@ fun ConnectionCard(
     selected: Boolean,
     onClick: () -> Unit,
     onConnect: () -> Unit,
+    onBrowseFiles: () -> Unit,
 ) {
     Button(
         onClick = onClick,
@@ -75,6 +76,13 @@ fun ConnectionCard(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
+                    Tooltip(text = "Browse files") {
+                        IconButton(
+                            onClick = onBrowseFiles,
+                            imageVector = Icons.Folder,
+                            contentDescription = "Browse files on ${connection.name}",
+                        )
+                    }
                     Tooltip(text = "Connect") {
                         IconButton(
                             onClick = onConnect,

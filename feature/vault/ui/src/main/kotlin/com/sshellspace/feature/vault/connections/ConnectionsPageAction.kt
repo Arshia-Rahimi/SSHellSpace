@@ -16,6 +16,9 @@ sealed interface ConnectionsPageAction {
     /** Opens a terminal tab connected to the saved [connection]. */
     data class Connect(val connection: SshConnection) : ConnectionsPageAction
 
+    /** Opens a file browser tab connected to the saved [connection]. */
+    data class BrowseFiles(val connection: SshConnection) : ConnectionsPageAction
+
     data object Save : ConnectionsPageAction
 
     /** Saves the open form, then connects to it. */

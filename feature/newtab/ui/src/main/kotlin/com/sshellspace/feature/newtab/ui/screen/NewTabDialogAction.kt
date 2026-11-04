@@ -8,4 +8,7 @@ sealed interface NewTabDialogAction {
 
     /** Opens an SSH tab connected to the saved [connection]. */
     data class Connect(val connection: SshConnection) : NewTabDialogAction
+
+    /** Opens a file browser tab connected to the saved [connection]. */
+    data class BrowseFiles(val connection: SshConnection) : NewTabDialogAction
 }

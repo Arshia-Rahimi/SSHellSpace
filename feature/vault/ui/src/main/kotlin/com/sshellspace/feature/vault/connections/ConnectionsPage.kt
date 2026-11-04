@@ -155,6 +155,7 @@ private fun ConnectionList(
                                 selected = uiState.sidebar?.editingId == connection.id,
                                 onClick = { onAction(ConnectionsPageAction.Select(connection)) },
                                 onConnect = { onAction(ConnectionsPageAction.Connect(connection)) },
+                                onBrowseFiles = { onAction(ConnectionsPageAction.BrowseFiles(connection)) },
                             )
                         }
                     }

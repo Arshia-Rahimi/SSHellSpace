@@ -10,6 +10,7 @@ import com.sshellspace.core.ui.tabs.TabManager
 import com.sshellspace.feature.terminal.domain.ShellDiscoveryService
 import com.sshellspace.feature.terminal.domain.TerminalPreferencesRepository
 import com.sshellspace.feature.terminal.domain.models.Shell
+import com.sshellspace.feature.terminal.domain.models.SftpParams
 import com.sshellspace.feature.terminal.domain.models.SshTerminalParams
 import com.sshellspace.feature.terminal.domain.models.TerminalParams
 import com.sshellspace.feature.terminal.domain.models.resolveDefault
@@ -62,6 +63,9 @@ class NewTabDialogViewModel(
         when (action) {
             is NewTabDialogAction.CreateNewTab -> createNewTab(action.shell)
             is NewTabDialogAction.Connect -> connect(action.connection)
+            is NewTabDialogAction.BrowseFiles -> tabManager.createNewTab(
+                SftpParams(connectionId = action.connection.id, title = action.connection.name),
+            )
         }
     }
 

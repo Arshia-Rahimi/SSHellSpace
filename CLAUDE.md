@@ -123,7 +123,16 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 - `MinaPortForwardingService` (feature/terminal/data, Koin `single`) runs forwards via `ShellSession.Ssh.startForward`. Forwards on the same connection share one session, which closes when the last forward stops. A dropped session marks its forwards failed, and deleted forwards are stopped.
 - The client's `forwardingFilter` must allow TCP. MINA's default rejects the server's `forwarded-tcpip` channels, which breaks remote (`-R`) forwards.
 - The Port Forwarding page (`feature/vault/ui/.../portforwarding`) is the `SshPrompter` for starting forwards. Its login questions render with the shared cards in `feature/terminal/ui/.../ssh/SshPromptCards.kt`. Stopping a forward mid-login answers `null`, because cancelling the coroutine doesn't unblock the MINA thread.
-- `MinaSshConnectionServiceTest` runs real connections against an embedded MINA `SshServer`. The agent test uses a real `ssh-agent` and is skipped when OpenSSH isn't installed.
+- `MinaSshConnectionServiceTest` runs real connections against an embedded MINA `SshServer`, and `MinaSftpSessionTest` does the same for file operations. The agent test uses a real `ssh-agent` and is skipped when OpenSSH isn't installed.
+
+### SFTP browser
+
+- A file browser is its own tab type (`SftpParams`, `SftpTabFactory`), opened from a connection's folder button in the Vault page or the new tab dialog. It lives in the terminal feature because it needs `ShellSession.Ssh`, and `ShellSession.Ssh.openSftp()` returns the `SftpSession` that `MinaSftpSession` (feature/terminal/data) implements. `SftpBrowserViewModel` opens its own SSH session, so each tab logs in separately, and closing the tab stops its transfers. Tabs are saved and restored like terminals (`SavedTab.Sftp`).
+- **Everything a server sends is hostile.** `readDirectory` drops names that could leave the folder (a listed `..` would make a recursive delete remove the parent). `isSafeLocalName` guards every local path, including names that only do damage on Windows (`a\b`, `a:b`, `CON`). Names on screen go through `printableRemoteText`, because bidirectional overrides can disguise a file type. Listings, tree depth and file counts are capped.
+- **Links aren't followed when walking a folder**, in either direction or when deleting: a link could reach outside what the user chose. A link the user picked directly is followed, using `stat`, since a listing only gives the link's own size and mode.
+- **Modes stay private.** Downloads arrive in a private temp file beside the target, then move to the real name once whole, with the remote mode masked by 755. New uploads get the local mode before any data is written, because the server's default would make a private key readable. MINA's `open` can't send a mode, hence the open, `setStat`, then write sequence.
+- Conflicts are decided by the ViewModel (`SftpDialog.Conflict`), and `replace = false` still fails rather than overwriting if a file appears in the meantime.
+- Rows use the desktop `Modifier.onClick`. Each handler must match only its own modifier keys: one matching any keys takes every click from the others.
 
 ### Terminal
 
@@ -137,4 +146,4 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 
 ## Tests
 
-- Tests exist in `core/data`, `feature/vault/data`, `feature/vault/ui`, `feature/terminal/data` and `feature/terminal/ui`. They use `kotlin.test` assertions, mockk, and `runTest`, with backtick-named test functions.
+- Tests exist in `core/data`, `feature/vault/data`, `feature/vault/ui`, `feature/terminal/domain`, `feature/terminal/data` and `feature/terminal/ui`. They use `kotlin.test` assertions, mockk, and `runTest`, with backtick-named test functions.

@@ -13,6 +13,9 @@ sealed interface ShellSession {
         /** Starts [forward] on the target host. Blocks until the listener is bound. Close the handle to stop it. */
         fun startForward(forward: PortForward): SshForwardHandle
 
+        /** Opens a file browsing channel. Blocks until the server started SFTP, or throws [SftpFailure]. */
+        fun openSftp(): SftpSession
+
         /** Calls [listener] once when the connection closes, from either side. */
         fun onClose(listener: () -> Unit)
     }

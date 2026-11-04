@@ -204,12 +204,13 @@ internal fun Actions(
     primaryAction: Pair<String, () -> Unit>?,
     secondaryAction: Pair<String, () -> Unit>? = null,
     destructive: Boolean = false,
+    middleAction: Pair<String, () -> Unit>? = null,
 ) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End),
     ) {
-        secondaryAction?.let { (label, onClick) ->
+        listOfNotNull(secondaryAction, middleAction).forEach { (label, onClick) ->
             Button(
                 onClick = onClick,
                 modifier = Modifier

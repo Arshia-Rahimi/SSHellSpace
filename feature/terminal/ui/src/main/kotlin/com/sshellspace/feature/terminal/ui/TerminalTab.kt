@@ -4,10 +4,14 @@ import com.sshellspace.core.ui.tabs.TabController
 import com.sshellspace.core.ui.tabs.TabItemFactory
 import com.sshellspace.core.ui.tabs.TabItem
 import com.sshellspace.core.ui.tabs.TabType
+import com.sshellspace.feature.terminal.domain.models.SftpParams
 import com.sshellspace.feature.terminal.domain.models.SshTerminalParams
 import com.sshellspace.feature.terminal.domain.models.TerminalParams
 import com.sshellspace.feature.terminal.ui.screen.TerminalTabScreen
 import com.sshellspace.feature.terminal.ui.screen.TerminalTabViewModel
+import com.sshellspace.feature.terminal.ui.screen.sftp.SftpBrowserScreen
+import com.sshellspace.feature.terminal.ui.screen.sftp.SftpBrowserViewModel
+import com.sshellspace.feature.terminal.ui.screen.sftp.sftpTabTitle
 import com.sshellspace.feature.terminal.ui.screen.ssh.SshTerminalTabScreen
 import com.sshellspace.feature.terminal.ui.screen.ssh.SshTerminalTabViewModel
 import org.koin.compose.viewmodel.koinViewModel
@@ -39,6 +43,21 @@ val SshTerminalTabFactory = TabItemFactory<SshTerminalParams> { parameters ->
                 parametersOf(item as TabController, parameters)
             }
             SshTerminalTabScreen(viewModel)
+        }
+    )
+}
+
+object SftpTab : TabType
+
+val SftpTabFactory = TabItemFactory<SftpParams> { parameters ->
+    TabItem(
+        type = SftpTab,
+        initialTitle = sftpTabTitle(parameters.title),
+        contentProvider = { item ->
+            val viewModel: SftpBrowserViewModel = koinViewModel {
+                parametersOf(item as TabController, parameters)
+            }
+            SftpBrowserScreen(viewModel)
         }
     )
 }

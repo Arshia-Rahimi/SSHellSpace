@@ -15,6 +15,7 @@ import com.sshellspace.feature.terminal.domain.ShellDiscoveryService
 import com.sshellspace.feature.terminal.domain.TerminalPreferencesRepository
 import com.sshellspace.feature.terminal.domain.models.SavedSession
 import com.sshellspace.feature.terminal.domain.models.SavedTab
+import com.sshellspace.feature.terminal.domain.models.SftpParams
 import com.sshellspace.feature.terminal.domain.models.Shell
 import com.sshellspace.feature.terminal.domain.models.SshTerminalParams
 import com.sshellspace.feature.terminal.domain.models.TerminalParams
@@ -107,6 +108,25 @@ class SessionRestoreTest {
 
     private fun kotlinx.coroutines.test.TestScope.running() =
         launch(UnconfinedTestDispatcher(testScheduler)) { restore.run() }
+
+    @Test
+    fun `file browser tabs are saved and come back as file browsers`() = runTest {
+        val job = running()
+        activeVault.value = vault
+        testScheduler.runCurrent()
+        tabs.createNewTab(SftpParams(server.id, "server"))
+        testScheduler.runCurrent()
+        assertEquals(listOf<SavedTab>(SavedTab.Sftp(server.id, "server")), stored.tabs)
+
+        activeVault.value = null
+        tabs.reset()
+        testScheduler.runCurrent()
+        activeVault.value = vault
+        testScheduler.runCurrent()
+
+        assertEquals(listOf<TabParams>(SftpParams(server.id, "server")), tabs.openTabs().map { it.second })
+        job.cancel()
+    }
 
     @Test
     fun `open tabs are saved and come back on the next unlock`() = runTest {
