@@ -7,6 +7,7 @@ import com.sshellspace.core.domain.models.VaultException
 import com.sshellspace.core.domain.models.VaultInfo
 import com.sshellspace.core.domain.repositories.CorePreferencesRepository
 import com.sshellspace.core.domain.repositories.VaultManager
+import com.sshellspace.core.domain.repositories.VaultPreferencesRepository
 import com.sshellspace.core.ui.shortcuts.ShortcutHandler
 import com.sshellspace.feature.terminal.domain.ShellDiscoveryService
 import com.sshellspace.feature.terminal.domain.TerminalPreferencesRepository
@@ -40,7 +41,9 @@ class SettingsPageViewModelThemeTest {
         every { getColorScheme() } returns flowOf(DEFAULT_COLOR_SCHEME_ID)
         every { getUserThemes() } returns flowOf(emptyList())
         every { getActiveUserTheme() } returns flowOf(null)
-        every { getAutoLockMinutes() } returns flowOf(15)
+    }
+    private val vaultPreferences = mockk<VaultPreferencesRepository>(relaxed = true) {
+        every { getAutoLockMinutes() } returns flowOf(30)
     }
     private val terminalPreferences = mockk<TerminalPreferencesRepository>(relaxed = true) {
         every { get() } returns MutableStateFlow(TerminalPreferences(terminalThemeName = "nord"))
@@ -65,9 +68,22 @@ class SettingsPageViewModelThemeTest {
         mockk<ShellDiscoveryService>(relaxed = true),
         shortcutHandler,
         vaultManager,
+        vaultPreferences,
     )
 
     private val work = VaultInfo(Uuid.random(), "Work")
+
+    @Test
+    fun `the idle timeout shown and changed is the unlocked vault's`() = runTest {
+        activeVault.value = work
+        val viewModel = viewModel()
+
+        assertEquals(30, viewModel.uiState.first { it.vaultName != null }.autoLockMinutes)
+
+        viewModel.execute(SettingsPageAction.SetAutoLockMinutes(5))
+
+        coVerify { vaultPreferences.setAutoLockMinutes(5) }
+    }
 
     @Test
     fun `exporting says it worked`() = runTest {

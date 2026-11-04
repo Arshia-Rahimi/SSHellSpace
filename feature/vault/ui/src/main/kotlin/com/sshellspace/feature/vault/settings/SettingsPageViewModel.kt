@@ -7,6 +7,7 @@ import com.sshellspace.core.domain.models.VaultException
 import com.sshellspace.core.domain.models.VaultInfo
 import com.sshellspace.core.domain.repositories.CorePreferencesRepository
 import com.sshellspace.core.domain.repositories.VaultManager
+import com.sshellspace.core.domain.repositories.VaultPreferencesRepository
 import com.sshellspace.core.ui.designsystem.theme.AppColorScheme
 import com.sshellspace.core.ui.shortcuts.AppShortcut
 import com.sshellspace.core.ui.shortcuts.ShortcutHandler
@@ -36,6 +37,7 @@ class SettingsPageViewModel(
     private val shellDiscoveryService: ShellDiscoveryService,
     private val shortcutHandler: ShortcutHandler,
     private val vaultManager: VaultManager,
+    private val vaultPreferencesRepository: VaultPreferencesRepository,
 ) : ViewModel() {
     private val discoveredShells = MutableStateFlow<List<Shell>?>(null)
     private val recording = MutableStateFlow<ShortcutRecording?>(null)
@@ -62,7 +64,7 @@ class SettingsPageViewModel(
     private val appearanceAndVault = combine(
         appearance,
         vaultManager.activeVault,
-        corePreferencesRepository.getAutoLockMinutes(),
+        vaultPreferencesRepository.getAutoLockMinutes(),
         vaultForm,
     ) { appearance, vault, autoLockMinutes, form ->
         appearance.copy(
@@ -148,7 +150,7 @@ class SettingsPageViewModel(
                 terminalPreferencesRepository.set(UpdateTerminalPreferences(restoreTabs = action.enabled))
             }
             is SettingsPageAction.SetAutoLockMinutes -> viewModelScope.launch {
-                corePreferencesRepository.setAutoLockMinutes(action.minutes)
+                vaultPreferencesRepository.setAutoLockMinutes(action.minutes)
             }
 
             is SettingsPageAction.Shortcut.StartRecording -> setRecording(ShortcutRecording(action.shortcut))

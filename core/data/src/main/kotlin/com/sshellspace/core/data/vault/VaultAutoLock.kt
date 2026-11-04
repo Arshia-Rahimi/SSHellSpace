@@ -1,7 +1,7 @@
 package com.sshellspace.core.data.vault
 
-import com.sshellspace.core.domain.repositories.CorePreferencesRepository
 import com.sshellspace.core.domain.repositories.VaultManager
+import com.sshellspace.core.domain.repositories.VaultPreferencesRepository
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 
@@ -12,12 +12,12 @@ private const val MILLIS_PER_MINUTE = 60_000L
 private const val SLEEP_GAP_MILLIS = 60_000L
 
 /**
- * Locks the unlocked vault after the configured idle time, or as soon as the machine wakes from sleep. Only user input
+ * Locks the unlocked vault after its own configured idle time, or as soon as the machine wakes from sleep. Only user input
  * counts as activity, so output from a running terminal doesn't keep a vault open at an unattended machine.
  */
 class VaultAutoLock(
     private val vaultManager: VaultManager,
-    private val preferences: CorePreferencesRepository,
+    private val preferences: VaultPreferencesRepository,
     private val now: () -> Long = System::currentTimeMillis,
 ) {
     @Volatile

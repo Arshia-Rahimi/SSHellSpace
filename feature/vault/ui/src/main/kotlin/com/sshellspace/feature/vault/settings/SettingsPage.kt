@@ -119,7 +119,8 @@ private fun SettingsSections(
             )
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
-                    "Lock when idle or when this computer sleeps. Output in a terminal doesn't count as activity.",
+                    "Lock this vault when idle or when this computer sleeps. Each vault has its own setting. " +
+                        "Output in a terminal doesn't count as activity.",
                     color = Theme[colors][textSecondary],
                 )
                 FlowRow(

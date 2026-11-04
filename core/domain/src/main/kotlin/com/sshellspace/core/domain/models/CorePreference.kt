@@ -13,7 +13,10 @@ data class CorePreference(
     val userThemes: List<UserTheme> = emptyList(),
     /** The imported theme in use, which takes over from [colorSchemeId]. Null when using a built-in scheme. */
     val activeUserThemeName: String? = null,
-    /** Idle minutes before the vault locks itself. 0 turns that off, including locking on sleep. */
+    /**
+     * Idle minutes before a vault locks itself, for vaults with no [VaultPreference.autoLockMinutes] of their own.
+     * 0 turns that off, including locking on sleep. Settings no longer changes this.
+     */
     val autoLockMinutes: Int = DEFAULT_AUTO_LOCK_MINUTES,
 )
 

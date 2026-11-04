@@ -84,11 +84,6 @@ internal class CorePreferencesRepositoryImpl(
     override fun getAutoLockMinutes() = preference
         .map { it.autoLockMinutes }
 
-    override suspend fun setAutoLockMinutes(minutes: Int) {
-        val updated = preference.value.copy(autoLockMinutes = minutes)
-        datasource.set(key, JsonSerializer.encodeToString(CorePreference.serializer(), updated))
-    }
-
     override fun getShortcuts() = preference
         .map { it.shortcuts }
 

@@ -1,8 +1,8 @@
 package com.sshellspace.core.data.vault
 
 import com.sshellspace.core.domain.models.VaultInfo
-import com.sshellspace.core.domain.repositories.CorePreferencesRepository
 import com.sshellspace.core.domain.repositories.VaultManager
+import com.sshellspace.core.domain.repositories.VaultPreferencesRepository
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -18,7 +18,7 @@ class VaultAutoLockTest {
     private val manager = mockk<VaultManager>(relaxed = true) {
         every { activeVault } returns this@VaultAutoLockTest.activeVault
     }
-    private val autoLock = VaultAutoLock(manager, mockk<CorePreferencesRepository>(), now = { time })
+    private val autoLock = VaultAutoLock(manager, mockk<VaultPreferencesRepository>(), now = { time })
 
     /** Moves the clock in small steps, as the running timer would. */
     private suspend fun passTime(millis: Long, minutes: Int) {

@@ -6,11 +6,19 @@ import com.sshellspace.core.data.generated.Database
 import com.sshellspace.core.data.generated.Device_ssh_keys
 import com.sshellspace.core.data.generated.Port_forwards
 import com.sshellspace.core.data.generated.Vault_ssh_keys
+import com.sshellspace.core.data.impl.SqlDelightPreferencesDatasource
+import com.sshellspace.core.data.impl.VaultPreferencesRepositoryImpl
+import com.sshellspace.core.domain.models.DEFAULT_AUTO_LOCK_MINUTES
 import com.sshellspace.core.domain.models.PasswordStrength
 import com.sshellspace.core.domain.models.VaultCredential
 import com.sshellspace.core.domain.models.VaultException
 import com.sshellspace.core.domain.models.VaultInfo
 import com.sshellspace.core.domain.models.vaultPasswordStrength
+import com.sshellspace.core.domain.repositories.CorePreferencesRepository
+import com.sshellspace.core.domain.repositories.PreferencesDatasource
+import com.sshellspace.core.domain.repositories.VaultPreferencesDatasource
+import io.mockk.every
+import io.mockk.mockk
 import java.io.File
 import java.nio.file.Files
 import java.nio.file.attribute.PosixFilePermissions
@@ -30,8 +38,11 @@ import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import org.sqlite.SQLiteConnection
 
@@ -469,6 +480,54 @@ class VaultManagerImplTest {
     @Test
     fun `secrets don't appear in toString`() {
         assertFalse("correct" in password.toString())
+    }
+
+    private fun autoLockSettings() = VaultPreferencesRepositoryImpl(
+        object : VaultPreferencesDatasource, PreferencesDatasource by SqlDelightPreferencesDatasource(vaultDatabase) {},
+        manager,
+        mockk<CorePreferencesRepository> { every { getAutoLockMinutes() } returns flowOf(DEFAULT_AUTO_LOCK_MINUTES) },
+    )
+
+    private suspend fun VaultPreferencesRepositoryImpl.awaitMinutes(minutes: Int) = withContext(Dispatchers.Default) {
+        withTimeout(5_000) { getAutoLockMinutes().first { it == minutes } }
+    }
+
+    @Test
+    fun `each vault keeps its own idle timeout across locks`() = runTest {
+        val settings = autoLockSettings()
+        val work = manager.create("Work", password, moveUnencryptedData = false)
+        settings.awaitMinutes(DEFAULT_AUTO_LOCK_MINUTES)
+        settings.setAutoLockMinutes(5)
+        settings.awaitMinutes(5)
+
+        val home = manager.create("Home", password, moveUnencryptedData = false)
+        settings.awaitMinutes(DEFAULT_AUTO_LOCK_MINUTES)
+        settings.setAutoLockMinutes(0)
+        settings.awaitMinutes(0)
+
+        manager.lock()
+        manager.unlock(work.id, password)
+        settings.awaitMinutes(5)
+
+        manager.unlock(home.id, password)
+        settings.awaitMinutes(0)
+    }
+
+    @Test
+    fun `an imported vault can't turn its own auto-lock off`() = runTest {
+        val settings = autoLockSettings()
+        val vault = manager.create("Work", password, moveUnencryptedData = false)
+        settings.setAutoLockMinutes(0)
+        settings.awaitMinutes(0)
+        val exported = File(root, "export.sshv").path
+        manager.lock()
+        manager.export(vault.id, exported)
+        manager.delete(vault.id)
+
+        val imported = manager.import(exported, password)
+        manager.unlock(imported.id, password)
+
+        settings.awaitMinutes(DEFAULT_AUTO_LOCK_MINUTES)
     }
 
     @Test

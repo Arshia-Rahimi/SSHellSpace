@@ -28,7 +28,6 @@ interface CorePreferencesRepository {
     suspend fun deleteUserTheme(name: String)
 
     fun getAutoLockMinutes(): Flow<Int>
-    suspend fun setAutoLockMinutes(minutes: Int)
 
     /** User overrides keyed by shortcut id. Shortcuts without an entry use their default chord. */
     fun getShortcuts(): Flow<Map<String, KeyChord>>
