@@ -23,6 +23,7 @@ sealed interface VaultGateMode {
     data object Create : VaultGateMode
     data class Import(val path: String) : VaultGateMode
     data class ChangePassword(val vault: VaultInfo) : VaultGateMode
+    data class Delete(val vault: VaultInfo) : VaultGateMode
 }
 
 data class VaultGateUiState(
@@ -30,6 +31,8 @@ data class VaultGateUiState(
     val mode: VaultGateMode = VaultGateMode.Select(),
     val isBusy: Boolean = false,
     val error: String? = null,
+    /** Confirms something that finished without changing what's on screen, such as an export. */
+    val notice: String? = null,
     val unencryptedItemCount: Long = 0,
 )
 
@@ -45,8 +48,9 @@ sealed interface VaultGateAction {
     ) : VaultGateAction
     data class ShowImport(val path: String) : VaultGateAction
     data class Import(val path: String, val password: String) : VaultGateAction
-    data class Export(val id: Uuid, val path: String) : VaultGateAction
-    data class Delete(val id: Uuid) : VaultGateAction
+    data class Export(val vault: VaultInfo, val path: String) : VaultGateAction
+    data class ShowDelete(val vault: VaultInfo) : VaultGateAction
+    data class Delete(val vault: VaultInfo) : VaultGateAction
     data class ShowChangePassword(val vault: VaultInfo) : VaultGateAction
     data class ChangePassword(
         val id: Uuid,
@@ -55,6 +59,9 @@ sealed interface VaultGateAction {
         val confirmation: String,
     ) : VaultGateAction
     data object BackToList : VaultGateAction
+
+    /** The user started correcting their input, so the last error no longer applies. */
+    data object ClearError : VaultGateAction
 }
 
 class VaultGateViewModel(
@@ -63,9 +70,7 @@ class VaultGateViewModel(
     private val form = MutableStateFlow(VaultGateUiState())
 
     val uiState = combine(vaultManager.vaults, form) { vaults, form ->
-        // With no vaults there is nothing to pick from, so the first thing to do is make one.
-        val mode = if (vaults.isEmpty() && form.mode is VaultGateMode.Select) VaultGateMode.Create else form.mode
-        form.copy(vaults = vaults, mode = mode)
+        form.copy(vaults = vaults, mode = resolveMode(form.mode, vaults))
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), VaultGateUiState(vaults = vaultManager.vaults.value))
 
     init {
@@ -80,28 +85,58 @@ class VaultGateViewModel(
             is VaultGateAction.SelectVault -> setMode(VaultGateMode.Select(action.id))
             VaultGateAction.ShowCreate -> setMode(VaultGateMode.Create)
             is VaultGateAction.ShowImport -> setMode(VaultGateMode.Import(action.path))
-            VaultGateAction.BackToList -> setMode(VaultGateMode.Select())
             is VaultGateAction.ShowChangePassword -> setMode(VaultGateMode.ChangePassword(action.vault))
-            is VaultGateAction.ChangePassword -> changePassword(action)
-            is VaultGateAction.Unlock -> run {
-                vaultManager.unlock(action.id, VaultCredential.Password(action.password))
-            }
+            is VaultGateAction.ShowDelete -> setMode(VaultGateMode.Delete(action.vault))
+            VaultGateAction.BackToList -> setMode(VaultGateMode.Select())
+            VaultGateAction.ClearError -> form.update { it.copy(error = null) }
+            is VaultGateAction.Unlock -> unlock(action)
             is VaultGateAction.Create -> create(action)
-            is VaultGateAction.Import -> run {
-                vaultManager.import(action.path, VaultCredential.Password(action.password))
-                setMode(VaultGateMode.Select())
+            is VaultGateAction.Import -> import(action)
+            is VaultGateAction.Export -> run {
+                vaultManager.export(action.vault.id, action.path)
+                form.update { it.copy(notice = "Exported ${action.vault.name}. You'll need its password to import it.") }
             }
-            is VaultGateAction.Export -> run { vaultManager.export(action.id, action.path) }
             is VaultGateAction.Delete -> run {
-                vaultManager.delete(action.id)
+                vaultManager.delete(action.vault.id)
                 setMode(VaultGateMode.Select())
+                form.update { it.copy(notice = "Deleted ${action.vault.name}.") }
             }
+            is VaultGateAction.ChangePassword -> changePassword(action)
+        }
+    }
+
+    private fun resolveMode(mode: VaultGateMode, vaults: List<VaultInfo>): VaultGateMode = when {
+        mode !is VaultGateMode.Select -> mode
+        // With no vaults there is nothing to pick from, so the first thing to do is make one.
+        vaults.isEmpty() -> VaultGateMode.Create
+        // With only one, choosing it would be a pointless extra click.
+        vaults.none { it.id == mode.selectedId } -> VaultGateMode.Select(vaults.singleOrNull()?.id)
+        else -> mode
+    }
+
+    private fun unlock(action: VaultGateAction.Unlock) {
+        if (action.password.isEmpty()) {
+            form.update { it.copy(error = "Enter the vault's password.") }
+            return
+        }
+        run { vaultManager.unlock(action.id, VaultCredential.Password(action.password)) }
+    }
+
+    private fun import(action: VaultGateAction.Import) {
+        if (action.password.isEmpty()) {
+            form.update { it.copy(error = "Enter the password this vault was exported with.") }
+            return
+        }
+        run {
+            val imported = vaultManager.import(action.path, VaultCredential.Password(action.password))
+            setMode(VaultGateMode.Select(imported.id))
+            form.update { it.copy(notice = "Imported ${imported.name}. Enter its password to unlock it.") }
         }
     }
 
     private fun create(action: VaultGateAction.Create) {
         val problem = if (action.name.isBlank()) {
-            "The vault needs a name."
+            "Give the vault a name."
         } else {
             passwordProblem(action.password, action.confirmation)
         }
@@ -127,6 +162,7 @@ class VaultGateViewModel(
                 VaultCredential.Password(action.password),
             )
             setMode(VaultGateMode.Select(action.id))
+            form.update { it.copy(notice = "Password changed. Exports you made earlier still use the old one.") }
         }
     }
 
@@ -139,13 +175,13 @@ class VaultGateViewModel(
     }
 
     private fun setMode(mode: VaultGateMode) {
-        form.update { it.copy(mode = mode, error = null) }
+        form.update { it.copy(mode = mode, error = null, notice = null) }
     }
 
     /** Runs a vault operation one at a time, showing progress and any failure. */
     private fun run(block: suspend () -> Unit) {
         if (form.value.isBusy) return
-        form.update { it.copy(isBusy = true, error = null) }
+        form.update { it.copy(isBusy = true, error = null, notice = null) }
         viewModelScope.launch {
             val error = try {
                 block()

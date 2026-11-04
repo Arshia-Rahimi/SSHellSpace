@@ -2,5 +2,7 @@
     <!--  accessibility  -->
     <string name="new_tab">new tab</string>
     <string name="close_tab">close tab</string>
+    <string name="lock_vault">Lock</string>
+    <string name="exit_app">Exit</string>
     <!--  end accessibility  -->
 </resources>

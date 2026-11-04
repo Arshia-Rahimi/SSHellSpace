@@ -8,6 +8,7 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
@@ -37,6 +38,7 @@ import dev.nucleusframework.application.DecoratedWindow
 import dev.nucleusframework.application.NucleusBackend
 import dev.nucleusframework.application.nucleusApplication
 import dev.nucleusframework.window.WindowScaffold
+import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import sshellspace.app.generated.resources.Res
 import sshellspace.app.generated.resources.title
@@ -65,8 +67,10 @@ fun main() {
                 .collectAsStateWithLifecycle(DEFAULT_COLOR_SCHEME_ID)
             val userTheme by remember { preferences.getActiveUserTheme() }
                 .collectAsStateWithLifecycle(null)
-            val activeVault by koinInject<VaultManager>().activeVault.collectAsStateWithLifecycle()
+            val vaultManager = koinInject<VaultManager>()
+            val activeVault by vaultManager.activeVault.collectAsStateWithLifecycle()
             val unlocked = activeVault != null
+            val scope = rememberCoroutineScope()
 
             LaunchedEffect(unlocked) { shortcutHandler.isPaused = !unlocked }
 
@@ -77,7 +81,25 @@ fun main() {
             ) {
                 ProvideWindowClass(Modifier.fillMaxSize()) {
                     WindowScaffold(
-                        titleBar = { if (unlocked) TitleBar(NewTabDialogEvent::emit) else LockedTitleBar() },
+                        titleBar = {
+                            activeVault?.let { vault ->
+                                TitleBar(
+                                    vaultName = vault.name,
+                                    onLockVault = { scope.launch { vaultManager.lock() } },
+                                    onExit = {
+                                        scope.launch {
+                                            // Locking first closes sessions and forwards cleanly.
+                                            try {
+                                                vaultManager.lock()
+                                            } finally {
+                                                exitApplication()
+                                            }
+                                        }
+                                    },
+                                    onCreateNewTab = NewTabDialogEvent::emit,
+                                )
+                            } ?: LockedTitleBar()
+                        },
                         modifier = Modifier.fillMaxSize().pointerInput(autoLock) {
                             // The initial pass sees events even when the terminal goes on to consume them.
                             awaitPointerEventScope {

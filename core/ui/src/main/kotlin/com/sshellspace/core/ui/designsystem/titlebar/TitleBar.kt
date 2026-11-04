@@ -1,5 +1,6 @@
 package com.sshellspace.core.ui.designsystem.titlebar
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -7,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -18,7 +20,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.composeunstyled.Text
@@ -29,8 +32,10 @@ import com.sshellspace.core.ui.designsystem.common.asString
 import com.sshellspace.core.ui.designsystem.components.IconButton
 import com.sshellspace.core.ui.designsystem.theme.colors
 import com.sshellspace.core.ui.designsystem.theme.separator
+import com.sshellspace.core.ui.designsystem.theme.surfaceElevated
+import com.sshellspace.core.ui.designsystem.theme.textPrimary
+import com.sshellspace.core.ui.designsystem.theme.textSecondary
 import com.sshellspace.core.ui.tabs.TabId
-import com.sshellspace.core.ui.tabs.TabItem
 import com.sshellspace.core.ui.tabs.TabManager
 import dev.nucleusframework.window.DecoratedWindowScope
 import dev.nucleusframework.window.WindowControls
@@ -43,6 +48,9 @@ import sshellspace.core.ui.generated.resources.new_tab
 
 @Composable
 fun DecoratedWindowScope.TitleBar(
+    vaultName: String,
+    onLockVault: () -> Unit,
+    onExit: () -> Unit,
     onCreateNewTab: () -> Unit,
 ) {
     val tabManager = koinInject<TabManager>()
@@ -79,17 +87,26 @@ fun DecoratedWindowScope.TitleBar(
             tabModifier = Modifier.noWindowDrag(),
             separator = { UnstyledVerticalSeparator(Theme[colors][separator], Modifier.padding(vertical = 4.dp)) },
             tab = { modifier, tabId, isSelected, isFixed ->
+                val tab = tabsState.getTab(tabId) ?: return@ReorderableTabRow
                 Tab(
-                    tab = tabsState.getTab(tabId) ?: return@ReorderableTabRow,
+                    // The fixed tab is the unlocked vault itself, so it goes by that vault's name.
+                    title = if (isFixed) vaultName else tab.title,
                     isSelected = isSelected,
-                    isFixed = isFixed,
-                    closeIcon = Icons.Cross,
-                    closeIconDescription = Res.string.close_tab.asString(),
-                    onCloseTab = {
-                        tabKeys -= tabId
-                        tabManager.closeTab(tabId)
-                    },
                     modifier = modifier,
+                    trailing = {
+                        if (isFixed) {
+                            VaultMenu(vaultName, onLock = onLockVault, onExit = onExit)
+                        } else {
+                            IconButton(
+                                onClick = {
+                                    tabKeys -= tabId
+                                    tabManager.closeTab(tabId)
+                                },
+                                contentDescription = Res.string.close_tab.asString(),
+                                imageVector = Icons.Cross,
+                            )
+                        }
+                    },
                 )
             },
             trailingIcon = { modifier ->
@@ -111,29 +128,28 @@ fun DecoratedWindowScope.TitleBar(
 
 @Composable
 fun Tab(
-    tab: TabItem,
+    title: String,
     modifier: Modifier,
     isSelected: Boolean,
-    isFixed: Boolean,
-    closeIcon: ImageVector,
-    closeIconDescription: String?,
-    onCloseTab: () -> Unit,
+    trailing: @Composable () -> Unit,
 ) {
     Row(
         modifier = modifier.fillMaxHeight()
-            .clip(RoundedCornerShape(12.dp))
-            .padding(horizontal = 8.dp),
+            .clip(RoundedCornerShape(8.dp))
+            .background(if (isSelected) Theme[colors][surfaceElevated] else Color.Transparent)
+            .padding(start = 10.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.Center,
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        Text(tab.title + if(isSelected) "1" else 0)
-
-        if (!isFixed) {
-            IconButton(
-                onClick = onCloseTab,
-                contentDescription = closeIconDescription,
-                imageVector = closeIcon,
-            )
-        }
+        Text(
+            title,
+            modifier = Modifier.widthIn(max = TabTitleMaxWidth),
+            color = Theme[colors][if (isSelected) textPrimary else textSecondary],
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        trailing()
     }
 }
+
+private val TabTitleMaxWidth = 180.dp

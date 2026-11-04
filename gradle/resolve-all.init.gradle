@@ -1,0 +1,11 @@
+allprojects {
+    tasks.register("resolveAllForVerification") {
+        notCompatibleWithConfigurationCache("one-off")
+        doLast {
+            project.configurations.findAll { it.canBeResolved }.each { c ->
+                try { c.resolvedConfiguration.lenientConfiguration.artifacts*.file }
+                catch (Exception e) { println "SKIPPED ${project.path}:${c.name}: ${e.class.simpleName}" }
+            }
+        }
+    }
+}

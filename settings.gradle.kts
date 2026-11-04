@@ -12,6 +12,10 @@ dependencyResolutionManagement {
     @Suppress("UnstableApiUsage")
     repositories {
         google()
+        // JetBrains' proxy of Google's repository, for networks where Google's returns 404 for AndroidX artifacts.
+        maven("https://cache-redirector.jetbrains.com/maven.google.com") {
+            content { includeGroupByRegex("androidx\\..*") }
+        }
         mavenCentral()
     }
 }

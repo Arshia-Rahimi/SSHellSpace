@@ -12,7 +12,7 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 - `./gradlew graphUpdate` regenerates each module's `DependencyGraph.md` (Mermaid). The task comes from the `project.root` plugin (`build-logic/src/main/kotlin/utils/Graph.kt`).
 - The project requires the JDK 25 toolchain (`jvmToolchain(25)`), which the foojay resolver auto-provisions.
 - `gradle.properties` turns on both the build cache and the **configuration cache**, so build-logic changes must stay configuration-cache compatible.
-- If the Kotlin compiler fails with "Java heap space", run `./gradlew --stop` and rebuild.
+- If the Kotlin compiler still runs out of memory, run `./gradlew --stop` and rebuild. Heap sizes are set in `gradle.properties`.
 
 ## Build structure
 
@@ -20,7 +20,8 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 - Detekt is configured from the root `detekt.yml`.
 - Type-safe project accessors are enabled, so reference modules as `projects.feature.vault.ui`, never as string paths.
 - All dependency versions live in `gradle/libs.versions.toml`.
-- **After changing a dependency,** refresh the lockfile and checksums, then review the diff: `./gradlew :app:dependencies --configuration runtimeClasspath --write-locks` and `./gradlew --write-verification-metadata sha256 help --no-configuration-cache`. A build fails on any artifact missing from `gradle/verification-metadata.xml`.
+- `settings.gradle.kts` also lists JetBrains' proxy of Google's repository for `androidx.*`, because Google's can return 404 from some networks.
+- **After changing a dependency,** refresh the lockfile and checksums, then review the diff: `./gradlew :app:dependencies --configuration runtimeClasspath --write-locks` and `./gradlew -I gradle/resolve-all.init.gradle --write-verification-metadata sha256 resolveAllForVerification --no-configuration-cache`. The init script resolves every configuration, because plain `help` misses ones such as the hot reload agent. A build fails on any artifact missing from `gradle/verification-metadata.xml`.
 
 ## Architecture
 

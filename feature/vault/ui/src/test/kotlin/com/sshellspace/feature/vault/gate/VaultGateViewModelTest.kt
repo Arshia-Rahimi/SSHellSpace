@@ -11,6 +11,7 @@ import io.mockk.mockk
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
 import kotlin.test.assertIs
@@ -55,6 +56,84 @@ class VaultGateViewModelTest {
         val state = VaultGateViewModel(manager).uiState.first { it.vaults.isNotEmpty() }
 
         assertIs<VaultGateMode.Select>(state.mode)
+    }
+
+    @Test
+    fun `a single vault is selected without a click`() = runTest {
+        val state = VaultGateViewModel(manager).uiState.first { it.vaults.isNotEmpty() }
+
+        assertEquals(VaultGateMode.Select(work.id), state.mode)
+    }
+
+    @Test
+    fun `with several vaults none is selected until one is chosen`() = runTest {
+        val home = VaultInfo(Uuid.random(), "Home")
+        vaults.value = listOf(work, home)
+        val viewModel = VaultGateViewModel(manager)
+
+        assertEquals(VaultGateMode.Select(null), viewModel.uiState.first { it.vaults.size == 2 }.mode)
+
+        viewModel.execute(VaultGateAction.SelectVault(home.id))
+        assertEquals(VaultGateMode.Select(home.id), viewModel.uiState.first { it.mode == VaultGateMode.Select(home.id) }.mode)
+    }
+
+    @Test
+    fun `an empty password isn't tried`() = runTest {
+        val viewModel = VaultGateViewModel(manager)
+
+        viewModel.execute(VaultGateAction.Unlock(work.id, ""))
+
+        assertEquals("Enter the vault's password.", viewModel.uiState.first { it.error != null }.error)
+        coVerify(exactly = 0) { manager.unlock(any(), any()) }
+    }
+
+    @Test
+    fun `typing clears the last error`() = runTest {
+        val viewModel = VaultGateViewModel(manager)
+        viewModel.execute(VaultGateAction.Unlock(work.id, ""))
+        viewModel.uiState.first { it.error != null }
+
+        viewModel.execute(VaultGateAction.ClearError)
+
+        assertNull(viewModel.uiState.first { it.error == null }.error)
+    }
+
+    @Test
+    fun `exporting confirms it worked`() = runTest {
+        val viewModel = VaultGateViewModel(manager)
+
+        viewModel.execute(VaultGateAction.Export(work, "/tmp/work.sshv"))
+
+        coVerify { manager.export(work.id, "/tmp/work.sshv") }
+        assertContains(viewModel.uiState.first { it.notice != null }.notice.orEmpty(), "Exported Work")
+    }
+
+    @Test
+    fun `importing selects the new vault ready to unlock`() = runTest {
+        val imported = VaultInfo(Uuid.random(), "Imported")
+        coEvery { manager.import(any(), any()) } answers {
+            vaults.value = vaults.value + imported
+            imported
+        }
+        val viewModel = VaultGateViewModel(manager)
+
+        viewModel.execute(VaultGateAction.Import("/tmp/a.sshv", "correct horse"))
+
+        val state = viewModel.uiState.first { it.notice != null }
+        assertEquals(VaultGateMode.Select(imported.id), state.mode)
+    }
+
+    @Test
+    fun `deleting goes back to the list and says so`() = runTest {
+        val viewModel = VaultGateViewModel(manager)
+        viewModel.execute(VaultGateAction.ShowDelete(work))
+
+        viewModel.execute(VaultGateAction.Delete(work))
+
+        coVerify { manager.delete(work.id) }
+        val state = viewModel.uiState.first { it.notice != null }
+        assertIs<VaultGateMode.Select>(state.mode)
+        assertContains(state.notice.orEmpty(), "Deleted Work")
     }
 
     @Test
