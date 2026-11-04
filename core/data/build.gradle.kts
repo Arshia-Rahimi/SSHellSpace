@@ -9,6 +9,6 @@ dependencies {
     //
     implementation(libs.mina.common)
     implementation(libs.bouncy.castle)
-    //
-    testImplementation(libs.sqldelight.desktop)
+    implementation(libs.sqldelight.desktop)
+    implementation(libs.sqlite.jdbc)
 }

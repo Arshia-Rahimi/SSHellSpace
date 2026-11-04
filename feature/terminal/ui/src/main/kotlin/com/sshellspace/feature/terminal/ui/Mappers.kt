@@ -1,7 +1,7 @@
 package com.sshellspace.feature.terminal.ui
 
 import ai.rever.bossterm.compose.settings.theme.Theme
-import com.sshellspace.feature.terminal.domain.models.TerminalColors
+import com.sshellspace.core.domain.models.TerminalColors
 
 fun TerminalColors.toBossTermTheme() = Theme(
     id = name,

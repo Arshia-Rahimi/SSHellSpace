@@ -98,6 +98,9 @@ data class ConnectionForm(
     val keepAliveInterval: String = SshConnectionOptions().keepAliveIntervalSeconds.toString(),
     val compression: Boolean = false,
     val startupCommand: String = "",
+    val strictHostKeyChecking: Boolean = false,
+    /** The password or passphrase already saved, which can't be shown again. Newly typed text can. */
+    val savedSecret: String = "",
 ) {
     fun toDraft() = SshConnectionDraft(
         name = name.trim(),
@@ -117,6 +120,7 @@ data class ConnectionForm(
             keepAliveIntervalSeconds = keepAliveInterval.trim().toInt(),
             compression = compression,
             startupCommand = startupCommand.trim().ifEmpty { null },
+            strictHostKeyChecking = strictHostKeyChecking,
         ),
     )
 
@@ -185,19 +189,26 @@ fun SshConnection.toForm(): ConnectionForm {
         keepAliveInterval = options.keepAliveIntervalSeconds.toString(),
         compression = options.compression,
         startupCommand = options.startupCommand.orEmpty(),
+        strictHostKeyChecking = options.strictHostKeyChecking,
     )
     return when (val auth = auth) {
-        is SshConnectionAuth.Password -> base.copy(authMethod = AuthMethod.Password, password = auth.password.orEmpty())
+        is SshConnectionAuth.Password -> base.copy(
+            authMethod = AuthMethod.Password,
+            password = auth.password.orEmpty(),
+            savedSecret = auth.password.orEmpty(),
+        )
         is SshConnectionAuth.StoredKey -> base.copy(authMethod = AuthMethod.StoredKey, keyId = auth.keyId)
         is SshConnectionAuth.KeyFile -> base.copy(
             authMethod = AuthMethod.KeyFile,
             keyFilePath = auth.path,
             keyFilePassphrase = auth.passphrase.orEmpty(),
+            savedSecret = auth.passphrase.orEmpty(),
         )
         SshConnectionAuth.Agent -> base.copy(authMethod = AuthMethod.Agent)
         is SshConnectionAuth.KeyboardInteractive -> base.copy(
             authMethod = AuthMethod.KeyboardInteractive,
             password = auth.password.orEmpty(),
+            savedSecret = auth.password.orEmpty(),
         )
     }
 }

@@ -172,5 +172,7 @@ class PortForwardingPageViewModelTest {
         override fun stop(forwardId: Uuid) {
             stopped += forwardId
         }
+
+        override fun stopAll() = Unit
     }
 }

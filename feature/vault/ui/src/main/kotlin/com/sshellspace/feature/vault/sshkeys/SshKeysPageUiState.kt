@@ -54,6 +54,8 @@ sealed interface SidebarState {
         val fileName: String = "",
         val path: String = DEFAULT_SSH_DIR,
         val algorithm: Algorithm = Algorithm.Ed25519,
+        val passphrase: String = "",
+        val passphraseVisible: Boolean = false,
     ) : Creating {
         override val method = CreationMethod.CreateDevice
     }

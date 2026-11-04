@@ -141,6 +141,17 @@ object CreatingSidebar {
                 selected = state.algorithm,
                 onSelected = { onAction(SshKeysPageAction.DeviceKey.SetAlgorithm(it)) },
             )
+            PassphraseField(
+                value = state.passphrase,
+                onValueChange = { onAction(SshKeysPageAction.DeviceKey.SetPassphrase(it)) },
+                visible = state.passphraseVisible,
+                onToggleVisible = { onAction(SshKeysPageAction.DeviceKey.TogglePassphraseVisibility(it)) },
+                enabled = !isSaveInFlight,
+            )
+            Text(
+                "This key is saved as a file outside the vault, so a passphrase is what protects it.",
+                color = Theme[colors][textSecondary],
+            )
         }
     }
 

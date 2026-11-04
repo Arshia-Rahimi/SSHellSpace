@@ -37,9 +37,17 @@ fun createSshClient(
     // Try the plain password method before keyboard-interactive, so a password connection doesn't run into a
     // 2FA challenge first. Methods a connection didn't pick have nothing to offer and are skipped quickly.
     CoreModuleProperties.PREFERRED_AUTHS.set(this, "publickey,password,keyboard-interactive")
+    // Old algorithms an attacker in the middle could otherwise negotiate down to. RSA keys still work, using SHA-2.
+    cipherFactories = cipherFactories.filterNot { it.name.endsWith("-cbc") }
+    macFactories = macFactories.filterNot { it.name.startsWith("hmac-sha1") }
+    signatureFactories = signatureFactories.filterNot { it.name == "ssh-rsa" }
+    // Waiting for the user's answer to a login question holds a worker, so one session's open prompt shouldn't stall others.
+    nioWorkers = NIO_WORKERS
     addSessionListener(SessionConfigurer { knownHosts.also(::ensureParentDirectory) })
     start()
 }
+
+private const val NIO_WORKERS = 16
 
 private fun ensureParentDirectory(file: Path) {
     val dir = file.parent ?: return

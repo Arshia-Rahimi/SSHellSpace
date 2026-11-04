@@ -29,6 +29,8 @@ sealed interface SshKeysPageAction {
         data class SetFileName(val value: String) : DeviceKey
         data class SetPath(val value: String) : DeviceKey
         data class SetAlgorithm(val value: Algorithm) : DeviceKey
+        data class SetPassphrase(val value: String) : DeviceKey
+        data class TogglePassphraseVisibility(val value: Boolean) : DeviceKey
         data object Save : DeviceKey
     }
 

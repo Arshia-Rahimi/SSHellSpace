@@ -10,7 +10,7 @@ interface SshKeyService {
         comment: String,
         passphrase: String?,
         algorithm: Algorithm,
-        keySize: Int = 256,
+        keySize: Int = algorithm.defaultKeySize,
     ): KeyPair
 
     /**

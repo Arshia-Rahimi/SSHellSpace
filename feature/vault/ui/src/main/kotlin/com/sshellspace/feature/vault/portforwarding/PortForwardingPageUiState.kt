@@ -87,7 +87,13 @@ data class PortForwardForm(
     val bindPort: String = "",
     val destinationHost: String = "localhost",
     val destinationPort: String = "",
+    /** The user accepted that a listener on a non-local address has no password. */
+    val networkAccessConfirmed: Boolean = false,
 ) {
+    /** Listening anywhere but this device means anyone who can reach the port can use the tunnel, with no login. */
+    val isExposed: Boolean
+        get() = bindHost.trim().let { it != "localhost" && it != "::1" && !it.startsWith("127.") }
+
     /** Used when the name is left empty, e.g. `8080 → localhost:5432`. */
     val suggestedName: String
         get() = when (type) {
@@ -120,7 +126,11 @@ data class PortForwardForm(
                     forwards.any { f -> f.id != editingId && f.name.equals(trimmedName, ignoreCase = true) }
             },
             connection = "Choose a connection".takeIf { showRequired && connectionId == null },
-            bind = port(bindPort) ?: "Address can't contain spaces".takeIf { bindHost.trim().contains(' ') },
+            bind = port(bindPort)
+                ?: "Address can't contain spaces".takeIf { bindHost.trim().contains(' ') }
+                ?: "Confirm network access below, or listen on $LOCALHOST".takeIf {
+                    showRequired && isExposed && !networkAccessConfirmed
+                },
             destination = if (needsDestination) {
                 required(destinationHost, "Destination host is required")
                     ?: "Host can't contain spaces".takeIf { destinationHost.trim().contains(' ') }
@@ -153,4 +163,5 @@ fun PortForward.toForm() = PortForwardForm(
     bindPort = bindPort.toString(),
     destinationHost = if (type == PortForwardType.Dynamic) "localhost" else destinationHost,
     destinationPort = if (type == PortForwardType.Dynamic) "" else destinationPort.toString(),
+    networkAccessConfirmed = true,
 )

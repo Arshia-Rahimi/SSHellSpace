@@ -17,4 +17,9 @@ enum class AppShortcut(
         label = "New tab with default shell",
         defaultChord = primaryChord(Key.T),
     ),
+    LockVault(
+        id = "lock_vault",
+        label = "Lock vault",
+        defaultChord = primaryChord(Key.L, shift = true),
+    ),
 }

@@ -14,6 +14,7 @@ import com.sshellspace.core.domain.models.ThemePreference
 import java.util.Properties
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 
@@ -32,6 +33,7 @@ class CorePreferencesRepositoryImplTest {
         ),
     )
     private val repository = CorePreferencesRepositoryImpl(datasource)
+    private val exampleTheme = checkNotNull(javaClass.getResource("/custom-theme.json")).readText()
 
     @Test
     fun `getTheme defaults to SYSTEM_DEFAULT when nothing stored`() = runTest {
@@ -64,6 +66,47 @@ class CorePreferencesRepositoryImplTest {
 
         assertEquals("violet", repository.getColorScheme().first { it == "violet" })
         assertEquals(ThemePreference.LIGHT, repository.getTheme().first())
+    }
+
+    @Test
+    fun `importUserTheme saves the theme and makes it active`() = runTest {
+        val theme = repository.importUserTheme(exampleTheme)
+
+        assertEquals(theme, repository.getActiveUserTheme().first { it != null })
+        assertEquals(listOf(theme), repository.getUserThemes().first())
+    }
+
+    @Test
+    fun `importing the same name replaces the saved theme`() = runTest {
+        repository.importUserTheme(exampleTheme)
+        repository.getUserThemes().first { it.isNotEmpty() }
+
+        repository.importUserTheme(exampleTheme.replace("#2DD4BF", "#123456"))
+
+        val themes = repository.getUserThemes().first { it.single().dark.primary == "0xFF123456" }
+        assertEquals(1, themes.size)
+    }
+
+    @Test
+    fun `setColorScheme leaves the active imported theme but keeps it saved`() = runTest {
+        repository.importUserTheme(exampleTheme)
+        repository.getActiveUserTheme().first { it != null }
+
+        repository.setColorScheme("violet")
+
+        assertNull(repository.getActiveUserTheme().first { it == null })
+        assertEquals(1, repository.getUserThemes().first().size)
+    }
+
+    @Test
+    fun `deleteUserTheme removes the theme and deactivates it`() = runTest {
+        val theme = repository.importUserTheme(exampleTheme)
+        repository.getActiveUserTheme().first { it != null }
+
+        repository.deleteUserTheme(theme.name)
+
+        assertNull(repository.getActiveUserTheme().first { it == null })
+        assertEquals(emptyList(), repository.getUserThemes().first())
     }
 
     @Test

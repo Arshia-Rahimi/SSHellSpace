@@ -13,6 +13,7 @@ import com.sshellspace.feature.vault.domain.CreateSshKeyResult
 import com.sshellspace.feature.vault.domain.SshKeyDetails
 import java.io.File
 import java.nio.file.Files
+import java.nio.file.attribute.PosixFilePermissions
 import kotlin.test.Test
 import kotlin.test.assertNotNull
 import kotlin.test.assertEquals
@@ -89,6 +90,43 @@ class SshKeyRepositoryImplTest {
 
         assertIs<CreateSshKeyResult.Error>(result)
         assertEquals("boom", result.message)
+        coVerify { datasource wasNot Called }
+    }
+
+    @Test
+    fun `createDeviceKey makes the private key readable by its owner only`() = runTest {
+        val dir = Files.createTempDirectory("sshkey-test").toFile()
+        every { service.generate("comment", null, Algorithm.Ed25519) } returns ("private-data" to "public-data")
+        coEvery { datasource.insert(any(), any(), any()) } returns mockk()
+
+        repository.createDeviceKey("name", "comment", "mykey", dir.absolutePath, Algorithm.Ed25519)
+
+        assertEquals(
+            PosixFilePermissions.fromString("rw-------"),
+            Files.getPosixFilePermissions(File(dir, "mykey").toPath()),
+        )
+    }
+
+    @Test
+    fun `createDeviceKey encrypts with the passphrase and saves it`() = runTest {
+        val dir = Files.createTempDirectory("sshkey-test").toFile()
+        every { service.generate("comment", "secret", Algorithm.Ed25519) } returns ("private-data" to "public-data")
+        coEvery { datasource.insert(any(), any(), any()) } returns mockk()
+
+        repository.createDeviceKey("name", "comment", "mykey", dir.absolutePath, Algorithm.Ed25519, "secret")
+
+        coVerify {
+            datasource.insert("name", Algorithm.Ed25519, SshKeySecret.Device(File(dir, "mykey").path, "secret"))
+        }
+    }
+
+    @Test
+    fun `createDeviceKey refuses a file name that leaves the folder`() = runTest {
+        val dir = Files.createTempDirectory("sshkey-test").toFile()
+
+        val result = repository.createDeviceKey("name", "comment", "../mykey", dir.absolutePath, Algorithm.Ed25519)
+
+        assertIs<CreateSshKeyResult.Error>(result)
         coVerify { datasource wasNot Called }
     }
 
@@ -218,7 +256,7 @@ class SshKeyRepositoryImplTest {
         val result = repository.importDeviceKey("name", file.absolutePath, null)
 
         assertIs<CreateSshKeyResult.Error>(result)
-        assertEquals("Key format is not correct", result.message)
+        assertEquals("bad", result.message)
         coVerify { datasource wasNot Called }
     }
 
@@ -296,7 +334,7 @@ class SshKeyRepositoryImplTest {
         val result = repository.importVaultKey("name", "garbage", null)
 
         assertIs<CreateSshKeyResult.Error>(result)
-        assertEquals("Key format is not correct", result.message)
+        assertEquals("bad", result.message)
         coVerify { datasource wasNot Called }
     }
 

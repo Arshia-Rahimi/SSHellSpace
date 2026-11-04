@@ -8,5 +8,8 @@ interface TabManager {
     fun createNewTab(params: TabParams)
     fun setCurrentTab(id: TabId)
     fun closeTab(id: TabId)
+
+    /** Closes every tab and clears the ViewModels of the fixed ones, back to how the app started. */
+    fun reset()
     fun onNewTabCreated(callback: (TabId) -> Unit)
 }

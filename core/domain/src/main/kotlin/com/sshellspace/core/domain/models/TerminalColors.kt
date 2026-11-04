@@ -1,6 +1,5 @@
-package com.sshellspace.feature.terminal.domain.models
+package com.sshellspace.core.domain.models
 
-import com.sshellspace.core.domain.models.ColorHex
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -9,12 +8,12 @@ data class TerminalColors(
     val name: String,
     val background: ColorHex,
     val foreground: ColorHex,
-    val cursor: String,
-    @SerialName("cursor_text") val cursorText: String,
-    val selection: String,
-    @SerialName("selection_text") val selectionText: String,
-    @SerialName("search_match") val searchMatch: String,
-    val hyperlink: String,
+    val cursor: ColorHex,
+    @SerialName("cursor_text") val cursorText: ColorHex,
+    val selection: ColorHex,
+    @SerialName("selection_text") val selectionText: ColorHex,
+    @SerialName("search_match") val searchMatch: ColorHex,
+    val hyperlink: ColorHex,
     val black: ColorHex,
     @SerialName("bright_black") val brightBlack: ColorHex,
     val red: ColorHex,

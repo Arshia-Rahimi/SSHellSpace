@@ -1,5 +1,6 @@
 package com.sshellspace.config
 
+import com.sshellspace.core.domain.repositories.VaultManager
 import com.sshellspace.core.ui.shortcuts.AppShortcut
 import com.sshellspace.core.ui.shortcuts.ShortcutHandler
 import com.sshellspace.core.ui.tabs.TabManager
@@ -22,6 +23,7 @@ fun Koin.registerShortcuts() {
     val tabManager = get<TabManager>()
     val terminalPreferences = get<TerminalPreferencesRepository>()
     val shellDiscoveryService = get<ShellDiscoveryService>()
+    val vaultManager = get<VaultManager>()
 
     shortcutHandler.register(AppShortcut.NewTab) {
         shortcutScope.launch {
@@ -30,5 +32,8 @@ fun Koin.registerShortcuts() {
             }
             tabManager.createNewTab(TerminalParams(shell))
         }
+    }
+    shortcutHandler.register(AppShortcut.LockVault) {
+        shortcutScope.launch { vaultManager.lock() }
     }
 }

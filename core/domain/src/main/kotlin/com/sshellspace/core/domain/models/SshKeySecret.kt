@@ -12,7 +12,9 @@ sealed interface SshKeySecret {
 
     data class Vault(
         override val privateKey: PrivateKey,
-    ) : SshKeySecret
+    ) : SshKeySecret {
+        override fun toString() = "Vault(privateKey=***)"
+    }
 
     data class Device(
         val path: String,
@@ -20,6 +22,8 @@ sealed interface SshKeySecret {
     ) : SshKeySecret {
         override val privateKey: PrivateKey
             get() = File(path).readText()
+
+        override fun toString() = "Device(path=$path, passphrase=${if (passphrase == null) "null" else "***"})"
     }
 }
 
@@ -37,7 +41,9 @@ enum class SshKeyType {
 
 enum class Algorithm(
     val type: String,
+    val defaultKeySize: Int,
+    val minKeySize: Int,
 ) {
-    RSA("ssh-rsa"),
-    Ed25519("ssh-ed25519"),
+    RSA("ssh-rsa", defaultKeySize = 3072, minKeySize = 2048),
+    Ed25519("ssh-ed25519", defaultKeySize = 256, minKeySize = 256),
 }

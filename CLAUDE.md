@@ -20,6 +20,7 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 - Detekt is configured from the root `detekt.yml`.
 - Type-safe project accessors are enabled, so reference modules as `projects.feature.vault.ui`, never as string paths.
 - All dependency versions live in `gradle/libs.versions.toml`.
+- **After changing a dependency,** refresh the lockfile and checksums, then review the diff: `./gradlew :app:dependencies --configuration runtimeClasspath --write-locks` and `./gradlew --write-verification-metadata sha256 help --no-configuration-cache`. A build fails on any artifact missing from `gradle/verification-metadata.xml`.
 
 ## Architecture
 
@@ -68,6 +69,25 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 - Implementations keep a **single** `stateIn` StateFlow and build updates from `preference.value.copy(...)`. If you create a new `stateIn` per `get()` call, it returns the defaults, not the stored value.
 - The user-facing Settings UI is the **Settings page inside the Vault tab** (`feature/vault/ui/.../settings`). `feature/settings` is currently only a placeholder tab.
 
+### Vaults
+
+- Connections, SSH keys and port forwards belong to an encrypted vault. The app starts on `VaultGateScreen` (`feature/vault/ui/.../gate`) and shows tabs only once `VaultManager.activeVault` is set. Preferences (theme, shortcuts, terminal) stay in the unencrypted `sshellspace.db`, because the theme has to apply to the gate.
+- Each vault is one file, `vaults/<id>.sshv`, in the user-data dir (`core/data/.../vault/VaultFile.kt` documents the format). A random vault key encrypts the SQLite image with AES-256-GCM, and each `KeySlot` wraps that key for one way of authenticating. Password slots use Argon2id. **To add biometric unlock**, add a `VaultCredential` case and a `KeySlot` case, with no change to the data encryption.
+- An unlocked vault's database exists only in memory (`SQLiteConnection.serialize`/`deserialize`). `VaultSqlDriver` re-encrypts it to disk after every write, from `notifyListeners`. Vault datasources are singletons reading through that driver, which throws while locked, so code touching vault data must only run while a vault is unlocked. Use `VaultManager.beforeLock` to shut down anything holding a vault's connections.
+- Schema migrations run per vault when it unlocks, in `OpenVault.load`. The same `Database` schema is used for vaults and the app database, so each has empty tables it doesn't use.
+- Export copies the already encrypted file. Import treats the file as hostile even when the password is right: `VaultFile` caps its size, key slots and Argon2 costs, and `loadImage` refuses a damaged database or one with triggers or views.
+- `VaultAutoLock` locks after the idle time in `CorePreference.autoLockMinutes` (default 15, 0 turns it off) and on waking from sleep. Only key and pointer input from `Main.kt` count as activity. The JVM has no portable way to detect the OS screen locking.
+- Changing a password (`changeCredential`) re-encrypts under a new vault key. Saved passwords in the connection form can't be revealed; only newly typed ones can.
+- Tests must never point `VaultManagerImpl` at the real user-data dir: creating a vault with `moveUnencryptedData` erases those tables from `sshellspace.db`.
+
+### Custom themes
+
+- A theme file is JSON with `name`, `dark` and `light` (`ThemePalette`, the app tokens) and `terminal` (`TerminalColors`); every token is required. `core/data/src/test/resources/custom-theme.json` is a complete example. `parseUserTheme` accepts `#RRGGBB`, `#AARRGGBB` and `0xAARRGGBB`, and stores `0xAARRGGBB` only: BossTerm parses a six-digit value as fully transparent.
+- Imported themes live in `CorePreference`. A theme's name is its identity, so re-importing a name replaces that theme.
+- Terminal colors resolve in `resolveTerminalColors`: the theme picked in `TerminalPreferences.terminalThemeName`, else the active imported theme's `terminal`, else colors derived from the app tokens (`deriveTerminalColors`).
+- Themes have to stay readable: `parseUserTheme` requires opaque surfaces, text and error colors, plus minimum contrast, so a theme can't hide the host key warning.
+- BossTerm renders from its global `ThemeManager`, not from the settings passed to `EmbeddableTerminal`, so `ApplyTerminalTheme` goes through it. That persists the colors to `~/.bossterm/settings.json`.
+
 ### SSH connections
 
 - Saved connections (`SshConnection` in core/domain) live in the `ssh_connections` table. `auth` and `options` are stored as JSON columns, and the Vault page (`feature/vault/ui/.../connections`) edits them.
@@ -76,10 +96,11 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
   - **Jump hosts:** it resolves the jump-host chain and tunnels each hop through the previous one with a local port forward.
   - **Per-connection settings:** a single shared `SshClient` from `createSshClient()` serves every connection. Each connection's settings go into a `ConnectionContext`, attached as the MINA connection context. `SessionConfigurer`, a `SessionListener`, applies that context to the session in `sessionCreated`, which runs before key exchange.
   - **Auth method choice:** `PREFERRED_AUTHS` can't be set per session, because MINA reads it in the session constructor. Auth methods are limited instead through the identities and prompts each session gets.
-  - **Host keys:** host keys are checked against `~/.ssh/known_hosts` by `PromptingKnownHostsVerifier`. It matches by the saved host name, even when going through a tunnel.
+  - **Host keys:** host keys are checked against `~/.ssh/known_hosts` by `PromptingKnownHostsVerifier`. It matches by the saved host name, even when going through a tunnel. A changed key needs the host name typed to accept, removes the saved password from that attempt, and is refused outright with `strictHostKeyChecking`.
+  - **Algorithms:** `createSshClient` removes CBC ciphers, SHA-1 MACs and `ssh-rsa` signatures, so very old servers can't connect.
   - **SSH agent:** the agent client (`ssh/agent/SystemSshAgent.kt`) uses JDK Unix sockets or Windows named pipes. MINA's `agent.unix` client needs Tomcat's native APR library, so it isn't used.
   - **`~/.ssh/config` is ignored on purpose.**
-- User questions (host key, password, passphrase, 2FA) go through `SshPrompter`.
+- User questions (host key, password, passphrase, 2FA) go through `SshPrompter`. Text a server supplies goes through `fromServer` and is marked as coming from the server, since it could otherwise pose as the app asking for the vault password.
   - `SshTerminalTabViewModel` implements it by showing a prompt state and waiting for the answer.
   - MINA's callbacks are blocking, so `ConnectionContext.ask` uses `runBlocking` on the MINA thread.
 - The SSH tab hands BossTerm a custom `PlatformServices` (`SshPlatformServices`) whose `spawnProcess` opens a shell channel in place of a local PTY.
@@ -94,10 +115,12 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 
 ### Terminal
 
+- **BossTerm's defaults are for its own app, not this one.** `EmbeddedTerminalSettings` turns off kitty file reads, AI assistant interception, MCP, the daemon and voice. `handleTerminalLink` only opens http(s) links, because BossTerm would pass link text to `cmd /c start`, `open` or `xdg-open`. Re-check both, and that nothing starts listening on a port, when upgrading BossTerm.
 - Terminal emulators implement the `Terminal` interface (`feature/terminal/ui/.../screen/emulators/Terminal.kt`). BossTerm is the concrete emulator. `BossTermSshProcessHandleAdapter` bridges it to Apache MINA sshd (ssh-common/sftp/scp) for remote sessions, and pty4j handles local PTYs.
 
 ### Packaging
 
+- Release signing isn't configured. It needs your own certificates.
 - The nucleus plugin packages the app (`app/build.gradle.kts`): main class `com.sshellspace.MainKt`, Tao backend, GraalVM native image enabled, and Dmg/Msi/AppImage target formats.
 
 ## Tests

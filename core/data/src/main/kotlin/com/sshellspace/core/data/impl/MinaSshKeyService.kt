@@ -8,6 +8,7 @@ import com.sshellspace.core.domain.models.PrivateKey
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.security.Security
+import java.security.interfaces.RSAPublicKey
 import org.apache.sshd.common.config.keys.FilePasswordProvider
 import org.apache.sshd.common.config.keys.KeyUtils
 import org.apache.sshd.common.config.keys.PublicKeyEntry
@@ -55,7 +56,14 @@ internal class MinaSshKeyService : SshKeyService {
                 inputStream
             ).firstOrNull()
 
-            if (keyPair != null) {
+            val weakRsaBits = (keyPair?.public as? RSAPublicKey)?.modulus?.bitLength()
+                ?.takeIf { it < Algorithm.RSA.minKeySize }
+            if (weakRsaBits != null) {
+                SshKeyValidationResult.InvalidSshKeyFormat(
+                    "This RSA key is only $weakRsaBits bits, which can be broken. " +
+                        "Generate a new key and replace this one on your servers.",
+                )
+            } else if (keyPair != null) {
                 val rawAlgorithm = keyPair.private.algorithm
                 val normalizedAlgorithm = when {
                     rawAlgorithm.equals("EdDSA", ignoreCase = true) ||
@@ -87,7 +95,10 @@ internal class MinaSshKeyService : SshKeyService {
         passphrase: String?,
         algorithm: Algorithm,
         keySize: Int,
-    ): KeyPair = encode(KeyUtils.generateKeyPair(algorithm.type, keySize), comment, passphrase)
+    ): KeyPair {
+        require(keySize >= algorithm.minKeySize) { "$algorithm keys need at least ${algorithm.minKeySize} bits." }
+        return encode(KeyUtils.generateKeyPair(algorithm.type, keySize), comment, passphrase)
+    }
 
     override fun load(privateKey: PrivateKey, passphrase: String?): KeyPair {
         val keyPair = SecurityUtils.getKeyPairResourceParser().loadKeyPairs(

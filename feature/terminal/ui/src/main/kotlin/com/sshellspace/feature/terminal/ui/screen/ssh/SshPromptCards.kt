@@ -49,6 +49,7 @@ import com.sshellspace.feature.terminal.domain.SecretPrompt
 @Composable
 fun SshHostKeyCard(prompt: HostKeyPrompt, onAnswer: (trust: Boolean) -> Unit) {
     val endpoint = if (prompt.port == DEFAULT_SSH_PORT) prompt.host else "${prompt.host}:${prompt.port}"
+    var confirmation by remember(prompt) { mutableStateOf("") }
     Card {
         if (prompt.isChangedKey) {
             Text("Host key changed for $endpoint", color = Theme[colors][error])
@@ -59,6 +60,13 @@ fun SshHostKeyCard(prompt: HostKeyPrompt, onAnswer: (trust: Boolean) -> Unit) {
             )
             Fingerprint("Saved ${prompt.keyType} key", prompt.expectedFingerprint.orEmpty())
             Fingerprint("Key sent now", prompt.fingerprint)
+            // Typing it forces a pause: this is the one prompt where clicking through can give away credentials.
+            TextField(
+                value = confirmation,
+                onValueChange = { confirmation = it },
+                label = "Type ${prompt.host} to replace the saved key",
+            )
+            Text("A saved password won't be sent automatically; you'll be asked for it.", color = Theme[colors][textSecondary])
         } else {
             Text("Trust $endpoint?")
             Text(
@@ -69,8 +77,10 @@ fun SshHostKeyCard(prompt: HostKeyPrompt, onAnswer: (trust: Boolean) -> Unit) {
             Fingerprint("${prompt.keyType} key fingerprint", prompt.fingerprint)
         }
         Actions(
-            primaryAction = (if (prompt.isChangedKey) "Replace key and connect" else "Trust and connect") to {
-                onAnswer(true)
+            primaryAction = when {
+                !prompt.isChangedKey -> "Trust and connect" to { onAnswer(true) }
+                confirmation.trim() == prompt.host -> "Replace key and connect" to { onAnswer(true) }
+                else -> null
             },
             secondaryAction = "Cancel" to { onAnswer(false) },
             destructive = prompt.isChangedKey,
@@ -89,6 +99,7 @@ fun SshSecretCard(prompt: SecretPrompt, onSubmit: (String) -> Unit, onCancel: ()
     Card {
         Text(prompt.title)
         Text(prompt.message, color = Theme[colors][textSecondary])
+        if (prompt.fromServer) ServerTextNotice()
         TextField(
             value = value,
             onValueChange = { value = it },
@@ -119,6 +130,7 @@ fun SshChallengeCard(challenge: AuthChallenge, onSubmit: (List<String>) -> Unit,
         if (challenge.instruction.isNotBlank()) {
             Text(challenge.instruction, color = Theme[colors][textSecondary])
         }
+        ServerTextNotice()
         challenge.prompts.forEachIndexed { index, prompt ->
             TextField(
                 value = answers[index],
@@ -137,6 +149,15 @@ fun SshChallengeCard(challenge: AuthChallenge, onSubmit: (List<String>) -> Unit,
             secondaryAction = "Cancel" to onCancel,
         )
     }
+}
+
+/** A server writes these prompts itself, so it could word one to look like the app asking for the vault password. */
+@Composable
+private fun ServerTextNotice() {
+    Text(
+        "This question comes from the server, not from SSHellSpace. Never enter your vault password here.",
+        color = Theme[colors][error],
+    )
 }
 
 @Composable

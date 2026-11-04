@@ -169,6 +169,7 @@ private fun AuthSection(
             onValueChange = { edit { copy(password = it) } },
             label = "Password",
             placeholder = "Ask when connecting",
+            revealable = form.password != form.savedSecret,
             visible = secretVisible,
             onToggleVisible = onToggleSecret,
             enabled = enabled,
@@ -207,6 +208,7 @@ private fun AuthSection(
                 onValueChange = { edit { copy(keyFilePassphrase = it) } },
                 label = "Passphrase",
                 placeholder = "Ask when connecting",
+                revealable = form.keyFilePassphrase != form.savedSecret,
                 visible = secretVisible,
                 onToggleVisible = onToggleSecret,
                 enabled = enabled,
@@ -267,6 +269,13 @@ private fun AdvancedSection(
         description = "Compress traffic. Helps on slow links, costs CPU on fast ones.",
         checked = form.compression,
         onCheckedChange = { edit { copy(compression = it) } },
+        enabled = enabled,
+    )
+    SwitchRow(
+        title = "Strict host key checking",
+        description = "Refuse to connect if the server's key changes, instead of asking.",
+        checked = form.strictHostKeyChecking,
+        onCheckedChange = { edit { copy(strictHostKeyChecking = it) } },
         enabled = enabled,
     )
     TextField(
@@ -389,6 +398,8 @@ private fun SecretField(
     onValueChange: (String) -> Unit,
     label: String,
     placeholder: String,
+    /** False for a saved secret, so someone at an unlocked app can't read it. */
+    revealable: Boolean,
     visible: Boolean,
     onToggleVisible: () -> Unit,
     enabled: Boolean,
@@ -398,15 +409,19 @@ private fun SecretField(
         onValueChange = onValueChange,
         label = label,
         placeholder = placeholder,
-        isPassword = !visible,
+        isPassword = !(visible && revealable),
         enabled = enabled,
-        trailing = {
-            IconButton(
-                onClick = onToggleVisible,
-                imageVector = if (visible) Icons.EyeClosed else Icons.EyeOpen,
-                contentDescription = if (visible) "Hide $label" else "Show $label",
-                tint = Theme[colors][textSecondary],
-            )
+        trailing = if (revealable) {
+            {
+                IconButton(
+                    onClick = onToggleVisible,
+                    imageVector = if (visible) Icons.EyeClosed else Icons.EyeOpen,
+                    contentDescription = if (visible) "Hide $label" else "Show $label",
+                    tint = Theme[colors][textSecondary],
+                )
+            }
+        } else {
+            null
         },
     )
 }

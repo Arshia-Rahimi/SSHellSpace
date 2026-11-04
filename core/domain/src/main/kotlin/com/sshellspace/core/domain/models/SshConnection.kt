@@ -27,7 +27,9 @@ sealed interface SshConnectionAuth {
     /** `password` auth. A null [password] means the user is asked for it on every connect. */
     @Serializable
     @SerialName("password")
-    data class Password(val password: String? = null) : SshConnectionAuth
+    data class Password(val password: String? = null) : SshConnectionAuth {
+        override fun toString() = "Password(***)"
+    }
 
     /** `publickey` auth with a key from the SSH keys page (vault or device key). */
     @Serializable
@@ -40,7 +42,9 @@ sealed interface SshConnectionAuth {
     data class KeyFile(
         val path: String,
         val passphrase: String? = null,
-    ) : SshConnectionAuth
+    ) : SshConnectionAuth {
+        override fun toString() = "KeyFile(path=$path, passphrase=***)"
+    }
 
     /** `publickey` auth with the identities held by the running SSH agent (`SSH_AUTH_SOCK`). */
     @Serializable
@@ -53,7 +57,9 @@ sealed interface SshConnectionAuth {
      */
     @Serializable
     @SerialName("keyboard_interactive")
-    data class KeyboardInteractive(val password: String? = null) : SshConnectionAuth
+    data class KeyboardInteractive(val password: String? = null) : SshConnectionAuth {
+        override fun toString() = "KeyboardInteractive(***)"
+    }
 }
 
 @Serializable
@@ -67,4 +73,6 @@ data class SshConnectionOptions(
     val compression: Boolean = false,
     /** Command written to the shell right after it opens. */
     val startupCommand: String? = null,
+    /** Refuse a changed host key outright instead of asking, like OpenSSH's `StrictHostKeyChecking`. */
+    val strictHostKeyChecking: Boolean = false,
 )

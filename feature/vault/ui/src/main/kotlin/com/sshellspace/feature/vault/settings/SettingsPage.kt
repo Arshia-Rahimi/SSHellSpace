@@ -23,6 +23,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -51,11 +52,14 @@ import com.sshellspace.core.ui.designsystem.theme.primary
 import com.sshellspace.core.ui.designsystem.theme.surface
 import com.sshellspace.core.ui.designsystem.theme.surfaceElevated
 import com.sshellspace.core.ui.designsystem.theme.textSecondary
+import com.sshellspace.core.ui.designsystem.theme.toColor
 import com.sshellspace.core.ui.shortcuts.label
 import com.sshellspace.core.ui.shortcuts.toKeyChord
+import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
 private val SettingsMaxWidth = 720.dp
+private val AUTO_LOCK_OPTIONS = listOf(5, 15, 30, 60, 0)
 
 @Composable
 fun SettingsPage() {
@@ -94,6 +98,36 @@ private fun SettingsSections(
 ) {
     Text("Settings")
 
+    uiState.vaultName?.let { vaultName ->
+        SettingsSection(
+            title = "Vault",
+            description = "\"$vaultName\" is unlocked. Locking closes every tab and port forward.",
+        ) {
+            OptionButton(selected = false, onClick = { onAction(SettingsPageAction.LockVault) }) {
+                Text("Lock vault")
+            }
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text(
+                    "Lock when idle or when this computer sleeps. Output in a terminal doesn't count as activity.",
+                    color = Theme[colors][textSecondary],
+                )
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    AUTO_LOCK_OPTIONS.forEach { minutes ->
+                        OptionButton(
+                            selected = minutes == uiState.autoLockMinutes,
+                            onClick = { onAction(SettingsPageAction.SetAutoLockMinutes(minutes)) },
+                        ) {
+                            Text(if (minutes == 0) "Never" else "$minutes min")
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     SettingsSection(
         title = "Appearance",
         description = "Choose light or dark mode and the accent color used across the app.",
@@ -102,16 +136,14 @@ private fun SettingsSections(
             selected = uiState.themePreference,
             onSelected = { onAction(SettingsPageAction.SetTheme(it)) },
         )
-        ColorSchemeSelector(
-            selected = uiState.colorScheme,
-            onSelected = { onAction(SettingsPageAction.SetColorScheme(it)) },
-        )
+        ColorSchemeSelector(uiState, onAction)
     }
 
     SettingsSection(
         title = "Terminal",
-        description = "The shell that new local terminal tabs start with.",
+        description = "The terminal's colors, and the shell that new local terminal tabs start with.",
     ) {
+        TerminalThemeSelector(uiState, onAction)
         Dropdown(
             options = uiState.shells,
             selected = uiState.defaultShell,
@@ -257,9 +289,11 @@ private fun ThemeSelector(
 
 @Composable
 private fun ColorSchemeSelector(
-    selected: AppColorScheme,
-    onSelected: (AppColorScheme) -> Unit,
+    uiState: SettingsPageUiState,
+    onAction: (SettingsPageAction) -> Unit,
 ) {
+    val scope = rememberCoroutineScope()
+
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text("Color scheme", color = Theme[colors][textSecondary])
         FlowRow(
@@ -267,22 +301,90 @@ private fun ColorSchemeSelector(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             AppColorScheme.entries.forEach { scheme ->
+                ColorSchemeOption(
+                    label = scheme.label,
+                    swatch = scheme.colors(isDark = true).getValue(primary),
+                    selected = uiState.activeUserThemeName == null && scheme == uiState.colorScheme,
+                    onClick = { onAction(SettingsPageAction.SetColorScheme(scheme)) },
+                )
+            }
+            uiState.userThemes.forEach { theme ->
+                ColorSchemeOption(
+                    label = theme.name,
+                    swatch = theme.colors(isDark = true).getValue(primary),
+                    selected = theme.name == uiState.activeUserThemeName,
+                    onClick = { onAction(SettingsPageAction.SetUserTheme(theme.name)) },
+                )
+            }
+            OptionButton(
+                selected = false,
+                onClick = {
+                    scope.launch { pickThemeFile()?.let { onAction(SettingsPageAction.ImportTheme(it)) } }
+                },
+            ) {
+                Text("Import theme…")
+            }
+            uiState.activeUserThemeName?.let { name ->
                 OptionButton(
-                    selected = scheme == selected,
-                    onClick = { onSelected(scheme) },
+                    selected = false,
+                    onClick = { onAction(SettingsPageAction.RemoveUserTheme(name)) },
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    ) {
-                        Box(
-                            modifier = Modifier.size(12.dp)
-                                .clip(CircleShape)
-                                .background(scheme.colors(isDark = true).getValue(primary)),
-                        )
-                        Text(scheme.label)
-                    }
+                    Text("Remove \"$name\"")
                 }
+            }
+        }
+        uiState.themeImportError?.let {
+            Text(it, color = Theme[colors][error])
+        }
+    }
+}
+
+@Composable
+private fun ColorSchemeOption(
+    label: String,
+    swatch: Color,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    OptionButton(selected = selected, onClick = onClick) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Box(
+                modifier = Modifier.size(12.dp)
+                    .clip(CircleShape)
+                    .background(swatch),
+            )
+            Text(label)
+        }
+    }
+}
+
+@Composable
+private fun TerminalThemeSelector(
+    uiState: SettingsPageUiState,
+    onAction: (SettingsPageAction) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text("Terminal colors", color = Theme[colors][textSecondary])
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            OptionButton(
+                selected = uiState.terminalThemeName == null,
+                onClick = { onAction(SettingsPageAction.SetTerminalTheme(null)) },
+            ) {
+                Text("Follow app theme")
+            }
+            uiState.userThemes.forEach { theme ->
+                ColorSchemeOption(
+                    label = theme.name,
+                    swatch = theme.terminal.background.toColor(),
+                    selected = theme.name == uiState.terminalThemeName,
+                    onClick = { onAction(SettingsPageAction.SetTerminalTheme(theme.name)) },
+                )
             }
         }
     }

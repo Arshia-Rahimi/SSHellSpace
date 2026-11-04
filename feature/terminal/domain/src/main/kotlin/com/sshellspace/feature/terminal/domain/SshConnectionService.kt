@@ -35,6 +35,8 @@ data class SecretPrompt(
     val label: String,
     /** Set when an earlier answer was rejected. */
     val error: String? = null,
+    /** The wording was written by the server, so the user shouldn't take it as coming from this app. */
+    val fromServer: Boolean = false,
 )
 
 /** A keyboard-interactive round from the server, e.g. a one-time code. */

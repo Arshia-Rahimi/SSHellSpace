@@ -67,6 +67,8 @@ class SshKeysPageViewModel(
             is SshKeysPageAction.DeviceKey.SetFileName -> updateDeviceCreating { copy(fileName = action.value) }
             is SshKeysPageAction.DeviceKey.SetPath -> updateDeviceCreating { copy(path = action.value) }
             is SshKeysPageAction.DeviceKey.SetAlgorithm -> updateDeviceCreating { copy(algorithm = action.value) }
+            is SshKeysPageAction.DeviceKey.SetPassphrase -> updateDeviceCreating { copy(passphrase = action.value) }
+            is SshKeysPageAction.DeviceKey.TogglePassphraseVisibility -> updateDeviceCreating { copy(passphraseVisible = action.value) }
             SshKeysPageAction.DeviceKey.Save -> saveDeviceKey()
 
             is SshKeysPageAction.ImportKey.SetName -> updateImportCreating { copy(nameField = action.value) }
@@ -241,6 +243,7 @@ class SshKeysPageViewModel(
                 state.fileName.takeIf { it.isNotBlank() },
                 state.path,
                 state.algorithm,
+                state.passphrase.ifEmpty { null },
             )) {
                 is CreateSshKeyResult.Success -> closeSidebar()
                 is CreateSshKeyResult.Error -> errorMessage.update { result.message ?: "Failed to create device key" }

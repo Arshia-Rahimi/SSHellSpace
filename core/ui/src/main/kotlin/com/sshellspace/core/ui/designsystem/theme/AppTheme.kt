@@ -2,11 +2,13 @@ package com.sshellspace.core.ui.designsystem.theme
 
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import com.composeunstyled.TooltipHost
 import com.composeunstyled.platformtheme.buildPlatformTheme
 import com.composeunstyled.theme.Theme
 import com.sshellspace.core.domain.models.ThemePreference
+import com.sshellspace.core.domain.models.UserTheme
 import dev.nucleusframework.darkmodedetector.isSystemInDarkMode
 import dev.nucleusframework.window.DecoratedWindowScope
 import dev.nucleusframework.window.WindowAppearance
@@ -17,6 +19,7 @@ import dev.nucleusframework.window.WindowBackground
 fun DecoratedWindowScope.SSHellSpaceTheme(
     themePreference: ThemePreference = ThemePreference.SYSTEM_DEFAULT,
     colorScheme: AppColorScheme = AppColorScheme.Default,
+    userTheme: UserTheme? = null,
     content: @Composable () -> Unit,
 ) {
     val isDark = when (themePreference) {
@@ -24,11 +27,14 @@ fun DecoratedWindowScope.SSHellSpaceTheme(
         ThemePreference.LIGHT -> false
         ThemePreference.DARK -> true
     }
+    val palette = remember(isDark, colorScheme, userTheme) {
+        userTheme?.colors(isDark) ?: themeColors(isDark, colorScheme)
+    }
 
     val theme = buildPlatformTheme {
         name = "SSHellSpaceTheme"
-        applyThemeColors(isDark, colorScheme)
-        defaultContentColor = themeColors(isDark, colorScheme).getValue(onBackground)
+        properties[colors] = palette
+        defaultContentColor = palette.getValue(onBackground)
     }
 
     theme {

@@ -16,6 +16,7 @@ import com.sshellspace.feature.terminal.domain.HostKeyPrompt
 import com.sshellspace.feature.terminal.domain.SecretPrompt
 import com.sshellspace.feature.terminal.domain.SshConnectResult
 import com.sshellspace.feature.terminal.domain.SshPrompter
+import com.sshellspace.feature.terminal.data.ssh.fromServer
 import com.sshellspace.feature.terminal.data.ssh.agent.SshAgentLocator
 import io.mockk.mockk
 import java.io.File
@@ -100,6 +101,7 @@ class MinaSshConnectionServiceTest {
         username: String = "alice",
         port: Int = server.port,
         jumpHostId: Uuid? = null,
+        strictHostKeyChecking: Boolean = false,
     ) = SshConnection(
         id = Uuid.random(),
         name = "$host-${auth::class.simpleName}",
@@ -107,7 +109,11 @@ class MinaSshConnectionServiceTest {
         port = port,
         username = username,
         auth = auth,
-        options = SshConnectionOptions(jumpHostId = jumpHostId, connectTimeoutSeconds = 5),
+        options = SshConnectionOptions(
+            jumpHostId = jumpHostId,
+            connectTimeoutSeconds = 5,
+            strictHostKeyChecking = strictHostKeyChecking,
+        ),
     ).also(connections::add)
 
     private fun connect(connection: SshConnection, prompter: FakePrompter) = runBlocking {
@@ -291,6 +297,67 @@ class MinaSshConnectionServiceTest {
 
         assertTrue(output.contains("héllo ✓"))
         shell.close()
+    }
+
+    private fun saveDifferentHostKey() {
+        val other = KeyUtils.generateKeyPair("ssh-ed25519", 256).public
+        Files.createDirectories(knownHosts.parent)
+        Files.writeString(knownHosts, "[127.0.0.1]:${server.port} ${PublicKeyEntry.toString(other)}\n")
+    }
+
+    @Test
+    fun `strict checking refuses a changed host key without asking`() {
+        saveDifferentHostKey()
+        val target = connection(SshConnectionAuth.Password("secret"), strictHostKeyChecking = true)
+        val prompter = FakePrompter()
+
+        val failed = assertIs<SshConnectResult.Failed>(connect(target, prompter))
+
+        assertTrue(failed.message.contains("changed"), failed.message)
+        assertEquals(emptyList(), prompter.hostKeys)
+    }
+
+    @Test
+    fun `accepting a changed host key doesn't send the saved password`() {
+        saveDifferentHostKey()
+        val target = connection(SshConnectionAuth.Password("secret"))
+        val prompter = FakePrompter()
+
+        // The saved password would have logged in. Instead the user is asked, and declining cancels the connection.
+        assertIs<SshConnectResult.Cancelled>(connect(target, prompter))
+
+        assertEquals(1, prompter.hostKeys.size)
+        assertEquals(1, prompter.secrets.size)
+    }
+
+    @Test
+    fun `a jump host session keeps working after its tunnel stops listening`() = runBlocking {
+        val jump = connection(SshConnectionAuth.Password("secret"), host = "localhost")
+        val target = connection(SshConnectionAuth.Password("secret"), jumpHostId = jump.id)
+
+        val session = assertIs<SshConnectResult.Success>(connect(target, FakePrompter())).session
+        val shell = session.openShell()
+        shell.write("through the jump\n")
+        val output = StringBuilder()
+        withTimeout(10_000) {
+            while (!output.contains("through the jump")) output.append(shell.read() ?: break)
+        }
+        assertTrue(output.contains("through the jump"), output.toString())
+        session.close()
+    }
+
+    @Test
+    fun `legacy algorithms aren't offered`() {
+        assertTrue(client.cipherFactories.none { it.name.endsWith("-cbc") })
+        assertTrue(client.macFactories.none { it.name.startsWith("hmac-sha1") })
+        assertTrue(client.signatureFactories.none { it.name == "ssh-rsa" })
+    }
+
+    @Test
+    fun `server prompt text loses control characters and is shortened`() {
+        assertEquals("safe text", "sa\u202Efe\u0007 text".fromServer(100))
+        assertEquals("line one\nline two", "line one\nline two".fromServer(100))
+        assertEquals(5, "x".repeat(50).fromServer(5).length)
     }
 
     private class FakePrompter(

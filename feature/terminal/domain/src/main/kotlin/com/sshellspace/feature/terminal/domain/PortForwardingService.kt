@@ -17,6 +17,9 @@ interface PortForwardingService {
 
     /** Stops [forwardId] and closes its session when no other forward uses it. Also clears a failed state. */
     fun stop(forwardId: Uuid)
+
+    /** Stops every forward, for when the vault they belong to locks. */
+    fun stopAll()
 }
 
 sealed interface PortForwardState {

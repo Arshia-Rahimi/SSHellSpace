@@ -38,4 +38,9 @@ class TerminalPreferencesRepositoryImpl(
         }
         datasource.set(key, JsonSerializer.encodeToString(TerminalPreferences.serializer(), newValue))
     }
+
+    override suspend fun setTerminalThemeName(name: String?) {
+        val newValue = preferences.value.copy(terminalThemeName = name)
+        datasource.set(key, JsonSerializer.encodeToString(TerminalPreferences.serializer(), newValue))
+    }
 }

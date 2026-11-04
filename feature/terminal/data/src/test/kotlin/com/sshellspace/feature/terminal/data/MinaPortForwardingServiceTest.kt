@@ -179,7 +179,8 @@ class MinaPortForwardingServiceTest {
         val forward = forward(PortForwardType.Local)
 
         assertNull(start(forward, AcceptingPrompter(acceptHostKeys = false)))
-        assertEquals(0, server.activeSessions.size)
+        // The server only notices the client hanging up a moment later.
+        runBlocking { withTimeout(5_000) { while (server.activeSessions.isNotEmpty()) delay(50) } }
     }
 
     @Test

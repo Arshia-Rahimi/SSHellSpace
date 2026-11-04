@@ -26,7 +26,17 @@ internal class PromptingKnownHostsVerifier(
         entry: KnownHostEntry,
         expected: PublicKey,
         actual: PublicKey,
-    ): Boolean = context.confirm(actual, expected)
+    ): Boolean {
+        if (context.connection.options.strictHostKeyChecking) {
+            context.failure = "The host key for ${context.connection.host} changed, and this connection refuses " +
+                "changed keys. If the change is expected, turn off strict host key checking for it first."
+            return false
+        }
+        val accepted = context.confirm(actual, expected)
+        // Whoever holds this key may not be the real server, so make the user decide again before sending a password.
+        if (accepted) context.savedPassword?.let(clientSession::removePasswordIdentity)
+        return accepted
+    }
 
     override fun handleRevokedKey(clientSession: ClientSession, remoteAddress: SocketAddress, serverKey: PublicKey) {
         context.failure = "The host key for ${context.connection.host} is marked as revoked in known_hosts."

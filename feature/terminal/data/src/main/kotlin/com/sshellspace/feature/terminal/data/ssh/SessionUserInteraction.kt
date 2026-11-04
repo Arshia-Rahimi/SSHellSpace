@@ -37,7 +37,11 @@ internal class SessionUserInteraction(
         echo: BooleanArray?,
     ): Array<String>? {
         if (!context.allowsChallenges || context.isCancelled) return null
-        val prompts = prompt.orEmpty().mapIndexed { i, text -> ChallengePrompt(text, echo?.getOrNull(i) ?: false) }
+        val prompts = prompt.orEmpty().mapIndexed { i, text ->
+            ChallengePrompt(text.fromServer(MAX_LABEL_LENGTH), echo?.getOrNull(i) ?: false)
+        }
+        val serverName = name?.fromServer(MAX_LABEL_LENGTH)
+        val serverInstruction = instruction?.fromServer(MAX_MESSAGE_LENGTH)
         // Info-only rounds carry no questions but still need an (empty) reply.
         if (prompts.isEmpty()) return emptyArray()
 
@@ -46,16 +50,17 @@ internal class SessionUserInteraction(
         if (single != null && !single.echo) {
             return askSecret(
                 SecretPrompt(
-                    title = name?.takeIf { it.isNotBlank() } ?: "Verification",
-                    message = instruction?.takeIf { it.isNotBlank() } ?: "The server for ${context.address} asks:",
+                    title = serverName?.takeIf { it.isNotBlank() } ?: "Verification",
+                    message = serverInstruction?.takeIf { it.isNotBlank() } ?: "The server for ${context.address} asks:",
                     label = single.text.trim().removeSuffix(":"),
+                    fromServer = true,
                 ),
             )?.let { arrayOf(it) }
         }
 
         val challenge = AuthChallenge(
-            title = name?.takeIf { it.isNotBlank() } ?: "Verification for ${context.address}",
-            instruction = instruction.orEmpty(),
+            title = serverName?.takeIf { it.isNotBlank() } ?: "Verification for ${context.address}",
+            instruction = serverInstruction.orEmpty(),
             prompts = prompts,
         )
         return context.ask { answerChallenge(challenge) }
@@ -67,8 +72,10 @@ internal class SessionUserInteraction(
         askSecret(
             SecretPrompt(
                 title = "Password change required",
-                message = prompt?.takeIf { it.isNotBlank() } ?: "The server asks for a new password for ${context.address}.",
+                message = prompt?.fromServer(MAX_MESSAGE_LENGTH)?.takeIf { it.isNotBlank() }
+                    ?: "The server asks for a new password for ${context.address}.",
                 label = "New password",
+                fromServer = true,
             ),
         )
 
@@ -77,5 +84,15 @@ internal class SessionUserInteraction(
 
     private companion object {
         const val MAX_PASSWORD_ATTEMPTS = 3
+        const val MAX_LABEL_LENGTH = 80
+        const val MAX_MESSAGE_LENGTH = 500
     }
 }
+
+/**
+ * Makes server-supplied prompt text safe to show: a server shouldn't be able to reorder what the user reads with bidi
+ * controls, or push the real buttons out of sight with endless text.
+ */
+internal fun String.fromServer(maxLength: Int): String =
+    filterNot { (it.isISOControl() && it != '\n') || it in '\u200E'..'\u200F' || it in '\u202A'..'\u202E' || it in '\u2066'..'\u2069' }
+        .take(maxLength)

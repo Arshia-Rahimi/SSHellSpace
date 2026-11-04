@@ -15,7 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 
 class TabManagerImpl(
-    defaultTabId: TabId,
+    private val defaultTabId: TabId,
     fixedTabs: List<TabItem>,
 ) : TabManager {
     private var onNewTabCreated: ((TabId) -> Unit)? = null
@@ -67,6 +67,13 @@ class TabManagerImpl(
                 tabs = newTabs,
                 currentTabId = newCurrentTabId,
             )
+        }
+    }
+
+    override fun reset() {
+        _tabsState.update { state ->
+            state.tabsSequence.forEach { it.tab.viewModelStore.clear() }
+            state.copy(tabs = emptyList(), currentTabId = defaultTabId)
         }
     }
 

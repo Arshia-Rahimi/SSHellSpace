@@ -12,7 +12,14 @@ interface SshKeyRepository {
     fun getKeys(): Flow<List<SshKeyInfo>>
     fun validate(privateKey: PrivateKey, passphrase: String?): SshKeyValidationResult
     suspend fun createVaultKey(name: String, comment: String, algorithm: Algorithm): CreateSshKeyResult
-    suspend fun createDeviceKey(name: String, comment: String, fileName: String?, path: String, algorithm: Algorithm): CreateSshKeyResult
+    suspend fun createDeviceKey(
+        name: String,
+        comment: String,
+        fileName: String?,
+        path: String,
+        algorithm: Algorithm,
+        passphrase: String? = null,
+    ): CreateSshKeyResult
     suspend fun importDeviceKey(name: String, path: String, passphrase: String?): CreateSshKeyResult
     suspend fun importVaultKey(name: String, privateKey: PrivateKey, passphrase: String?): CreateSshKeyResult
     suspend fun getDetails(id: Uuid): SshKeyDetails?

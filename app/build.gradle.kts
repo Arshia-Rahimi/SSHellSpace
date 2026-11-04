@@ -8,6 +8,7 @@ plugins {
 }
 
 dependencies {
+    implementation(projects.core.common)
     implementation(projects.core.ui)
     implementation(projects.core.tabs)
     implementation(projects.core.domain)
@@ -37,8 +38,16 @@ dependencies {
     implementation(libs.nucleus.tao)
 }
 
+// What ships is pinned exactly, so a dependency can't change version without showing up in a diff.
+configurations.runtimeClasspath {
+    resolutionStrategy.activateDependencyLocking()
+}
+
 nucleus.application {
     mainClass = "com.sshellspace.MainKt"
+
+    // Stops other programs attaching to the JVM to read decrypted secrets, and crashes leaving them in a core dump.
+    jvmArgs += listOf("-XX:+DisableAttachMechanism", "-XX:-CreateCoredumpOnCrash")
 
     graalvm {
         isEnabled = true

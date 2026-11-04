@@ -5,16 +5,21 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.window.rememberWindowState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import com.sshellspace.core.data.vault.VaultAutoLock
 import com.sshellspace.core.domain.emit
 import com.sshellspace.core.domain.models.DEFAULT_COLOR_SCHEME_ID
 import com.sshellspace.core.domain.models.ThemePreference
 import com.sshellspace.core.domain.repositories.CorePreferencesRepository
+import com.sshellspace.core.domain.repositories.VaultManager
 import com.sshellspace.core.ui.designsystem.adaptive.DefaultWindowSize
 import com.sshellspace.core.ui.designsystem.adaptive.MinWindowSize
 import com.sshellspace.core.ui.designsystem.adaptive.ProvideWindowClass
@@ -22,10 +27,12 @@ import com.sshellspace.core.ui.designsystem.common.asString
 import com.sshellspace.core.ui.designsystem.dialog.AppDialog
 import com.sshellspace.core.ui.designsystem.theme.AppColorScheme
 import com.sshellspace.core.ui.designsystem.theme.SSHellSpaceTheme
+import com.sshellspace.core.ui.designsystem.titlebar.LockedTitleBar
 import com.sshellspace.core.ui.designsystem.titlebar.TitleBar
 import com.sshellspace.core.ui.shortcuts.ShortcutHandler
 import com.sshellspace.core.ui.tabs.TabManager
 import com.sshellspace.feature.newtab.ui.NewTabDialogEvent
+import com.sshellspace.feature.vault.gate.VaultGateScreen
 import dev.nucleusframework.application.DecoratedWindow
 import dev.nucleusframework.application.NucleusBackend
 import dev.nucleusframework.application.nucleusApplication
@@ -39,32 +46,55 @@ fun main() {
 
     nucleusApplication(backend = NucleusBackend.Tao) {
         val shortcutHandler = koinInject<ShortcutHandler>()
+        val autoLock = koinInject<VaultAutoLock>()
 
         DecoratedWindow(
             onCloseRequest = ::exitApplication,
             state = rememberWindowState(size = DefaultWindowSize),
             title = Res.string.title.asString(),
             minimumSize = MinWindowSize,
-            onPreviewKeyEvent = shortcutHandler::onKeyEvent,
+            onPreviewKeyEvent = { event ->
+                autoLock.recordActivity()
+                shortcutHandler.onKeyEvent(event)
+            },
         ) {
             val preferences = koinInject<CorePreferencesRepository>()
             val themePreference by remember { preferences.getTheme() }
                 .collectAsStateWithLifecycle(ThemePreference.SYSTEM_DEFAULT)
             val colorSchemeId by remember { preferences.getColorScheme() }
                 .collectAsStateWithLifecycle(DEFAULT_COLOR_SCHEME_ID)
+            val userTheme by remember { preferences.getActiveUserTheme() }
+                .collectAsStateWithLifecycle(null)
+            val activeVault by koinInject<VaultManager>().activeVault.collectAsStateWithLifecycle()
+            val unlocked = activeVault != null
+
+            LaunchedEffect(unlocked) { shortcutHandler.isPaused = !unlocked }
 
             SSHellSpaceTheme(
                 themePreference = themePreference,
                 colorScheme = AppColorScheme.fromId(colorSchemeId),
+                userTheme = userTheme,
             ) {
                 ProvideWindowClass(Modifier.fillMaxSize()) {
                     WindowScaffold(
-                        titleBar = { TitleBar(NewTabDialogEvent::emit) },
-                        modifier = Modifier.fillMaxSize(),
+                        titleBar = { if (unlocked) TitleBar(NewTabDialogEvent::emit) else LockedTitleBar() },
+                        modifier = Modifier.fillMaxSize().pointerInput(autoLock) {
+                            // The initial pass sees events even when the terminal goes on to consume them.
+                            awaitPointerEventScope {
+                                while (true) {
+                                    awaitPointerEvent(PointerEventPass.Initial)
+                                    autoLock.recordActivity()
+                                }
+                            }
+                        },
                     ) { ip ->
-                        AppDialog()
+                        if (unlocked) {
+                            AppDialog()
 
-                        TabHost(Modifier.fillMaxSize().padding(ip))
+                            TabHost(Modifier.fillMaxSize().padding(ip))
+                        } else {
+                            VaultGateScreen(Modifier.fillMaxSize().padding(ip))
+                        }
                     }
                 }
             }

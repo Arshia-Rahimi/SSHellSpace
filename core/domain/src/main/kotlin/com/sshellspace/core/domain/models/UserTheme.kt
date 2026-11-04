@@ -3,11 +3,13 @@ package com.sshellspace.core.domain.models
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
+/** A theme imported from a JSON file. Its [name] identifies it: importing the same name again replaces it. */
 @Serializable
 data class UserTheme(
     val name: String,
     val dark: ThemePalette,
     val light: ThemePalette,
+    val terminal: TerminalColors,
 )
 
 @Serializable

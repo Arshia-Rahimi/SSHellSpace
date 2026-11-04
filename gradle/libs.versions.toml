@@ -4,6 +4,7 @@ kotlin = "2.4.21"
 kotlinx-coroutines = "1.11.0"
 appdirs = "1.5.0"
 sqldelight = "2.4.1"
+sqlite-jdbc = "3.53.4.0"
 serialization-json = "1.12.0"
 koin = "4.2.2"
 koin-plugin = "1.2.1"
@@ -19,7 +20,7 @@ compose-unstyled = "2.10.1"
 pty4j = "0.14.0"
 bossterm = "1.2.183"
 lifecycle = "2.11.0"
-mina = "2.20.0"
+mina = "2.20.1"
 bouncy-castle = "1.86"
 
 [libraries]
@@ -71,6 +72,7 @@ kotlinx-coroutines-swing = { module = "org.jetbrains.kotlinx:kotlinx-coroutines-
 #sqldelight
 sqldelight-coroutines = { module = "app.cash.sqldelight:coroutines-extensions", version.ref = "sqldelight"}
 sqldelight-desktop = { module = "app.cash.sqldelight:sqlite-driver", version.ref = "sqldelight"}
+sqlite-jdbc = { module = "org.xerial:sqlite-jdbc", version.ref = "sqlite-jdbc"}
 #filekit
 filekit-core = { module = "io.github.vinceglb:filekit-core", version.ref = "filekit" }
 filekit-dialogs = { module = "io.github.vinceglb:filekit-dialogs", version.ref = "filekit" }

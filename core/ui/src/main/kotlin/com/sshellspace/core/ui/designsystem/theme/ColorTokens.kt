@@ -1,9 +1,10 @@
 package com.sshellspace.core.ui.designsystem.theme
 
 import androidx.compose.ui.graphics.Color
-import com.composeunstyled.theme.ThemeBuilder
 import com.composeunstyled.theme.ThemeProperty
 import com.composeunstyled.theme.ThemeToken
+import com.sshellspace.core.domain.models.ThemePalette
+import com.sshellspace.core.domain.models.UserTheme
 
 val colors = ThemeProperty<Color>("colors")
 
@@ -109,6 +110,34 @@ private val lightColorTokens = mapOf(
 internal fun themeColors(isDark: Boolean, scheme: AppColorScheme): Map<ThemeToken<Color>, Color> =
     if (isDark) darkColorTokens + scheme.dark else lightColorTokens + scheme.light
 
-internal fun ThemeBuilder.applyThemeColors(isDark: Boolean, scheme: AppColorScheme) {
-    properties[colors] = themeColors(isDark, scheme)
-}
+fun UserTheme.colors(isDark: Boolean): Map<ThemeToken<Color>, Color> = paletteTokens(if (isDark) dark else light)
+
+private fun paletteTokens(palette: ThemePalette): Map<ThemeToken<Color>, Color> = mapOf(
+    background to palette.background.toColor(),
+    surface to palette.surface.toColor(),
+    surfaceElevated to palette.surfaceElevated.toColor(),
+    onBackground to palette.onBackground.toColor(),
+    onSurface to palette.onSurface.toColor(),
+    textPrimary to palette.textPrimary.toColor(),
+    textSecondary to palette.textSecondary.toColor(),
+    textDisabled to palette.textDisabled.toColor(),
+    primary to palette.primary.toColor(),
+    onPrimary to palette.onPrimary.toColor(),
+    accent to palette.accent.toColor(),
+    onAccent to palette.onAccent.toColor(),
+    primaryHovered to palette.primaryHovered.toColor(),
+    primaryPressed to palette.primaryPressed.toColor(),
+    border to palette.border.toColor(),
+    separator to palette.separator.toColor(),
+    outline to palette.outline.toColor(),
+    error to palette.error.toColor(),
+    onError to palette.onError.toColor(),
+    success to palette.success.toColor(),
+    warning to palette.warning.toColor(),
+    info to palette.info.toColor(),
+    scrim to palette.scrim.toColor(),
+    overlay to palette.overlay.toColor(),
+    hoverOverlay to palette.hoverOverlay.toColor(),
+    pressedOverlay to palette.pressedOverlay.toColor(),
+    onOverlay to palette.onOverlay.toColor(),
+)

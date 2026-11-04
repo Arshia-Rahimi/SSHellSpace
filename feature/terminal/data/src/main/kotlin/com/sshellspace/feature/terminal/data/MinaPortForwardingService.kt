@@ -27,8 +27,8 @@ import kotlinx.coroutines.sync.withLock
 
 class MinaPortForwardingService(
     private val connectionService: SshConnectionService,
-    forwardDatasource: PortForwardDatasource,
-    scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
+    private val forwardDatasource: PortForwardDatasource,
+    private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.IO),
 ) : PortForwardingService {
 
     private val _states = MutableStateFlow<Map<Uuid, PortForwardState>>(emptyMap())
@@ -42,7 +42,8 @@ class MinaPortForwardingService(
     /** One connect at a time per connection, so forwards started together share a session. */
     private val connectLocks = mutableMapOf<Uuid, Mutex>()
 
-    init {
+    /** Starts with the first forward rather than at creation, because the query needs a vault to be unlocked. */
+    private val watchForDeletedForwards by lazy {
         // A deleted forward (or one deleted with its connection) shouldn't keep running out of sight.
         scope.launch {
             forwardDatasource.index().collect { forwards ->
@@ -53,6 +54,7 @@ class MinaPortForwardingService(
     }
 
     override suspend fun start(forward: PortForward, prompter: SshPrompter) {
+        watchForDeletedForwards
         stop(forward.id)
         _states.update { it + (forward.id to PortForwardState.Starting) }
         var session: OpenSession? = null
@@ -83,6 +85,10 @@ class MinaPortForwardingService(
         val stopped = synchronized(lock) { running.remove(forwardId) }
         stopped?.let { runCatching { it.handle.close() } }
         release(forwardId, stopped?.session, clearState = true)
+    }
+
+    override fun stopAll() {
+        _states.value.keys.forEach(::stop)
     }
 
     /** The open session of the forward's connection, connecting first if needed. Null when the user cancelled. */

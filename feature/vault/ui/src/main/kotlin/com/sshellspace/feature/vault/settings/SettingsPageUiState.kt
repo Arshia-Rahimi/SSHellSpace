@@ -1,7 +1,9 @@
 package com.sshellspace.feature.vault.settings
 
+import com.sshellspace.core.domain.models.DEFAULT_AUTO_LOCK_MINUTES
 import com.sshellspace.core.domain.models.KeyChord
 import com.sshellspace.core.domain.models.ThemePreference
+import com.sshellspace.core.domain.models.UserTheme
 import com.sshellspace.core.ui.designsystem.theme.AppColorScheme
 import com.sshellspace.core.ui.shortcuts.AppShortcut
 import com.sshellspace.feature.terminal.domain.models.Shell
@@ -9,6 +11,12 @@ import com.sshellspace.feature.terminal.domain.models.Shell
 data class SettingsPageUiState(
     val themePreference: ThemePreference = ThemePreference.SYSTEM_DEFAULT,
     val colorScheme: AppColorScheme = AppColorScheme.Default,
+    val userThemes: List<UserTheme> = emptyList(),
+    val activeUserThemeName: String? = null,
+    val terminalThemeName: String? = null,
+    val themeImportError: String? = null,
+    val vaultName: String? = null,
+    val autoLockMinutes: Int = DEFAULT_AUTO_LOCK_MINUTES,
     val shells: List<Shell> = listOf(SYSTEM_DEFAULT_SHELL),
     val defaultShell: Shell = SYSTEM_DEFAULT_SHELL,
     val isDiscoveringShells: Boolean = true,

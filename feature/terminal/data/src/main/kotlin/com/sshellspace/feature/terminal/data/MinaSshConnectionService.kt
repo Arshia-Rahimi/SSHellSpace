@@ -65,8 +65,11 @@ class MinaSshConnectionService(
             try {
                 for (next in chain) {
                     hop = next
-                    val address = sessions.lastOrNull()?.let { tunnel(it, hop) } ?: SshdSocketAddress(hop.host, hop.port)
+                    val tunnel = sessions.lastOrNull()?.let { tunnel(it, hop) }
+                    val address = tunnel?.boundAddress ?: SshdSocketAddress(hop.host, hop.port)
                     sessions += openSession(hop, address, prompter)
+                    // Connected, so stop listening: otherwise any local program could reach this hop through the port.
+                    tunnel?.close()
                 }
                 SshConnectResult.Success(MinaSshSession(sessions.toList()), chain.last())
             } catch (e: CancellationException) {
@@ -101,9 +104,8 @@ class MinaSshConnectionService(
     }
 
     /** Forwards a local port through [jump] to [hop], like OpenSSH's ProxyJump. */
-    private fun tunnel(jump: ClientSession, hop: SshConnection): SshdSocketAddress =
+    private fun tunnel(jump: ClientSession, hop: SshConnection) =
         jump.createLocalPortForwardingTracker(SshdSocketAddress.LOCALHOST_ADDRESS, SshdSocketAddress(hop.host, hop.port))
-            .boundAddress
 
     private suspend fun openSession(hop: SshConnection, address: SshdSocketAddress, prompter: SshPrompter): ClientSession {
         val context = ConnectionContext(hop, prompter, keyPairs = loadKeys(hop, prompter))

@@ -24,6 +24,7 @@ import com.sshellspace.core.ui.designsystem.Icons
 import com.sshellspace.core.ui.designsystem.components.Button
 import com.sshellspace.core.ui.designsystem.components.Dropdown
 import com.sshellspace.core.ui.designsystem.components.IconButton
+import com.sshellspace.core.ui.designsystem.components.Switch
 import com.sshellspace.core.ui.designsystem.components.TextField
 import com.sshellspace.core.ui.designsystem.components.Tooltip
 import com.sshellspace.core.ui.designsystem.theme.colors
@@ -112,10 +113,33 @@ fun PortForwardSidebar(
             text = if (form.type == PortForwardType.Remote) {
                 "Most servers only listen on 127.0.0.1 unless GatewayPorts is on."
             } else {
-                "Use 0.0.0.0 to let other devices on your network connect."
+                "Only this device can connect when listening on $LOCALHOST."
             },
             color = Theme[colors][textSecondary],
         )
+        if (form.isExposed) {
+            Text(
+                if (form.type == PortForwardType.Dynamic) {
+                    "Anyone who can reach this address can use the proxy with no password, and reach whatever the " +
+                        "server can."
+                } else {
+                    "Anyone who can reach this address can use the tunnel with no password."
+                },
+                color = Theme[colors][error],
+            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Switch(
+                    checked = form.networkAccessConfirmed,
+                    onCheckedChange = { edit { copy(networkAccessConfirmed = it) } },
+                    enabled = enabled,
+                    accessibilityLabel = "Allow network access",
+                )
+                Text("I understand, allow network access")
+            }
+        }
 
         if (form.type != PortForwardType.Dynamic) {
             AddressFields(

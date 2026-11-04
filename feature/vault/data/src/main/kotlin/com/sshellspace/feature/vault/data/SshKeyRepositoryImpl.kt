@@ -1,5 +1,7 @@
 package com.sshellspace.feature.vault.data
 
+import com.sshellspace.core.common.createOwnerOnlyFile
+import com.sshellspace.core.common.restrictToOwner
 import com.sshellspace.core.data.SshKeyDatasource
 import com.sshellspace.core.domain.SshKeyService
 import com.sshellspace.core.domain.SshKeyValidationResult
@@ -11,6 +13,8 @@ import com.sshellspace.feature.vault.domain.CreateSshKeyResult
 import com.sshellspace.feature.vault.domain.SshKeyDetails
 import com.sshellspace.feature.vault.domain.SshKeyRepository
 import java.io.File
+import java.io.IOException
+import java.nio.file.Files
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
@@ -41,8 +45,12 @@ class SshKeyRepositoryImpl(
         fileName: String?,
         path: String,
         algorithm: Algorithm,
+        passphrase: String?,
     ): CreateSshKeyResult = withContext(Dispatchers.IO) {
         val fileName = if (fileName.isNullOrBlank()) "SSHellSpace_${name}_$algorithm" else fileName
+        if (File(fileName).name != fileName) {
+            return@withContext CreateSshKeyResult.Error("The file name can't contain a folder")
+        }
         val privateFile = File(path, fileName)
         val publicFile = File(path, "$fileName.pub")
         if (privateFile.exists()) {
@@ -52,15 +60,24 @@ class SshKeyRepositoryImpl(
             return@withContext CreateSshKeyResult.Error("$publicFile exists")
         }
 
-        val keyPair = sshKeyService.generate(comment, null, algorithm)
-        File(path).mkdirs()
-        privateFile.createNewFile()
-        privateFile.writeText(keyPair.first)
-        publicFile.createNewFile()
-        publicFile.writeText(keyPair.second)
+        try {
+            val keyPair = sshKeyService.generate(comment, passphrase, algorithm)
+            val directory = File(path)
+            if (!directory.exists()) {
+                Files.createDirectories(directory.toPath())
+                restrictToOwner(directory.toPath())
+            }
+            // Created owner-only before anything secret goes in. OpenSSH also refuses keys others can read.
+            createOwnerOnlyFile(privateFile.toPath())
+            privateFile.writeText(keyPair.first)
+            publicFile.createNewFile()
+            publicFile.writeText(keyPair.second)
 
-        sshKeyDatasource.insert(name, algorithm, SshKeySecret.Device(privateFile.path, null))
-        CreateSshKeyResult.Success
+            sshKeyDatasource.insert(name, algorithm, SshKeySecret.Device(privateFile.path, passphrase))
+            CreateSshKeyResult.Success
+        } catch (e: IOException) {
+            CreateSshKeyResult.Error(e.message ?: "Couldn't write the key files")
+        }
     }
 
     override suspend fun importDeviceKey(name: String, path: String, passphrase: String?): CreateSshKeyResult =
@@ -73,7 +90,7 @@ class SshKeyRepositoryImpl(
                 val fileContents = file.readText()
                 return@withContext when (val validationResult = validate(fileContents, passphrase)) {
                     SshKeyValidationResult.InvalidPassphrase -> CreateSshKeyResult.Error("Invalid Passphrase")
-                    is SshKeyValidationResult.InvalidSshKeyFormat -> CreateSshKeyResult.Error("Key format is not correct")
+                    is SshKeyValidationResult.InvalidSshKeyFormat -> CreateSshKeyResult.Error(validationResult.errorMessage)
                     is SshKeyValidationResult.Success -> {
                         sshKeyDatasource.insert(
                             name,
@@ -93,7 +110,7 @@ class SshKeyRepositoryImpl(
             try {
                 when (val validationResult = validate(privateKey, passphrase)) {
                     SshKeyValidationResult.InvalidPassphrase -> CreateSshKeyResult.Error("Invalid Passphrase")
-                    is SshKeyValidationResult.InvalidSshKeyFormat -> CreateSshKeyResult.Error("Key format is not correct")
+                    is SshKeyValidationResult.InvalidSshKeyFormat -> CreateSshKeyResult.Error(validationResult.errorMessage)
                     is SshKeyValidationResult.Success -> {
                         val decrypted = sshKeyService.load(privateKey, passphrase).first
                         sshKeyDatasource.insert(name, validationResult.algorithm, SshKeySecret.Vault(decrypted))

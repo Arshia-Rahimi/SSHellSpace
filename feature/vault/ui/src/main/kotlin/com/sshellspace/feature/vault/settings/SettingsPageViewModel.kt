@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sshellspace.core.domain.models.KeyChord
 import com.sshellspace.core.domain.repositories.CorePreferencesRepository
+import com.sshellspace.core.domain.repositories.VaultManager
 import com.sshellspace.core.ui.designsystem.theme.AppColorScheme
 import com.sshellspace.core.ui.shortcuts.AppShortcut
 import com.sshellspace.core.ui.shortcuts.ShortcutHandler
@@ -12,6 +13,8 @@ import com.sshellspace.feature.terminal.domain.ShellDiscoveryService
 import com.sshellspace.feature.terminal.domain.TerminalPreferencesRepository
 import com.sshellspace.feature.terminal.domain.models.Shell
 import com.sshellspace.feature.terminal.domain.models.UpdateTerminalPreferences
+import java.io.File
+import java.io.IOException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,30 +24,53 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+private const val MAX_THEME_FILE_BYTES = 1024 * 1024L
+
 class SettingsPageViewModel(
     private val corePreferencesRepository: CorePreferencesRepository,
     private val terminalPreferencesRepository: TerminalPreferencesRepository,
     private val shellDiscoveryService: ShellDiscoveryService,
     private val shortcutHandler: ShortcutHandler,
+    private val vaultManager: VaultManager,
 ) : ViewModel() {
     private val discoveredShells = MutableStateFlow<List<Shell>?>(null)
     private val recording = MutableStateFlow<ShortcutRecording?>(null)
 
+    private val themeImportError = MutableStateFlow<String?>(null)
+
     private val appearance = combine(
         corePreferencesRepository.getTheme(),
         corePreferencesRepository.getColorScheme(),
-    ) { theme, colorSchemeId -> theme to AppColorScheme.fromId(colorSchemeId) }
+        corePreferencesRepository.getUserThemes(),
+        corePreferencesRepository.getActiveUserTheme(),
+        themeImportError,
+    ) { theme, colorSchemeId, userThemes, activeUserTheme, importError ->
+        SettingsPageUiState(
+            themePreference = theme,
+            colorScheme = AppColorScheme.fromId(colorSchemeId),
+            userThemes = userThemes,
+            activeUserThemeName = activeUserTheme?.name,
+            themeImportError = importError,
+        )
+    }
+
+    private val appearanceAndVault = combine(
+        appearance,
+        vaultManager.activeVault,
+        corePreferencesRepository.getAutoLockMinutes(),
+    ) { appearance, vault, autoLockMinutes ->
+        appearance.copy(vaultName = vault?.name, autoLockMinutes = autoLockMinutes)
+    }
 
     val uiState = combine(
-        appearance,
+        appearanceAndVault,
         terminalPreferencesRepository.get(),
         discoveredShells,
         shortcutHandler.bindings,
         recording,
-    ) { (theme, colorScheme), terminalPrefs, shells, bindings, recording ->
-        SettingsPageUiState(
-            themePreference = theme,
-            colorScheme = colorScheme,
+    ) { appearance, terminalPrefs, shells, bindings, recording ->
+        appearance.copy(
+            terminalThemeName = terminalPrefs.terminalThemeName,
             shells = listOf(SYSTEM_DEFAULT_SHELL) + shells.orEmpty(),
             defaultShell = terminalPrefs.defaultShell,
             isDiscoveringShells = shells == null,
@@ -68,10 +94,30 @@ class SettingsPageViewModel(
                 corePreferencesRepository.setTheme(action.value)
             }
             is SettingsPageAction.SetColorScheme -> viewModelScope.launch {
+                themeImportError.update { null }
                 corePreferencesRepository.setColorScheme(action.value.id)
+            }
+            is SettingsPageAction.SetUserTheme -> viewModelScope.launch {
+                themeImportError.update { null }
+                corePreferencesRepository.setActiveUserTheme(action.name)
+            }
+            is SettingsPageAction.ImportTheme -> importTheme(action.path)
+            is SettingsPageAction.RemoveUserTheme -> viewModelScope.launch {
+                corePreferencesRepository.deleteUserTheme(action.name)
+                if (terminalPreferencesRepository.get().value.terminalThemeName == action.name) {
+                    terminalPreferencesRepository.setTerminalThemeName(null)
+                }
+            }
+            is SettingsPageAction.SetTerminalTheme -> viewModelScope.launch {
+                terminalPreferencesRepository.setTerminalThemeName(action.name)
             }
             is SettingsPageAction.SetDefaultShell -> viewModelScope.launch {
                 terminalPreferencesRepository.set(UpdateTerminalPreferences(defaultShell = action.value))
+            }
+
+            SettingsPageAction.LockVault -> viewModelScope.launch { vaultManager.lock() }
+            is SettingsPageAction.SetAutoLockMinutes -> viewModelScope.launch {
+                corePreferencesRepository.setAutoLockMinutes(action.minutes)
             }
 
             is SettingsPageAction.Shortcut.StartRecording -> setRecording(ShortcutRecording(action.shortcut))
@@ -80,6 +126,25 @@ class SettingsPageViewModel(
             is SettingsPageAction.Shortcut.Reset -> viewModelScope.launch {
                 shortcutHandler.resetChord(action.shortcut)
             }
+        }
+    }
+
+    private fun importTheme(path: String) {
+        viewModelScope.launch {
+            val error = try {
+                val json = withContext(Dispatchers.IO) {
+                    val file = File(path)
+                    if (file.length() > MAX_THEME_FILE_BYTES) throw IOException("it's too large to be a theme")
+                    file.readText()
+                }
+                corePreferencesRepository.importUserTheme(json)
+                null
+            } catch (e: IOException) {
+                "Couldn't read the file: ${e.message}"
+            } catch (e: IllegalArgumentException) {
+                "Couldn't import the theme: ${e.message}"
+            }
+            themeImportError.update { error }
         }
     }
 
