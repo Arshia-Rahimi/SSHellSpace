@@ -10,12 +10,14 @@ import com.sshellspace.core.data.impl.CorePreferencesRepositoryImpl
 import com.sshellspace.core.data.impl.MinaSshKeyService
 import com.sshellspace.core.data.impl.SqlDelightPortForwardDatasource
 import com.sshellspace.core.data.impl.SqlDelightPreferencesDatasource
+import com.sshellspace.core.data.impl.SqlDelightSnippetDatasource
 import com.sshellspace.core.data.impl.SqlDelightSshConnectionDatasource
 import com.sshellspace.core.data.impl.SqlDelightSshKeyDatasource
 import com.sshellspace.core.data.vault.VaultSqlDriver
 import com.sshellspace.core.domain.SshKeyService
 import com.sshellspace.core.domain.repositories.CorePreferencesRepository
 import com.sshellspace.core.domain.repositories.PreferencesDatasource
+import com.sshellspace.core.domain.repositories.VaultPreferencesDatasource
 import org.koin.core.qualifier.named
 import org.koin.dsl.bind
 import org.koin.dsl.module
@@ -28,6 +30,11 @@ val DataModule = module {
     single<SqlDelightSshKeyDatasource>() bind SshKeyDatasource::class
     single<SqlDelightSshConnectionDatasource>() bind SshConnectionDatasource::class
     single<SqlDelightPortForwardDatasource>() bind PortForwardDatasource::class
+    single<SqlDelightSnippetDatasource>() bind SnippetDatasource::class
+    single<VaultPreferencesDatasource> {
+        val vaultPreferences = SqlDelightPreferencesDatasource(get())
+        object : VaultPreferencesDatasource, PreferencesDatasource by vaultPreferences {}
+    }
     single<CorePreferencesRepositoryImpl>() bind CorePreferencesRepository::class
     single<MinaSshKeyService>() bind SshKeyService::class
     //

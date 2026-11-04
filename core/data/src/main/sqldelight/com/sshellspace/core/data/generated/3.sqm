@@ -1,0 +1,6 @@
+CREATE TABLE snippets (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    command TEXT NOT NULL,
+    run_immediately INTEGER NOT NULL
+);

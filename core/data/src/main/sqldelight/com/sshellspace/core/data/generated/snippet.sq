@@ -1,0 +1,18 @@
+CREATE TABLE snippets (
+    id TEXT NOT NULL PRIMARY KEY,
+    name TEXT NOT NULL,
+    command TEXT NOT NULL,
+    -- 1 presses Enter after sending the command, 0 leaves it on the prompt to review.
+    run_immediately INTEGER NOT NULL
+);
+
+index:
+SELECT * FROM snippets
+ORDER BY name COLLATE NOCASE;
+
+upsert:
+INSERT OR REPLACE INTO snippets VALUES ?;
+
+delete:
+DELETE FROM snippets
+WHERE id = ?;

@@ -10,6 +10,7 @@ import com.sshellspace.feature.terminal.domain.models.SshTerminalParams
 import com.sshellspace.feature.terminal.domain.models.TerminalParams
 import com.sshellspace.feature.terminal.ui.SshTerminalTabFactory
 import com.sshellspace.feature.terminal.ui.TerminalTabFactory
+import java.util.concurrent.ConcurrentHashMap
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
@@ -18,7 +19,7 @@ class TabManagerImpl(
     private val defaultTabId: TabId,
     fixedTabs: List<TabItem>,
 ) : TabManager {
-    private var onNewTabCreated: ((TabId) -> Unit)? = null
+    private val paramsByTab = ConcurrentHashMap<TabId, TabParams>()
     private val _tabsState = MutableStateFlow(TabsState(defaultTabId, fixedTabs))
 
     override fun tabsState() = _tabsState.asStateFlow()
@@ -29,13 +30,13 @@ class TabManagerImpl(
             is SshTerminalParams -> SshTerminalTabFactory.create(params)
             else -> throw IllegalArgumentException("Unknown tab param type")
         }
+        paramsByTab[newTab.tab.id] = params
         _tabsState.update {
             it.copy(
                 tabs = it.tabs + newTab,
                 currentTabId = newTab.tab.id,
             )
         }
-        onNewTabCreated?.invoke(newTab.tab.id)
     }
 
     override fun setCurrentTab(id: TabId) {
@@ -51,6 +52,7 @@ class TabManagerImpl(
             if (tabIndex == -1) return@update state
 
             state.tabs[tabIndex].tab.viewModelStore.clear()
+            paramsByTab.remove(id)
 
             val newTabs = state.tabs.toMutableList().apply { removeAt(tabIndex) }
 
@@ -73,11 +75,15 @@ class TabManagerImpl(
     override fun reset() {
         _tabsState.update { state ->
             state.tabsSequence.forEach { it.tab.viewModelStore.clear() }
+            paramsByTab.clear()
             state.copy(tabs = emptyList(), currentTabId = defaultTabId)
         }
     }
 
-    override fun onNewTabCreated(callback: (TabId) -> Unit) {
-        onNewTabCreated = callback
+    override fun clearFixedTabs() {
+        _tabsState.value.fixedTab.forEach { it.tab.viewModelStore.clear() }
     }
+
+    override fun openTabs(): List<Pair<TabId, TabParams>> =
+        _tabsState.value.tabs.mapNotNull { item -> paramsByTab[item.tab.id]?.let { item.tab.id to it } }
 }

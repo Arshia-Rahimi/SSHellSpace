@@ -13,6 +13,7 @@ import com.sshellspace.core.domain.models.SshKeySecret
 import com.sshellspace.core.domain.models.SshKeyType
 import com.sshellspace.feature.terminal.domain.AuthChallenge
 import com.sshellspace.feature.terminal.domain.HostKeyPrompt
+import com.sshellspace.feature.terminal.domain.SESSION_LOST_EXIT_CODE
 import com.sshellspace.feature.terminal.domain.SecretPrompt
 import com.sshellspace.feature.terminal.domain.SshConnectResult
 import com.sshellspace.feature.terminal.domain.SshPrompter
@@ -347,6 +348,27 @@ class MinaSshConnectionServiceTest {
     }
 
     @Test
+    fun `a lost connection reports differently from a shell that exits`() = runBlocking {
+        val target = connection(SshConnectionAuth.Password("secret"))
+        val session = assertIs<SshConnectResult.Success>(connect(target, FakePrompter())).session
+        val shell = session.openShell(80, 24)
+
+        server.activeSessions.forEach { it.close(true) }
+
+        assertEquals(SESSION_LOST_EXIT_CODE, withTimeout(10_000) { shell.waitForExit() })
+    }
+
+    @Test
+    fun `a shell that exits reports its exit status`() = runBlocking {
+        server.setShellFactory { ExitingShell(status = 3) }
+        val target = connection(SshConnectionAuth.Password("secret"))
+        val session = assertIs<SshConnectResult.Success>(connect(target, FakePrompter())).session
+        val shell = session.openShell(80, 24)
+
+        assertEquals(3, withTimeout(10_000) { shell.waitForExit() })
+    }
+
+    @Test
     fun `legacy algorithms aren't offered`() {
         assertTrue(client.cipherFactories.none { it.name.endsWith("-cbc") })
         assertTrue(client.macFactories.none { it.name.startsWith("hmac-sha1") })
@@ -424,6 +446,19 @@ class MinaSshConnectionServiceTest {
     }
 
     /** Echoes every byte back, which is all a terminal round-trip test needs. */
+    private class ExitingShell(private val status: Int) : Command {
+        private var exit: ExitCallback? = null
+        override fun setInputStream(`in`: InputStream) = Unit
+        override fun setOutputStream(out: OutputStream) = Unit
+        override fun setErrorStream(err: OutputStream) = Unit
+        override fun setExitCallback(callback: ExitCallback) { exit = callback }
+        override fun start(channel: ChannelSession, env: Environment) {
+            thread(isDaemon = true) { exit?.onExit(status) }
+        }
+
+        override fun destroy(channel: ChannelSession) = Unit
+    }
+
     private class EchoShell : Command {
         private lateinit var input: InputStream
         private lateinit var output: OutputStream

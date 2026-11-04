@@ -29,6 +29,9 @@ interface SshShellHandle {
     fun exitCode(): Int?
 }
 
+/** What [SshShellHandle.waitForExit] returns when the session ended with no exit status: the connection was lost. */
+const val SESSION_LOST_EXIT_CODE = -1
+
 interface SshForwardHandle : AutoCloseable {
     /** The address that is listening: on this device for local and dynamic forwards, on the server for remote. */
     val boundAddress: String

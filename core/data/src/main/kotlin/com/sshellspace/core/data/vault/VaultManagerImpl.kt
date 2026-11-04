@@ -51,6 +51,8 @@ class VaultManagerImpl(
 ) : VaultManager {
     private val mutex = Mutex()
     private val beforeLockActions = mutableListOf<suspend () -> Unit>()
+    private val beforeUnlockActions = mutableListOf<suspend (VaultInfo) -> Unit>()
+    private val afterDeleteActions = mutableListOf<suspend (Uuid) -> Unit>()
     private var open: OpenVault? = null
 
     private val _vaults = MutableStateFlow(readVaults())
@@ -88,7 +90,7 @@ class VaultManagerImpl(
         val id = generateUuid()
         val key = newVaultKey()
         val header = VaultHeader(id.toString(), trimmedName, listOf(newKeySlot(id.toString(), credential, key)))
-        val vault = OpenVault(VaultInfo(id, trimmedName), header, key, fileOf(id), inMemoryDriver())
+        val vault = OpenVault(VaultInfo(id, trimmedName, header.hasPassword), header, key, fileOf(id), inMemoryDriver())
         if (moveUnencryptedData) {
             vault.load(serializeUnencrypted())
             vault.driver.execute(null, "DELETE FROM preferences_table", 0)
@@ -115,7 +117,8 @@ class VaultManagerImpl(
         if (parsed.header.id != id.toString()) throw VaultException.Invalid("The vault file is damaged or was modified.")
         val key = unwrapKey(parsed.header, credential)
         val plaintext = parsed.decrypt(key)
-        val vault = OpenVault(VaultInfo(id, parsed.header.name), parsed.header, key, fileOf(id), inMemoryDriver())
+        val info = VaultInfo(id, parsed.header.name, parsed.header.hasPassword)
+        val vault = OpenVault(info, parsed.header, key, fileOf(id), inMemoryDriver())
         try {
             vault.load(plaintext)
         } catch (e: VaultException) {
@@ -133,6 +136,14 @@ class VaultManagerImpl(
         beforeLockActions += action
     }
 
+    override fun beforeUnlock(action: suspend (VaultInfo) -> Unit) {
+        beforeUnlockActions += action
+    }
+
+    override fun afterDelete(action: suspend (Uuid) -> Unit) {
+        afterDeleteActions += action
+    }
+
     override suspend fun export(id: Uuid, destination: String) = locked {
         val target = Path.of(destination)
         Files.copy(fileOf(id), target, StandardCopyOption.REPLACE_EXISTING)
@@ -144,7 +155,7 @@ class VaultManagerImpl(
         val key = unwrapKey(parsed.header, credential)
         val plaintext = parsed.decrypt(key)
         // The password proves the file opens, not that whoever made it can be trusted, so check its database now.
-        checkImage(plaintext)
+        val cleaned = cleanImportedImage(plaintext)
         val sourceId = runCatching { Uuid.parse(parsed.header.id) }.getOrNull()
             ?: throw VaultException.Invalid("The vault file is damaged.")
 
@@ -158,39 +169,55 @@ class VaultManagerImpl(
             name = name,
             slots = if (idTaken) listOf(newKeySlot(id.toString(), credential, key)) else parsed.header.slots,
         )
-        writeAtomically(fileOf(id), VaultFile.seal(header, key, plaintext))
+        writeAtomically(fileOf(id), VaultFile.seal(header, key, cleaned))
         plaintext.fill(0)
+        cleaned.fill(0)
         key.fill(0)
 
-        VaultInfo(id, name).also { info -> _vaults.update { (it + info).sortedBy(VaultInfo::name) } }
+        VaultInfo(id, name, header.hasPassword).also { info -> _vaults.update { (it + info).sortedBy(VaultInfo::name) } }
     }
 
     override suspend fun changeCredential(id: Uuid, current: VaultCredential, new: VaultCredential) = locked {
-        if (open?.info?.id == id) throw VaultException.Invalid("Lock the vault before changing its password.")
         val parsed = VaultFile.read(fileOf(id))
         if (parsed.header.id != id.toString()) throw VaultException.Invalid("The vault file is damaged or was modified.")
         val oldKey = unwrapKey(parsed.header, current)
-        val plaintext = parsed.decrypt(oldKey)
         val newKey = newVaultKey()
         val header = parsed.header.copy(slots = listOf(newKeySlot(id.toString(), new, newKey)))
-        writeAtomically(fileOf(id), VaultFile.seal(header, newKey, plaintext))
-        plaintext.fill(0)
+        val active = open?.takeIf { it.info.id == id }
+        if (active != null) {
+            // The database in memory is the current one, and from now on it saves under the new key.
+            active.rekey(header, newKey)
+            _activeVault.value = active.info
+        } else {
+            val plaintext = parsed.decrypt(oldKey)
+            writeAtomically(fileOf(id), VaultFile.seal(header, newKey, plaintext))
+            plaintext.fill(0)
+            newKey.fill(0)
+        }
         oldKey.fill(0)
-        newKey.fill(0)
+        _vaults.update { vaults ->
+            vaults.map { if (it.id == id) it.copy(hasPassword = header.hasPassword) else it }
+        }
     }
 
-    override suspend fun delete(id: Uuid) = locked {
-        if (open?.info?.id == id) closeOpenVault()
-        Files.deleteIfExists(fileOf(id))
-        _vaults.update { vaults -> vaults.filterNot { it.id == id } }
+    // Not cancellable: locking clears the Settings page's ViewModel, which can be what asked for this.
+    override suspend fun delete(id: Uuid) = withContext(NonCancellable) {
+        locked {
+            if (open?.info?.id == id) closeOpenVault()
+            Files.deleteIfExists(fileOf(id))
+            _vaults.update { vaults -> vaults.filterNot { it.id == id } }
+            afterDeleteActions.forEach { it(id) }
+        }
     }
 
     private suspend fun <T> locked(block: suspend () -> T): T =
         withContext(Dispatchers.IO) { mutex.withLock { block() } }
 
-    private fun activate(vault: OpenVault) {
+    private suspend fun activate(vault: OpenVault) {
         open = vault
         vaultDriver.attach(vault.driver, vault::persist)
+        // Before the vault counts as unlocked, so nothing from the previous vault shows for even a frame.
+        withContext(NonCancellable) { beforeUnlockActions.forEach { it(vault.info) } }
         _activeVault.value = vault.info
     }
 
@@ -216,7 +243,7 @@ class VaultManagerImpl(
             // A file that can't be read is skipped rather than deleted: it may still be recoverable by hand.
             runCatching {
                 val header = VaultFile.read(file.toPath()).header
-                VaultInfo(Uuid.parse(header.id), header.name)
+                VaultInfo(Uuid.parse(header.id), header.name, header.hasPassword)
             }.getOrNull()
         }.sortedBy(VaultInfo::name)
     }
@@ -235,10 +262,19 @@ class VaultManagerImpl(
         Properties().apply { put("foreign_keys", "true") },
     )
 
-    private fun checkImage(image: ByteArray) {
+    /**
+     * Checks a database from an imported file and drops its saved state. Saved tabs reopen by themselves on unlock, so
+     * keeping them would let whoever made the file choose what connects or runs here, without the user clicking anything.
+     */
+    private fun cleanImportedImage(image: ByteArray): ByteArray {
         val driver = inMemoryDriver()
         try {
-            loadImage(driver, driver.getConnection().unwrap(SQLiteConnection::class.java), image)
+            val connection = driver.getConnection().unwrap(SQLiteConnection::class.java)
+            loadImage(driver, connection, image)
+            driver.execute(null, "DELETE FROM preferences_table", 0)
+            return connection.serialize(SCHEMA_NAME)
+        } catch (_: SQLException) {
+            throw VaultException.Invalid("This vault's database is damaged or contains something unexpected.")
         } finally {
             driver.close()
         }
@@ -266,9 +302,9 @@ class VaultManagerImpl(
     }
 
     private class OpenVault(
-        val info: VaultInfo,
-        val header: VaultHeader,
-        val key: ByteArray,
+        info: VaultInfo,
+        private var header: VaultHeader,
+        private var key: ByteArray,
         val file: Path,
         val driver: JdbcSqliteDriver,
     ) {
@@ -299,7 +335,19 @@ class VaultManagerImpl(
             driver.execute(null, "PRAGMA user_version = $version", 0)
         }
 
+        var info = info
+            private set
+
         private var closed = false
+
+        @Synchronized
+        fun rekey(newHeader: VaultHeader, newKey: ByteArray) {
+            key.fill(0)
+            header = newHeader
+            key = newKey
+            info = info.copy(hasPassword = newHeader.hasPassword)
+            persist()
+        }
 
         @Synchronized
         fun persist() {

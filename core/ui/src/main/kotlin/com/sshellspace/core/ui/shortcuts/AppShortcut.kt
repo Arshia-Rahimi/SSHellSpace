@@ -17,6 +17,11 @@ enum class AppShortcut(
         label = "New tab with default shell",
         defaultChord = primaryChord(Key.T),
     ),
+    QuickConnect(
+        id = "quick_connect",
+        label = "Quick connect and snippets",
+        defaultChord = primaryChord(Key.K, shift = true),
+    ),
     LockVault(
         id = "lock_vault",
         label = "Lock vault",

@@ -5,6 +5,7 @@ import com.composables.icons.radix.Archive
 import com.composables.icons.radix.Check
 import com.composables.icons.radix.ChevronDown
 import com.composables.icons.radix.ChevronLeft
+import com.composables.icons.radix.Code
 import com.composables.icons.radix.Copy
 import com.composables.icons.radix.Cross2
 import com.composables.icons.radix.Desktop
@@ -38,6 +39,7 @@ object Icons {
     val Back = Radix.ChevronLeft
     val ChevronDown = Radix.ChevronDown
     val More = Radix.DotsHorizontal
+    val Snippet = Radix.Code
     val EyeOpen = Radix.EyeOpen
     val EyeClosed = Radix.EyeClosed
     val Key = Radix.Keyboard

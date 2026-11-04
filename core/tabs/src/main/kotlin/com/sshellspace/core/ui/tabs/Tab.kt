@@ -44,6 +44,17 @@ class TabItem(
         this._icon = icon
     }
 
+    private var _textInput: ((String, Boolean) -> Unit)? by mutableStateOf(null)
+    val acceptsText: Boolean get() = _textInput != null
+
+    override fun setTextInput(input: ((String, Boolean) -> Unit)?) {
+        this._textInput = input
+    }
+
+    fun sendText(text: String, pressEnter: Boolean) {
+        _textInput?.invoke(text, pressEnter)
+    }
+
     val content: @Composable () -> Unit = { contentProvider(this) }
 
     override fun equals(other: Any?) = other is TabItem && other.tab.id == tab.id

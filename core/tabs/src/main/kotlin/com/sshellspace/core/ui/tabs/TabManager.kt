@@ -11,5 +11,10 @@ interface TabManager {
 
     /** Closes every tab and clears the ViewModels of the fixed ones, back to how the app started. */
     fun reset()
-    fun onNewTabCreated(callback: (TabId) -> Unit)
+
+    /** Clears the ViewModels of the fixed tabs, leaving the other tabs and whatever runs in them alone. */
+    fun clearFixedTabs()
+
+    /** What each open tab was created from, in tab order, paired with its id. Fixed tabs aren't included. */
+    fun openTabs(): List<Pair<TabId, TabParams>>
 }

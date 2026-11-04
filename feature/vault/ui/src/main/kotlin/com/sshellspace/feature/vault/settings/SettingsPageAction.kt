@@ -17,6 +17,14 @@ sealed interface SettingsPageAction {
     data class SetTerminalTheme(val name: String?) : SettingsPageAction
     data class SetDefaultShell(val value: Shell) : SettingsPageAction
     data object LockVault : SettingsPageAction
+    data class ExportVault(val path: String) : SettingsPageAction
+    data class SetVaultEdit(val edit: VaultEdit?) : SettingsPageAction
+    data class ChangeVaultPassword(val current: String, val password: String, val confirmation: String) : SettingsPageAction
+    data object DeleteVault : SettingsPageAction
+    data object ClearVaultError : SettingsPageAction
+    data class SetAutoReconnect(val enabled: Boolean) : SettingsPageAction
+    data class SetRestoreTabs(val enabled: Boolean) : SettingsPageAction
+    data class SetKeepSessionsWhenLocked(val enabled: Boolean) : SettingsPageAction
     data class SetAutoLockMinutes(val minutes: Int) : SettingsPageAction
 
     sealed interface Shortcut : SettingsPageAction {

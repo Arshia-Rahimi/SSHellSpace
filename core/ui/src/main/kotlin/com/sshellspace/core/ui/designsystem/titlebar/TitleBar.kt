@@ -57,10 +57,10 @@ fun DecoratedWindowScope.TitleBar(
     val tabsState by tabManager.tabsState().collectAsStateWithLifecycle()
     var tabKeys by remember { mutableStateOf(emptyList<TabId>()) }
 
-    LaunchedEffect(Unit) {
-        tabManager.onNewTabCreated {
-            tabKeys += it
-        }
+    // Keeps the user's drag order while picking up tabs opened or closed anywhere else.
+    LaunchedEffect(tabsState.tabs) {
+        val open = tabsState.tabs.map { it.tab.id }
+        tabKeys = tabKeys.filter { it in open } + open.filter { it !in tabKeys }
     }
 
     Row(

@@ -35,6 +35,7 @@ import com.sshellspace.feature.vault.connections.address
 import com.sshellspace.feature.vault.connections.method
 
 private val CardShape = RoundedCornerShape(8.dp)
+private const val MAX_CARD_TAGS = 2
 
 @Composable
 fun ConnectionCard(
@@ -96,6 +97,7 @@ fun ConnectionCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Badge(connection.auth.method.label)
+                connection.options.tags.take(MAX_CARD_TAGS).forEach { Badge(it) }
                 if (jumpHostName != null) {
                     Text(
                         text = "via $jumpHostName",

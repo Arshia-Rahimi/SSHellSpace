@@ -36,6 +36,9 @@ class TerminalPreferencesRepositoryImpl(
         if (value.defaultShell != null) {
             newValue = newValue.copy(defaultShell = value.defaultShell!!)
         }
+        value.autoReconnect?.let { newValue = newValue.copy(autoReconnect = it) }
+        value.restoreTabs?.let { newValue = newValue.copy(restoreTabs = it) }
+        value.keepSessionsWhenLocked?.let { newValue = newValue.copy(keepSessionsWhenLocked = it) }
         datasource.set(key, JsonSerializer.encodeToString(TerminalPreferences.serializer(), newValue))
     }
 

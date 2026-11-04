@@ -3,6 +3,7 @@ package com.sshellspace
 import app.cash.sqldelight.db.SqlDriver
 import app.cash.sqldelight.driver.jdbc.sqlite.JdbcSqliteDriver
 import com.sshellspace.config.DEFAULT_TAB_ID
+import com.sshellspace.config.SessionRestore
 import com.sshellspace.config.createSqliteDriver
 import com.sshellspace.config.fixedTabItems
 import com.sshellspace.config.registerShortcuts
@@ -54,6 +55,16 @@ val AppModule = module {
         )
     }
     single { VaultAutoLock(vaultManager = get(), preferences = get()) }
+    single {
+        SessionRestore(
+            vaultManager = get(),
+            tabManager = get(),
+            savedSessions = get(),
+            terminalPreferences = get(),
+            connections = get(),
+            shellDiscovery = get(),
+        )
+    }
     single {
         TabManagerImpl(
             defaultTabId = DEFAULT_TAB_ID,

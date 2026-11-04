@@ -13,6 +13,6 @@ val TerminalUiModule = module {
         TerminalTabViewModel(tabController, shell, get())
     }
     viewModel { (tabController: TabController, params: SshTerminalParams) ->
-        SshTerminalTabViewModel(tabController, params, get())
+        SshTerminalTabViewModel(tabController, params, get(), get(), get())
     }
 }

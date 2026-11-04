@@ -21,6 +21,11 @@ class BossTermSshTerminal(
         session.close()
     }
 
+    // Without Enter it goes in as a paste, so a multi-line command waits for review instead of running line by line.
+    override fun sendText(text: String, pressEnter: Boolean) {
+        if (pressEnter) embeddedTerminalState.write("$text\n") else embeddedTerminalState.paste(text)
+    }
+
     @Composable
     override fun content(modifier: Modifier) {
         BossTerm(

@@ -3,6 +3,8 @@ package com.sshellspace.feature.vault.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sshellspace.core.domain.models.KeyChord
+import com.sshellspace.core.domain.models.VaultException
+import com.sshellspace.core.domain.models.VaultInfo
 import com.sshellspace.core.domain.repositories.CorePreferencesRepository
 import com.sshellspace.core.domain.repositories.VaultManager
 import com.sshellspace.core.ui.designsystem.theme.AppColorScheme
@@ -13,6 +15,8 @@ import com.sshellspace.feature.terminal.domain.ShellDiscoveryService
 import com.sshellspace.feature.terminal.domain.TerminalPreferencesRepository
 import com.sshellspace.feature.terminal.domain.models.Shell
 import com.sshellspace.feature.terminal.domain.models.UpdateTerminalPreferences
+import com.sshellspace.feature.vault.gate.credentialFrom
+import com.sshellspace.feature.vault.gate.passwordMismatch
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
@@ -37,6 +41,7 @@ class SettingsPageViewModel(
     private val recording = MutableStateFlow<ShortcutRecording?>(null)
 
     private val themeImportError = MutableStateFlow<String?>(null)
+    private val vaultForm = MutableStateFlow(VaultForm())
 
     private val appearance = combine(
         corePreferencesRepository.getTheme(),
@@ -58,8 +63,14 @@ class SettingsPageViewModel(
         appearance,
         vaultManager.activeVault,
         corePreferencesRepository.getAutoLockMinutes(),
-    ) { appearance, vault, autoLockMinutes ->
-        appearance.copy(vaultName = vault?.name, autoLockMinutes = autoLockMinutes)
+        vaultForm,
+    ) { appearance, vault, autoLockMinutes, form ->
+        appearance.copy(
+            vaultName = vault?.name,
+            vaultHasPassword = vault?.hasPassword ?: true,
+            autoLockMinutes = autoLockMinutes,
+            vaultForm = form,
+        )
     }
 
     val uiState = combine(
@@ -71,6 +82,9 @@ class SettingsPageViewModel(
     ) { appearance, terminalPrefs, shells, bindings, recording ->
         appearance.copy(
             terminalThemeName = terminalPrefs.terminalThemeName,
+            autoReconnect = terminalPrefs.autoReconnect,
+            restoreTabs = terminalPrefs.restoreTabs,
+            keepSessionsWhenLocked = terminalPrefs.keepSessionsWhenLocked,
             shells = listOf(SYSTEM_DEFAULT_SHELL) + shells.orEmpty(),
             defaultShell = terminalPrefs.defaultShell,
             isDiscoveringShells = shells == null,
@@ -116,6 +130,23 @@ class SettingsPageViewModel(
             }
 
             SettingsPageAction.LockVault -> viewModelScope.launch { vaultManager.lock() }
+            is SettingsPageAction.SetVaultEdit -> vaultForm.update { VaultForm(edit = action.edit) }
+            SettingsPageAction.ClearVaultError -> vaultForm.update { it.copy(error = null) }
+            is SettingsPageAction.ExportVault -> runVaultAction { vault ->
+                vaultManager.export(vault.id, action.path)
+                vaultForm.update { it.copy(notice = exportNotice(vault)) }
+            }
+            is SettingsPageAction.ChangeVaultPassword -> changeVaultPassword(action)
+            SettingsPageAction.DeleteVault -> runVaultAction { vault -> vaultManager.delete(vault.id) }
+            is SettingsPageAction.SetAutoReconnect -> viewModelScope.launch {
+                terminalPreferencesRepository.set(UpdateTerminalPreferences(autoReconnect = action.enabled))
+            }
+            is SettingsPageAction.SetKeepSessionsWhenLocked -> viewModelScope.launch {
+                terminalPreferencesRepository.set(UpdateTerminalPreferences(keepSessionsWhenLocked = action.enabled))
+            }
+            is SettingsPageAction.SetRestoreTabs -> viewModelScope.launch {
+                terminalPreferencesRepository.set(UpdateTerminalPreferences(restoreTabs = action.enabled))
+            }
             is SettingsPageAction.SetAutoLockMinutes -> viewModelScope.launch {
                 corePreferencesRepository.setAutoLockMinutes(action.minutes)
             }
@@ -126,6 +157,46 @@ class SettingsPageViewModel(
             is SettingsPageAction.Shortcut.Reset -> viewModelScope.launch {
                 shortcutHandler.resetChord(action.shortcut)
             }
+        }
+    }
+
+    private fun exportNotice(vault: VaultInfo) = if (vault.hasPassword) {
+        "Exported ${vault.name}. You'll need its password to import it."
+    } else {
+        "Exported ${vault.name}. It has no password, so anyone with that file can read it."
+    }
+
+    private fun changeVaultPassword(action: SettingsPageAction.ChangeVaultPassword) {
+        passwordMismatch(action.password, action.confirmation)?.let { problem ->
+            vaultForm.update { it.copy(error = problem) }
+            return
+        }
+        runVaultAction { vault ->
+            vaultManager.changeCredential(vault.id, credentialFrom(action.current), credentialFrom(action.password))
+            val message = if (action.password.isEmpty()) {
+                "Password removed. Exports you made earlier still open with the old one."
+            } else {
+                "Password changed. Exports you made earlier still open with the old one."
+            }
+            vaultForm.update { VaultForm(notice = message) }
+        }
+    }
+
+    /** Runs an action on the unlocked vault, one at a time, showing progress and any failure. */
+    private fun runVaultAction(block: suspend (VaultInfo) -> Unit) {
+        val vault = vaultManager.activeVault.value ?: return
+        if (vaultForm.value.isBusy) return
+        vaultForm.update { it.copy(isBusy = true, error = null, notice = null) }
+        viewModelScope.launch {
+            val error = try {
+                block(vault)
+                null
+            } catch (e: VaultException) {
+                e.message
+            } catch (e: IOException) {
+                "Couldn't access the file: ${e.message}"
+            }
+            vaultForm.update { it.copy(isBusy = false, error = error) }
         }
     }
 

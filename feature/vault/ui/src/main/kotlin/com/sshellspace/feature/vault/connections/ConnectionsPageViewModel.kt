@@ -7,6 +7,7 @@ import com.sshellspace.core.domain.models.SshConnection
 import com.sshellspace.core.ui.tabs.TabManager
 import com.sshellspace.feature.vault.connections.components.DeleteConnectionDialogEvent
 import com.sshellspace.feature.vault.domain.SaveSshConnectionResult
+import com.sshellspace.feature.vault.domain.SshConfigImporter
 import com.sshellspace.feature.vault.domain.SshConnectionRepository
 import com.sshellspace.feature.vault.domain.SshKeyRepository
 import com.sshellspace.feature.terminal.domain.models.SshTerminalParams
@@ -22,6 +23,7 @@ class ConnectionsPageViewModel(
     private val connectionRepository: SshConnectionRepository,
     sshKeyRepository: SshKeyRepository,
     private val tabManager: TabManager,
+    private val sshConfigImporter: SshConfigImporter,
 ) : ViewModel() {
     private val connections = connectionRepository.getConnections()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), emptyList())
@@ -32,13 +34,34 @@ class ConnectionsPageViewModel(
     private val sidebar = MutableStateFlow<ConnectionSidebarState?>(null)
     private val isSaveInFlight = MutableStateFlow(false)
     private val errorMessage = MutableStateFlow<String?>(null)
+    private val selectedTag = MutableStateFlow<String?>(null)
+    private val collapsedGroups = MutableStateFlow(emptySet<String>())
+    private val sshConfigImport = MutableStateFlow<SshConfigImportState?>(null)
+    private val notice = MutableStateFlow<String?>(null)
 
-    private val data = combine(connections, keys, searchQuery) { connections, keys, query ->
-        ConnectionsPageUiState(connections = connections, keys = keys, searchQuery = query)
+    private val data = combine(connections, keys, searchQuery, selectedTag, collapsedGroups) { connections, keys, query, tag, collapsed ->
+        ConnectionsPageUiState(
+            connections = connections,
+            keys = keys,
+            searchQuery = query,
+            // A tag can stop existing when its last connection is edited or deleted.
+            selectedTag = tag?.takeIf { selected -> connections.any { selected in it.options.tags } },
+            collapsedGroups = collapsed,
+        )
     }
 
-    val uiState = combine(data, sidebar, isSaveInFlight, errorMessage) { data, sidebar, inFlight, error ->
-        data.copy(sidebar = sidebar, isSaveInFlight = inFlight, errorMessage = error)
+    private val panels = combine(sidebar, sshConfigImport, notice) { sidebar, import, notice ->
+        Triple(sidebar, import, notice)
+    }
+
+    val uiState = combine(data, panels, isSaveInFlight, errorMessage) { data, (sidebar, import, notice), inFlight, error ->
+        data.copy(
+            sidebar = sidebar,
+            sshConfigImport = import,
+            notice = notice,
+            isSaveInFlight = inFlight,
+            errorMessage = error,
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), ConnectionsPageUiState())
 
     fun execute(action: ConnectionsPageAction) {
@@ -57,17 +80,59 @@ class ConnectionsPageViewModel(
             ConnectionsPageAction.SaveAndConnect -> save(connectAfter = true)
             ConnectionsPageAction.Duplicate -> duplicate()
             ConnectionsPageAction.RequestDelete -> requestDelete()
+            is ConnectionsPageAction.SetTagFilter -> selectedTag.update { action.tag }
+            is ConnectionsPageAction.ToggleGroup -> collapsedGroups.update {
+                if (action.name in it) it - action.name else it + action.name
+            }
+            ConnectionsPageAction.OpenSshConfigImport -> openSshConfigImport()
+            is ConnectionsPageAction.ToggleSshConfigHost -> sshConfigImport.update { state ->
+                state?.copy(
+                    selected = if (action.alias in state.selected) {
+                        state.selected - action.alias
+                    } else {
+                        state.selected + action.alias
+                    },
+                )
+            }
+            ConnectionsPageAction.ConfirmSshConfigImport -> confirmSshConfigImport()
+            ConnectionsPageAction.DismissNotice -> notice.update { null }
         }
     }
 
     private fun openSidebar(state: ConnectionSidebarState) {
         errorMessage.update { null }
+        sshConfigImport.update { null }
         sidebar.update { state }
     }
 
     private fun closeSidebar() {
         errorMessage.update { null }
+        sshConfigImport.update { null }
         sidebar.update { null }
+    }
+
+    private fun openSshConfigImport() {
+        sidebar.update { null }
+        viewModelScope.launch {
+            val hosts = sshConfigImporter.preview()
+            sshConfigImport.update {
+                SshConfigImportState(
+                    hosts = hosts,
+                    selected = hosts.filterNot { it.alreadySaved }.mapTo(mutableSetOf()) { it.alias },
+                )
+            }
+        }
+    }
+
+    private fun confirmSshConfigImport() {
+        val state = sshConfigImport.value ?: return
+        sshConfigImport.update { it?.copy(isImporting = true) }
+        viewModelScope.launch {
+            val result = sshConfigImporter.import(state.hosts.filter { it.alias in state.selected })
+            sshConfigImport.update { null }
+            val count = "Imported ${result.imported} ${if (result.imported == 1) "host" else "hosts"}."
+            notice.update { (listOf(count) + result.problems).joinToString(" ") }
+        }
     }
 
     private fun updateSidebar(transform: ConnectionSidebarState.() -> ConnectionSidebarState) {

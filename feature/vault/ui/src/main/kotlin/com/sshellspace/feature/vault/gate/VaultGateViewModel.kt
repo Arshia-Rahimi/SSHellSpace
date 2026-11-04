@@ -2,12 +2,9 @@ package com.sshellspace.feature.vault.gate
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.sshellspace.core.domain.models.MIN_VAULT_PASSWORD_LENGTH
-import com.sshellspace.core.domain.models.PasswordStrength
 import com.sshellspace.core.domain.models.VaultCredential
 import com.sshellspace.core.domain.models.VaultException
 import com.sshellspace.core.domain.models.VaultInfo
-import com.sshellspace.core.domain.models.vaultPasswordStrength
 import com.sshellspace.core.domain.repositories.VaultManager
 import java.io.IOException
 import kotlin.uuid.Uuid
@@ -22,8 +19,6 @@ sealed interface VaultGateMode {
     data class Select(val selectedId: Uuid? = null) : VaultGateMode
     data object Create : VaultGateMode
     data class Import(val path: String) : VaultGateMode
-    data class ChangePassword(val vault: VaultInfo) : VaultGateMode
-    data class Delete(val vault: VaultInfo) : VaultGateMode
 }
 
 data class VaultGateUiState(
@@ -48,21 +43,19 @@ sealed interface VaultGateAction {
     ) : VaultGateAction
     data class ShowImport(val path: String) : VaultGateAction
     data class Import(val path: String, val password: String) : VaultGateAction
-    data class Export(val vault: VaultInfo, val path: String) : VaultGateAction
-    data class ShowDelete(val vault: VaultInfo) : VaultGateAction
-    data class Delete(val vault: VaultInfo) : VaultGateAction
-    data class ShowChangePassword(val vault: VaultInfo) : VaultGateAction
-    data class ChangePassword(
-        val id: Uuid,
-        val current: String,
-        val password: String,
-        val confirmation: String,
-    ) : VaultGateAction
     data object BackToList : VaultGateAction
 
     /** The user started correcting their input, so the last error no longer applies. */
     data object ClearError : VaultGateAction
 }
+
+/** An empty password means the vault has none. */
+internal fun credentialFrom(password: String): VaultCredential =
+    if (password.isEmpty()) VaultCredential.None else VaultCredential.Password(password)
+
+/** The one check on a new password. A weak password is the user's call, but a typo here would lock them out. */
+internal fun passwordMismatch(password: String, confirmation: String): String? =
+    "The passwords don't match.".takeIf { password.isNotEmpty() && password != confirmation }
 
 class VaultGateViewModel(
     private val vaultManager: VaultManager,
@@ -85,23 +78,11 @@ class VaultGateViewModel(
             is VaultGateAction.SelectVault -> setMode(VaultGateMode.Select(action.id))
             VaultGateAction.ShowCreate -> setMode(VaultGateMode.Create)
             is VaultGateAction.ShowImport -> setMode(VaultGateMode.Import(action.path))
-            is VaultGateAction.ShowChangePassword -> setMode(VaultGateMode.ChangePassword(action.vault))
-            is VaultGateAction.ShowDelete -> setMode(VaultGateMode.Delete(action.vault))
             VaultGateAction.BackToList -> setMode(VaultGateMode.Select())
             VaultGateAction.ClearError -> form.update { it.copy(error = null) }
             is VaultGateAction.Unlock -> unlock(action)
             is VaultGateAction.Create -> create(action)
             is VaultGateAction.Import -> import(action)
-            is VaultGateAction.Export -> run {
-                vaultManager.export(action.vault.id, action.path)
-                form.update { it.copy(notice = "Exported ${action.vault.name}. You'll need its password to import it.") }
-            }
-            is VaultGateAction.Delete -> run {
-                vaultManager.delete(action.vault.id)
-                setMode(VaultGateMode.Select())
-                form.update { it.copy(notice = "Deleted ${action.vault.name}.") }
-            }
-            is VaultGateAction.ChangePassword -> changePassword(action)
         }
     }
 
@@ -115,22 +96,19 @@ class VaultGateViewModel(
     }
 
     private fun unlock(action: VaultGateAction.Unlock) {
-        if (action.password.isEmpty()) {
+        val hasPassword = vaultManager.vaults.value.firstOrNull { it.id == action.id }?.hasPassword ?: true
+        if (hasPassword && action.password.isEmpty()) {
             form.update { it.copy(error = "Enter the vault's password.") }
             return
         }
-        run { vaultManager.unlock(action.id, VaultCredential.Password(action.password)) }
+        run { vaultManager.unlock(action.id, credentialFrom(action.password)) }
     }
 
     private fun import(action: VaultGateAction.Import) {
-        if (action.password.isEmpty()) {
-            form.update { it.copy(error = "Enter the password this vault was exported with.") }
-            return
-        }
         run {
-            val imported = vaultManager.import(action.path, VaultCredential.Password(action.password))
+            val imported = vaultManager.import(action.path, credentialFrom(action.password))
             setMode(VaultGateMode.Select(imported.id))
-            form.update { it.copy(notice = "Imported ${imported.name}. Enter its password to unlock it.") }
+            form.update { it.copy(notice = "Imported ${imported.name}.") }
         }
     }
 
@@ -138,40 +116,15 @@ class VaultGateViewModel(
         val problem = if (action.name.isBlank()) {
             "Give the vault a name."
         } else {
-            passwordProblem(action.password, action.confirmation)
+            passwordMismatch(action.password, action.confirmation)
         }
         if (problem != null) {
             form.update { it.copy(error = problem) }
             return
         }
         run {
-            vaultManager.create(action.name, VaultCredential.Password(action.password), action.moveUnencryptedData)
+            vaultManager.create(action.name, credentialFrom(action.password), action.moveUnencryptedData)
         }
-    }
-
-    private fun changePassword(action: VaultGateAction.ChangePassword) {
-        val problem = passwordProblem(action.password, action.confirmation)
-        if (problem != null) {
-            form.update { it.copy(error = problem) }
-            return
-        }
-        run {
-            vaultManager.changeCredential(
-                action.id,
-                VaultCredential.Password(action.current),
-                VaultCredential.Password(action.password),
-            )
-            setMode(VaultGateMode.Select(action.id))
-            form.update { it.copy(notice = "Password changed. Exports you made earlier still use the old one.") }
-        }
-    }
-
-    private fun passwordProblem(password: String, confirmation: String) = when {
-        password.length < MIN_VAULT_PASSWORD_LENGTH ->
-            "The password needs at least $MIN_VAULT_PASSWORD_LENGTH characters."
-        vaultPasswordStrength(password) == PasswordStrength.Weak -> "This password is too easy to guess."
-        password != confirmation -> "The passwords don't match."
-        else -> null
     }
 
     private fun setMode(mode: VaultGateMode) {

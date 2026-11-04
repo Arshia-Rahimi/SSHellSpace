@@ -73,13 +73,23 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 ### Vaults
 
 - Connections, SSH keys and port forwards belong to an encrypted vault. The app starts on `VaultGateScreen` (`feature/vault/ui/.../gate`) and shows tabs only once `VaultManager.activeVault` is set. Preferences (theme, shortcuts, terminal) stay in the unencrypted `sshellspace.db`, because the theme has to apply to the gate.
-- Each vault is one file, `vaults/<id>.sshv`, in the user-data dir (`core/data/.../vault/VaultFile.kt` documents the format). A random vault key encrypts the SQLite image with AES-256-GCM, and each `KeySlot` wraps that key for one way of authenticating. Password slots use Argon2id. **To add biometric unlock**, add a `VaultCredential` case and a `KeySlot` case, with no change to the data encryption.
-- An unlocked vault's database exists only in memory (`SQLiteConnection.serialize`/`deserialize`). `VaultSqlDriver` re-encrypts it to disk after every write, from `notifyListeners`. Vault datasources are singletons reading through that driver, which throws while locked, so code touching vault data must only run while a vault is unlocked. Use `VaultManager.beforeLock` to shut down anything holding a vault's connections.
+- Each vault is one file, `vaults/<id>.sshv`, in the user-data dir (`core/data/.../vault/VaultFile.kt` documents the format). A random vault key encrypts the SQLite image with AES-256-GCM, and each `KeySlot` wraps that key for one way of authenticating. Password slots use Argon2id. A vault with no password has a `KeySlot.Unprotected`, with the vault key in the header in the clear, so its file protects nothing. Password strength only ever warns (`NewPasswordFields`); only a mismatched confirmation blocks. **To add biometric unlock**, add a `VaultCredential` case and a `KeySlot` case, with no change to the data encryption.
+- An unlocked vault's database exists only in memory (`SQLiteConnection.serialize`/`deserialize`). `VaultSqlDriver` re-encrypts it to disk after every write, from `notifyListeners`. Vault datasources are singletons reading through that driver, which throws while locked, so code touching vault data must only run while a vault is unlocked. Reconnecting therefore waits for an unlock.
+- A lock normally only hides terminals and port forwards: `VaultSessions` (app) clears the fixed tabs' ViewModels, which hold vault data, and leaves sessions running. Opening a different vault, or deleting this one, closes them. `TerminalPreferences.keepSessionsWhenLocked` turns this off, so every lock closes them.
 - Schema migrations run per vault when it unlocks, in `OpenVault.load`. The same `Database` schema is used for vaults and the app database, so each has empty tables it doesn't use.
 - Export copies the already encrypted file. Import treats the file as hostile even when the password is right: `VaultFile` caps its size, key slots and Argon2 costs, and `loadImage` refuses a damaged database or one with triggers or views.
 - `VaultAutoLock` locks after the idle time in `CorePreference.autoLockMinutes` (default 15, 0 turns it off) and on waking from sleep. Only key and pointer input from `Main.kt` count as activity. The JVM has no portable way to detect the OS screen locking.
+- The gate (`VaultGateScreen`) only unlocks, creates and imports. Changing a password, export and delete live in Settings > Vault, so they need the vault unlocked. Forgetting a password therefore means the vault can't be deleted from the app.
 - Changing a password (`changeCredential`) re-encrypts under a new vault key. Saved passwords in the connection form can't be revealed; only newly typed ones can.
+- `SessionRestore` (app) saves a vault's open tabs in that vault's `preferences_table` through `VaultPreferencesDatasource`, and reopens them when a vault unlocks with no tabs open, such as after a restart. Import deletes that table's contents, and a saved local shell only reopens if this computer offers that shell: otherwise a crafted vault file could run a program on unlock with no click.
 - Tests must never point `VaultManagerImpl` at the real user-data dir: creating a vault with `moveUnencryptedData` erases those tables from `sshellspace.db`.
+
+### Hosts, snippets and quick connect
+
+- `SshConnectionOptions.group` and `tags` organize the Vault page. They live in the `options` JSON column, so they needed no migration.
+- Snippets (`Snippet`, `snippets` table, Snippets page) are per vault. `QuickConnectPalette` (feature/newtab, `AppShortcut.QuickConnect`) searches hosts and snippets. A snippet goes to the current tab through `TabController.setTextInput`, which each terminal ViewModel sets while it has a live terminal.
+- Dialog ViewModels are scoped to one unlock in `Main.kt`, because they hold vault data.
+- `SshConfigImporter` reads `~/.ssh/config` only when the user asks to import. The app still never reads it while connecting.
 
 ### Custom themes
 
@@ -100,7 +110,8 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
   - **Host keys:** host keys are checked against `~/.ssh/known_hosts` by `PromptingKnownHostsVerifier`. It matches by the saved host name, even when going through a tunnel. A changed key needs the host name typed to accept, removes the saved password from that attempt, and is refused outright with `strictHostKeyChecking`.
   - **Algorithms:** `createSshClient` removes CBC ciphers, SHA-1 MACs and `ssh-rsa` signatures, so very old servers can't connect.
   - **SSH agent:** the agent client (`ssh/agent/SystemSshAgent.kt`) uses JDK Unix sockets or Windows named pipes. MINA's `agent.unix` client needs Tomcat's native APR library, so it isn't used.
-  - **`~/.ssh/config` is ignored on purpose.**
+  - **`~/.ssh/config` is ignored on purpose** when connecting. Importing from it is a separate, one-time copy.
+  - **Reconnecting:** `SshTerminalTabViewModel` retries when `waitForExit` returns `SESSION_LOST_EXIT_CODE` (no exit status), never after a normal exit. A replaced terminal's late exit callback is ignored.
 - User questions (host key, password, passphrase, 2FA) go through `SshPrompter`. Text a server supplies goes through `fromServer` and is marked as coming from the server, since it could otherwise pose as the app asking for the vault password.
   - `SshTerminalTabViewModel` implements it by showing a prompt state and waiting for the answer.
   - MINA's callbacks are blocking, so `ConnectionContext.ask` uses `runBlocking` on the MINA thread.

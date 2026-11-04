@@ -16,8 +16,13 @@ class TerminalTabViewModel(
 
     val terminal: Terminal = BossTermTerminal(shell)
 
+    init {
+        tabController.setTextInput(terminal::sendText)
+    }
+
     override fun onCleared() {
         super.onCleared()
+        tabController.setTextInput(null)
         terminal.clear()
     }
 }

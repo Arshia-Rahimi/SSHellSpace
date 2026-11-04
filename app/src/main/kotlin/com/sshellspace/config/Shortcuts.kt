@@ -1,9 +1,11 @@
 package com.sshellspace.config
 
+import com.sshellspace.core.domain.emit
 import com.sshellspace.core.domain.repositories.VaultManager
 import com.sshellspace.core.ui.shortcuts.AppShortcut
 import com.sshellspace.core.ui.shortcuts.ShortcutHandler
 import com.sshellspace.core.ui.tabs.TabManager
+import com.sshellspace.feature.newtab.ui.QuickConnectDialogEvent
 import com.sshellspace.feature.terminal.domain.ShellDiscoveryService
 import com.sshellspace.feature.terminal.domain.TerminalPreferencesRepository
 import com.sshellspace.feature.terminal.domain.models.TerminalParams
@@ -32,6 +34,9 @@ fun Koin.registerShortcuts() {
             }
             tabManager.createNewTab(TerminalParams(shell))
         }
+    }
+    shortcutHandler.register(AppShortcut.QuickConnect) {
+        QuickConnectDialogEvent.emit()
     }
     shortcutHandler.register(AppShortcut.LockVault) {
         shortcutScope.launch { vaultManager.lock() }

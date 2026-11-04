@@ -16,12 +16,28 @@ data class SettingsPageUiState(
     val terminalThemeName: String? = null,
     val themeImportError: String? = null,
     val vaultName: String? = null,
+    val vaultHasPassword: Boolean = true,
+    val vaultForm: VaultForm = VaultForm(),
     val autoLockMinutes: Int = DEFAULT_AUTO_LOCK_MINUTES,
+    val autoReconnect: Boolean = true,
+    val restoreTabs: Boolean = true,
+    val keepSessionsWhenLocked: Boolean = true,
     val shells: List<Shell> = listOf(SYSTEM_DEFAULT_SHELL),
     val defaultShell: Shell = SYSTEM_DEFAULT_SHELL,
     val isDiscoveringShells: Boolean = true,
     val shortcuts: List<ShortcutBinding> = emptyList(),
     val recording: ShortcutRecording? = null,
+)
+
+/** A vault action that needs more than one click, open in the Vault section. */
+enum class VaultEdit { ChangePassword, Delete }
+
+data class VaultForm(
+    val edit: VaultEdit? = null,
+    val isBusy: Boolean = false,
+    val error: String? = null,
+    /** Confirms something that finished, such as an export. */
+    val notice: String? = null,
 )
 
 data class ShortcutBinding(

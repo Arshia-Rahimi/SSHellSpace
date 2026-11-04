@@ -1,6 +1,8 @@
 package com.sshellspace.feature.vault.data
 
 import com.sshellspace.feature.vault.domain.PortForwardRepository
+import com.sshellspace.feature.vault.domain.SnippetRepository
+import com.sshellspace.feature.vault.domain.SshConfigImporter
 import com.sshellspace.feature.vault.domain.SshConnectionRepository
 import com.sshellspace.feature.vault.domain.SshKeyRepository
 import org.koin.dsl.bind
@@ -11,4 +13,6 @@ val VaultDataModule = module {
     single<SshKeyRepositoryImpl>() bind SshKeyRepository::class
     single<SshConnectionRepositoryImpl>() bind SshConnectionRepository::class
     single<PortForwardRepositoryImpl>() bind PortForwardRepository::class
+    single<SnippetRepositoryImpl>() bind SnippetRepository::class
+    single { SshConfigImporterImpl(connectionRepository = get()) } bind SshConfigImporter::class
 }

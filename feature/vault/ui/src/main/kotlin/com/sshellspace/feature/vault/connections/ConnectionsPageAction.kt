@@ -22,4 +22,14 @@ sealed interface ConnectionsPageAction {
     data object SaveAndConnect : ConnectionsPageAction
     data object Duplicate : ConnectionsPageAction
     data object RequestDelete : ConnectionsPageAction
+
+    /** Shows only connections with [tag], or all of them when it's null. */
+    data class SetTagFilter(val tag: String?) : ConnectionsPageAction
+    data class ToggleGroup(val name: String) : ConnectionsPageAction
+
+    /** Reads `~/.ssh/config` and shows its hosts to choose from. */
+    data object OpenSshConfigImport : ConnectionsPageAction
+    data class ToggleSshConfigHost(val alias: String) : ConnectionsPageAction
+    data object ConfirmSshConfigImport : ConnectionsPageAction
+    data object DismissNotice : ConnectionsPageAction
 }

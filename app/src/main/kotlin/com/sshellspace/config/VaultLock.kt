@@ -2,22 +2,26 @@ package com.sshellspace.config
 
 import com.sshellspace.core.data.vault.VaultAutoLock
 import com.sshellspace.core.domain.repositories.VaultManager
-import com.sshellspace.core.ui.tabs.TabManager
 import com.sshellspace.feature.terminal.domain.PortForwardingService
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import org.koin.core.Koin
 
-/** Shuts down everything using a vault's connections when it locks, so no session outlives the password that opened it. */
+/** Connects what happens to running sessions, and the background jobs, to the vault lifecycle. */
 fun Koin.registerVaultLock() {
-    val tabManager = get<TabManager>()
-
-    get<VaultManager>().beforeLock {
-        withContext(Dispatchers.Main) { tabManager.reset() }
-        get<PortForwardingService>().stopAll()
+    val sessions = VaultSessions(
+        tabManager = get(),
+        portForwarding = { get<PortForwardingService>() },
+        terminalPreferences = get(),
+    )
+    get<VaultManager>().apply {
+        beforeLock(sessions::onLocking)
+        beforeUnlock(sessions::onUnlocking)
+        afterDelete(sessions::onDeleted)
     }
-    CoroutineScope(SupervisorJob() + Dispatchers.Default).launch { get<VaultAutoLock>().run() }
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    scope.launch { get<VaultAutoLock>().run() }
+    scope.launch { get<SessionRestore>().run() }
 }

@@ -44,6 +44,8 @@ import com.sshellspace.core.domain.models.ThemePreference
 import com.sshellspace.core.ui.designsystem.adaptive.currentWindowClass
 import com.sshellspace.core.ui.designsystem.components.Button
 import com.sshellspace.core.ui.designsystem.components.Dropdown
+import com.sshellspace.core.ui.designsystem.components.Switch
+import com.sshellspace.core.ui.designsystem.components.TextField
 import com.sshellspace.core.ui.designsystem.theme.AppColorScheme
 import com.sshellspace.core.ui.designsystem.theme.border
 import com.sshellspace.core.ui.designsystem.theme.colors
@@ -55,6 +57,9 @@ import com.sshellspace.core.ui.designsystem.theme.textSecondary
 import com.sshellspace.core.ui.designsystem.theme.toColor
 import com.sshellspace.core.ui.shortcuts.label
 import com.sshellspace.core.ui.shortcuts.toKeyChord
+import com.sshellspace.feature.vault.gate.NewPasswordFields
+import com.sshellspace.feature.vault.gate.PasswordField
+import com.sshellspace.feature.vault.gate.pickVaultExportFile
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
@@ -101,11 +106,17 @@ private fun SettingsSections(
     uiState.vaultName?.let { vaultName ->
         SettingsSection(
             title = "Vault",
-            description = "\"$vaultName\" is unlocked. Locking closes every tab and port forward.",
+            description = "\"$vaultName\" is unlocked." +
+                if (uiState.vaultHasPassword) "" else " It has no password, so it isn't protected.",
         ) {
-            OptionButton(selected = false, onClick = { onAction(SettingsPageAction.LockVault) }) {
-                Text("Lock vault")
-            }
+            VaultActions(vaultName, uiState, onAction)
+            ToggleRow(
+                title = "Keep terminals and port forwards running while locked",
+                description = "Locking then only hides them, and they're still there when you unlock. Their output " +
+                    "stays in memory and forwards keep accepting connections. Turn this off to close them on every lock.",
+                checked = uiState.keepSessionsWhenLocked,
+                onCheckedChange = { onAction(SettingsPageAction.SetKeepSessionsWhenLocked(it)) },
+            )
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(
                     "Lock when idle or when this computer sleeps. Output in a terminal doesn't count as activity.",
@@ -144,6 +155,18 @@ private fun SettingsSections(
         description = "The terminal's colors, and the shell that new local terminal tabs start with.",
     ) {
         TerminalThemeSelector(uiState, onAction)
+        ToggleRow(
+            title = "Reconnect dropped SSH sessions",
+            description = "Keeps trying for about a minute. Sessions you end yourself, such as with exit, stay closed.",
+            checked = uiState.autoReconnect,
+            onCheckedChange = { onAction(SettingsPageAction.SetAutoReconnect(it)) },
+        )
+        ToggleRow(
+            title = "Reopen tabs from last time",
+            description = "After restarting the app, reopens this vault's tabs as new sessions.",
+            checked = uiState.restoreTabs,
+            onCheckedChange = { onAction(SettingsPageAction.SetRestoreTabs(it)) },
+        )
         Dropdown(
             options = uiState.shells,
             selected = uiState.defaultShell,
@@ -167,6 +190,158 @@ private fun SettingsSections(
                 onAction = onAction,
             )
         }
+    }
+}
+
+@Composable
+private fun VaultActions(
+    vaultName: String,
+    uiState: SettingsPageUiState,
+    onAction: (SettingsPageAction) -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    val form = uiState.vaultForm
+
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            OptionButton(selected = false, onClick = { onAction(SettingsPageAction.LockVault) }) {
+                Text("Lock vault")
+            }
+            OptionButton(
+                selected = form.edit == VaultEdit.ChangePassword,
+                onClick = {
+                    val next = VaultEdit.ChangePassword.takeUnless { form.edit == it }
+                    onAction(SettingsPageAction.SetVaultEdit(next))
+                },
+            ) {
+                Text(if (uiState.vaultHasPassword) "Change password" else "Add a password")
+            }
+            OptionButton(
+                selected = false,
+                onClick = {
+                    scope.launch {
+                        pickVaultExportFile(vaultName)?.let { onAction(SettingsPageAction.ExportVault(it)) }
+                    }
+                },
+            ) {
+                Text("Export…")
+            }
+            OptionButton(
+                selected = form.edit == VaultEdit.Delete,
+                onClick = {
+                    onAction(SettingsPageAction.SetVaultEdit(VaultEdit.Delete.takeUnless { form.edit == it }))
+                },
+            ) {
+                Text("Delete vault", color = Theme[colors][error])
+            }
+        }
+        form.notice?.let { Text(it, color = Theme[colors][textSecondary]) }
+        when (form.edit) {
+            VaultEdit.ChangePassword -> ChangeVaultPasswordForm(uiState.vaultHasPassword, form, onAction)
+            VaultEdit.Delete -> DeleteVaultForm(vaultName, form, onAction)
+            null -> Unit
+        }
+        form.error?.let { Text(it, color = Theme[colors][error]) }
+    }
+}
+
+@Composable
+private fun ChangeVaultPasswordForm(
+    hasPassword: Boolean,
+    form: VaultForm,
+    onAction: (SettingsPageAction) -> Unit,
+) {
+    var current by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
+    var confirmation by remember { mutableStateOf("") }
+    val submit = { onAction(SettingsPageAction.ChangeVaultPassword(current, password, confirmation)) }
+    val clearError = { onAction(SettingsPageAction.ClearVaultError) }
+
+    Column(
+        modifier = Modifier.widthIn(max = 420.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        if (hasPassword) {
+            PasswordField(
+                value = current,
+                onValueChange = {
+                    current = it
+                    clearError()
+                },
+                label = "Current password",
+                enabled = !form.isBusy,
+                isError = form.error != null,
+            )
+        }
+        NewPasswordFields(
+            password = password,
+            onPasswordChange = {
+                password = it
+                clearError()
+            },
+            confirmation = confirmation,
+            onConfirmationChange = {
+                confirmation = it
+                clearError()
+            },
+            enabled = !form.isBusy,
+            onSubmit = submit,
+            label = "New password",
+        )
+        OptionButton(selected = true, onClick = submit) {
+            Text(
+                when {
+                    form.isBusy -> "Working…"
+                    password.isEmpty() -> "Remove the password"
+                    else -> "Save new password"
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun DeleteVaultForm(
+    vaultName: String,
+    form: VaultForm,
+    onAction: (SettingsPageAction) -> Unit,
+) {
+    var confirmation by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier.widthIn(max = 420.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            "Its hosts, keys, snippets and saved passwords are removed from this computer for good, and its open " +
+                "terminals close. Export a copy first if you might want them back.",
+            color = Theme[colors][textSecondary],
+        )
+        TextField(
+            value = confirmation,
+            onValueChange = { confirmation = it },
+            label = "Type $vaultName to confirm",
+            enabled = !form.isBusy,
+        )
+        if (confirmation.trim() == vaultName) {
+            OptionButton(selected = true, onClick = { onAction(SettingsPageAction.DeleteVault) }) {
+                Text(if (form.isBusy) "Deleting…" else "Delete $vaultName permanently", color = Theme[colors][error])
+            }
+        }
+    }
+}
+
+@Composable
+private fun ToggleRow(title: String, description: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Column(modifier = Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+            Text(title)
+            Text(description, color = Theme[colors][textSecondary])
+        }
+        Switch(checked = checked, onCheckedChange = onCheckedChange, accessibilityLabel = title)
     }
 }
 

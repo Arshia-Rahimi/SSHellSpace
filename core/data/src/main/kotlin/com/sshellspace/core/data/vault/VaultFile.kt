@@ -1,7 +1,6 @@
 package com.sshellspace.core.data.vault
 
 import com.sshellspace.core.common.JsonSerializer
-import com.sshellspace.core.domain.models.MIN_VAULT_PASSWORD_LENGTH
 import com.sshellspace.core.domain.models.VaultCredential
 import com.sshellspace.core.domain.models.VaultException
 import java.nio.BufferUnderflowException
@@ -47,6 +46,8 @@ internal fun randomBytes(size: Int) = ByteArray(size).also(secureRandom::nextByt
 
 internal fun newVaultKey() = randomBytes(KEY_BYTES)
 
+internal val VaultHeader.hasPassword: Boolean get() = slots.none { it is KeySlot.Unprotected }
+
 /**
  * The readable part of a vault file. A random vault key encrypts the contents and each [KeySlot] holds that key
  * encrypted for one way of authenticating, so a new method or a new password never re-encrypts the data.
@@ -70,6 +71,14 @@ internal sealed interface KeySlot {
         val nonce: String,
         @SerialName("wrapped_key") val wrappedKey: String,
     ) : KeySlot
+
+    /**
+     * A vault with no password: the vault key sits in the header in the clear. The file format and writes stay the same,
+     * so a password can be added later, but this protects nothing against anyone holding the file.
+     */
+    @Serializable
+    @SerialName("none")
+    data class Unprotected(val key: String) : KeySlot
 }
 
 /**
@@ -141,13 +150,19 @@ internal fun unwrapKey(header: VaultHeader, credential: VaultCredential): ByteAr
         slots.firstNotNullOfOrNull { unwrapPasswordSlot(it, header.id, credential.value) }
             ?: throw VaultException.WrongCredential()
     }
+    VaultCredential.None -> {
+        val slot = header.slots.filterIsInstance<KeySlot.Unprotected>().firstOrNull()
+            ?: throw VaultException.WrongCredential()
+        try {
+            slot.key.fromBase64().takeIf { it.size == KEY_BYTES }
+        } catch (_: IllegalArgumentException) {
+            null
+        } ?: throw VaultException.Invalid("The vault file is damaged.")
+    }
 }
 
 internal fun newKeySlot(vaultId: String, credential: VaultCredential, key: ByteArray): KeySlot = when (credential) {
     is VaultCredential.Password -> {
-        if (credential.value.length < MIN_VAULT_PASSWORD_LENGTH) {
-            throw VaultException.Invalid("The password needs at least $MIN_VAULT_PASSWORD_LENGTH characters.")
-        }
         val salt = randomBytes(SALT_BYTES)
         val nonce = randomBytes(NONCE_BYTES)
         val wrappingKey = argon2(credential.value, salt, ARGON2_MEMORY_KIB, ARGON2_ITERATIONS, ARGON2_PARALLELISM)
@@ -162,6 +177,7 @@ internal fun newKeySlot(vaultId: String, credential: VaultCredential, key: ByteA
             wrappedKey = wrapped.toBase64(),
         )
     }
+    VaultCredential.None -> KeySlot.Unprotected(key.toBase64())
 }
 
 /** Null when [password] isn't the one this slot was made with. */

@@ -112,6 +112,24 @@ fun ConnectionSidebar(
                 isError = errors.username != null,
             )
         }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TextField(
+                value = form.group,
+                onValueChange = { edit { copy(group = it) } },
+                modifier = Modifier.weight(1f),
+                label = "Group",
+                placeholder = "Production",
+                enabled = enabled,
+            )
+            TextField(
+                value = form.tags,
+                onValueChange = { edit { copy(tags = it) } },
+                modifier = Modifier.weight(1f),
+                label = "Tags",
+                placeholder = "web, eu-west",
+                enabled = enabled,
+            )
+        }
 
         Separator()
         AuthSection(

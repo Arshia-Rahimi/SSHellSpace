@@ -10,6 +10,7 @@ import com.sshellspace.core.domain.models.SshConnection
 import com.sshellspace.core.domain.models.SshConnectionAuth
 import com.sshellspace.feature.terminal.data.ssh.ConnectionContext
 import com.sshellspace.feature.terminal.data.ssh.agent.SshAgentLocator
+import com.sshellspace.feature.terminal.domain.SESSION_LOST_EXIT_CODE
 import com.sshellspace.feature.terminal.domain.SecretPrompt
 import com.sshellspace.feature.terminal.domain.ShellSession
 import com.sshellspace.feature.terminal.domain.SshConnectResult
@@ -339,7 +340,7 @@ private class MinaSshShellHandle(
 
     override suspend fun waitForExit(): Int = withContext(Dispatchers.IO) {
         channel.waitFor(setOf(ClientChannelEvent.CLOSED), 0L)
-        (channel.exitStatus ?: -1).also {
+        (channel.exitStatus ?: SESSION_LOST_EXIT_CODE).also {
             exitCodeRef.set(it)
             session.close()
         }

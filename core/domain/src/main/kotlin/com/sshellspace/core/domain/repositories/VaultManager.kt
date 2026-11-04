@@ -34,6 +34,12 @@ interface VaultManager {
     /** Registers [action] to run as a vault locks, while its data can still be written. */
     fun beforeLock(action: suspend () -> Unit)
 
+    /** Registers [action] to run just before a vault is shown as unlocked, once its data can be read. */
+    fun beforeUnlock(action: suspend (VaultInfo) -> Unit)
+
+    /** Registers [action] to run after a vault is deleted. */
+    fun afterDelete(action: suspend (Uuid) -> Unit)
+
     /** Writes vault [id] to [destination] as an encrypted file. Its password is needed to import it again. */
     suspend fun export(id: Uuid, destination: String)
 
@@ -41,8 +47,8 @@ interface VaultManager {
     suspend fun import(source: String, credential: VaultCredential): VaultInfo
 
     /**
-     * Replaces the password of locked vault [id] and re-encrypts it under a new vault key, so nothing known about the old
-     * key opens the new file. Copies made earlier, such as exports, still open with the old password.
+     * Replaces the password of vault [id], which may be unlocked, and re-encrypts it under a new vault key, so nothing
+     * known about the old key opens the new file. Copies made earlier, such as exports, still open with the old password.
      */
     suspend fun changeCredential(id: Uuid, current: VaultCredential, new: VaultCredential)
 

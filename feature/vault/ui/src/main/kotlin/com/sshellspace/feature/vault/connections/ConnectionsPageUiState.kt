@@ -5,6 +5,7 @@ import com.sshellspace.core.domain.models.SshConnection
 import com.sshellspace.core.domain.models.SshConnectionAuth
 import com.sshellspace.core.domain.models.SshConnectionOptions
 import com.sshellspace.core.domain.models.SshKeyInfo
+import com.sshellspace.feature.vault.domain.SshConfigHost
 import com.sshellspace.feature.vault.domain.SshConnectionDraft
 import kotlin.uuid.Uuid
 
@@ -15,16 +16,33 @@ data class ConnectionsPageUiState(
     val sidebar: ConnectionSidebarState? = null,
     val isSaveInFlight: Boolean = false,
     val errorMessage: String? = null,
+    val selectedTag: String? = null,
+    val collapsedGroups: Set<String> = emptySet(),
+    val sshConfigImport: SshConfigImportState? = null,
+    /** Result of the last SSH config import. */
+    val notice: String? = null,
 ) {
     val filteredConnections: List<SshConnection>
         get() {
             val query = searchQuery.trim()
-            if (query.isEmpty()) return connections
-            return connections.filter {
-                it.name.contains(query, ignoreCase = true) ||
-                    it.host.contains(query, ignoreCase = true) ||
-                    it.username.contains(query, ignoreCase = true)
+            return connections.filter { connection ->
+                (selectedTag == null || selectedTag in connection.options.tags) &&
+                    (query.isEmpty() || connection.matches(query))
             }
+        }
+
+    /** Every tag in use, for the filter row. */
+    val allTags: List<String>
+        get() = connections.flatMap { it.options.tags }.distinct().sortedBy(String::lowercase)
+
+    /** The filtered connections by group: named groups A to Z, then those without one. */
+    val sections: List<ConnectionSection>
+        get() {
+            val byGroup = filteredConnections.groupBy { it.options.group }
+            val named = byGroup.keys.filterNotNull().sortedBy(String::lowercase).map { name ->
+                ConnectionSection(name, byGroup.getValue(name))
+            }
+            return named + listOfNotNull(byGroup[null]?.let { ConnectionSection(null, it) })
         }
 
     /** Validation for the open form. Required fields only report once the user has tried to save. */
@@ -46,6 +64,22 @@ data class ConnectionsPageUiState(
     fun keyName(id: Uuid): String? = keys.firstOrNull { it.id == id }?.name
     fun connectionName(id: Uuid): String? = connections.firstOrNull { it.id == id }?.name
 }
+
+private fun SshConnection.matches(query: String) =
+    name.contains(query, ignoreCase = true) ||
+        host.contains(query, ignoreCase = true) ||
+        username.contains(query, ignoreCase = true) ||
+        options.group.orEmpty().contains(query, ignoreCase = true) ||
+        options.tags.any { it.contains(query, ignoreCase = true) }
+
+/** Connections under one heading. [name] is null for those not in a group. */
+data class ConnectionSection(val name: String?, val connections: List<SshConnection>)
+
+data class SshConfigImportState(
+    val hosts: List<SshConfigHost> = emptyList(),
+    val selected: Set<String> = emptySet(),
+    val isImporting: Boolean = false,
+)
 
 data class ConnectionSidebarState(
     /** Null while creating a new connection. */
@@ -101,6 +135,9 @@ data class ConnectionForm(
     val strictHostKeyChecking: Boolean = false,
     /** The password or passphrase already saved, which can't be shown again. Newly typed text can. */
     val savedSecret: String = "",
+    val group: String = "",
+    /** Comma-separated, as typed. */
+    val tags: String = "",
 ) {
     fun toDraft() = SshConnectionDraft(
         name = name.trim(),
@@ -121,6 +158,8 @@ data class ConnectionForm(
             compression = compression,
             startupCommand = startupCommand.trim().ifEmpty { null },
             strictHostKeyChecking = strictHostKeyChecking,
+            group = group.trim().ifEmpty { null },
+            tags = tags.split(",").map(String::trim).filter(String::isNotEmpty).distinct(),
         ),
     )
 
@@ -190,6 +229,8 @@ fun SshConnection.toForm(): ConnectionForm {
         compression = options.compression,
         startupCommand = options.startupCommand.orEmpty(),
         strictHostKeyChecking = options.strictHostKeyChecking,
+        group = options.group.orEmpty(),
+        tags = options.tags.joinToString(", "),
     )
     return when (val auth = auth) {
         is SshConnectionAuth.Password -> base.copy(

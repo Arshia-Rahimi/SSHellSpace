@@ -19,6 +19,16 @@ fun SshTerminalTabScreen(viewModel: SshTerminalTabViewModel) {
 
     when (val current = state) {
         is SshTerminalState.Connected -> current.terminal.content(Modifier.fillMaxSize())
+        is SshTerminalState.Reconnecting -> StatusCard(
+            title = "Connection to ${current.title} lost",
+            message = listOfNotNull(
+                current.lastError,
+                "Reconnecting in ${current.secondsLeft}s (attempt ${current.attempt} of ${current.maxAttempts}). " +
+                    "Scrollback from the old session is gone.",
+            ).joinToString("\n"),
+            primaryAction = "Reconnect now" to { onAction(SshTerminalAction.Reconnect) },
+            secondaryAction = "Stop" to { onAction(SshTerminalAction.Cancel) },
+        )
         is SshTerminalState.Connecting -> StatusCard(
             title = "Connecting to ${current.title}…",
             primaryAction = null,

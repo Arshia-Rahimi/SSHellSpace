@@ -6,6 +6,7 @@ import com.sshellspace.core.ui.designsystem.Icons
 import com.sshellspace.feature.vault.connections.ConnectionsPage
 import com.sshellspace.feature.vault.portforwarding.PortForwardingPage
 import com.sshellspace.feature.vault.settings.SettingsPage
+import com.sshellspace.feature.vault.snippets.SnippetsPage
 import com.sshellspace.feature.vault.sshkeys.SshKeysPage
 
 enum class VaultTabPage(
@@ -16,5 +17,6 @@ enum class VaultTabPage(
     Vault("Vault", Icons.Vault, ::ConnectionsPage),
     SshKeys("Ssh Keys", Icons.SshKeys, ::SshKeysPage),
     PortForwarding("Port Forwarding", Icons.PortForwarding, ::PortForwardingPage),
+    Snippets("Snippets", Icons.Snippet, ::SnippetsPage),
     Settings("Settings", Icons.Settings, ::SettingsPage),
 }

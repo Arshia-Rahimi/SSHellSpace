@@ -4,15 +4,20 @@ import kotlin.math.log2
 import kotlin.uuid.Uuid
 
 const val VAULT_FILE_EXTENSION = "sshv"
-const val MIN_VAULT_PASSWORD_LENGTH = 12
 
-data class VaultInfo(val id: Uuid, val name: String)
+/** Below this, the app warns that a password is easy to guess. It doesn't refuse it. */
+const val RECOMMENDED_VAULT_PASSWORD_LENGTH = 12
+
+data class VaultInfo(val id: Uuid, val name: String, val hasPassword: Boolean = true)
 
 /** What proves the user may open a vault. Biometric unlock would be another case here, with its own key slot. */
 sealed interface VaultCredential {
     data class Password(val value: String) : VaultCredential {
         override fun toString() = "Password(***)"
     }
+
+    /** For a vault with no password, which opens for anyone who has the file. */
+    data object None : VaultCredential
 }
 
 enum class PasswordStrength { Weak, Fair, Strong }

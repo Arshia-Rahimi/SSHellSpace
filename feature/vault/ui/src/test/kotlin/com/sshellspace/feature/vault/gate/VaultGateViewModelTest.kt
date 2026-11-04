@@ -88,6 +88,40 @@ class VaultGateViewModelTest {
     }
 
     @Test
+    fun `a vault with no password opens without one`() = runTest {
+        val open = VaultInfo(Uuid.random(), "Open", hasPassword = false)
+        vaults.value = listOf(open)
+
+        VaultGateViewModel(manager).execute(VaultGateAction.Unlock(open.id, ""))
+
+        coVerify { manager.unlock(open.id, VaultCredential.None) }
+    }
+
+    @Test
+    fun `a weak password gets through`() = runTest {
+        VaultGateViewModel(manager).execute(VaultGateAction.Create("New", "abc", "abc", moveUnencryptedData = false))
+
+        coVerify { manager.create("New", VaultCredential.Password("abc"), false) }
+    }
+
+    @Test
+    fun `no password creates a vault without one`() = runTest {
+        VaultGateViewModel(manager).execute(VaultGateAction.Create("New", "", "", moveUnencryptedData = false))
+
+        coVerify { manager.create("New", VaultCredential.None, false) }
+    }
+
+    @Test
+    fun `a mistyped confirmation stops the form, since it would lock the user out`() = runTest {
+        val viewModel = VaultGateViewModel(manager)
+
+        viewModel.execute(VaultGateAction.Create("New", "abc", "abd", moveUnencryptedData = false))
+
+        assertEquals("The passwords don't match.", viewModel.uiState.first { it.error != null }.error)
+        coVerify(exactly = 0) { manager.create(any(), any(), any()) }
+    }
+
+    @Test
     fun `typing clears the last error`() = runTest {
         val viewModel = VaultGateViewModel(manager)
         viewModel.execute(VaultGateAction.Unlock(work.id, ""))
@@ -96,16 +130,6 @@ class VaultGateViewModelTest {
         viewModel.execute(VaultGateAction.ClearError)
 
         assertNull(viewModel.uiState.first { it.error == null }.error)
-    }
-
-    @Test
-    fun `exporting confirms it worked`() = runTest {
-        val viewModel = VaultGateViewModel(manager)
-
-        viewModel.execute(VaultGateAction.Export(work, "/tmp/work.sshv"))
-
-        coVerify { manager.export(work.id, "/tmp/work.sshv") }
-        assertContains(viewModel.uiState.first { it.notice != null }.notice.orEmpty(), "Exported Work")
     }
 
     @Test
@@ -121,19 +145,6 @@ class VaultGateViewModelTest {
 
         val state = viewModel.uiState.first { it.notice != null }
         assertEquals(VaultGateMode.Select(imported.id), state.mode)
-    }
-
-    @Test
-    fun `deleting goes back to the list and says so`() = runTest {
-        val viewModel = VaultGateViewModel(manager)
-        viewModel.execute(VaultGateAction.ShowDelete(work))
-
-        viewModel.execute(VaultGateAction.Delete(work))
-
-        coVerify { manager.delete(work.id) }
-        val state = viewModel.uiState.first { it.notice != null }
-        assertIs<VaultGateMode.Select>(state.mode)
-        assertContains(state.notice.orEmpty(), "Deleted Work")
     }
 
     @Test
@@ -153,19 +164,6 @@ class VaultGateViewModelTest {
         VaultGateViewModel(manager).execute(VaultGateAction.Unlock(work.id, "correct horse"))
 
         coVerify { manager.unlock(work.id, VaultCredential.Password("correct horse")) }
-    }
-
-    @Test
-    fun `create refuses a short password or a mismatch without calling the manager`() = runTest {
-        val viewModel = VaultGateViewModel(manager)
-
-        viewModel.execute(VaultGateAction.Create("New", "short", "short", moveUnencryptedData = false))
-        assertEquals("The password needs at least 12 characters.", viewModel.uiState.first { it.error != null }.error)
-
-        viewModel.execute(VaultGateAction.Create("New", "long enough here", "different", moveUnencryptedData = false))
-        assertEquals("The passwords don't match.", viewModel.uiState.first { it.error != null }.error)
-
-        coVerify(exactly = 0) { manager.create(any(), any(), any()) }
     }
 
     @Test

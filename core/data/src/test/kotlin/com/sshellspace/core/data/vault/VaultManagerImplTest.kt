@@ -9,6 +9,7 @@ import com.sshellspace.core.data.generated.Vault_ssh_keys
 import com.sshellspace.core.domain.models.PasswordStrength
 import com.sshellspace.core.domain.models.VaultCredential
 import com.sshellspace.core.domain.models.VaultException
+import com.sshellspace.core.domain.models.VaultInfo
 import com.sshellspace.core.domain.models.vaultPasswordStrength
 import java.io.File
 import java.nio.file.Files
@@ -24,6 +25,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
+import kotlin.uuid.Uuid
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -214,15 +216,6 @@ class VaultManagerImplTest {
     }
 
     @Test
-    fun `short passwords and duplicate names are refused`() = runTest {
-        assertFailsWith<VaultException.Invalid> {
-            manager.create("Work", VaultCredential.Password("short"), moveUnencryptedData = false)
-        }
-        manager.create("Work", password, moveUnencryptedData = false)
-        assertFailsWith<VaultException.Invalid> { manager.create("work", password, moveUnencryptedData = false) }
-    }
-
-    @Test
     fun `an exported vault imports on another device with its data`() = runTest {
         val vault = manager.create("Work", password, moveUnencryptedData = false)
         insertConnection(vaultDatabase, "1", "server")
@@ -392,18 +385,6 @@ class VaultManagerImplTest {
     }
 
     @Test
-    fun `changing the password needs the current one and a locked vault`() = runTest {
-        val vault = manager.create("Work", password, moveUnencryptedData = false)
-        val newPassword = VaultCredential.Password("a different passphrase")
-
-        assertFailsWith<VaultException.Invalid> { manager.changeCredential(vault.id, password, newPassword) }
-        manager.lock()
-        assertFailsWith<VaultException.WrongCredential> {
-            manager.changeCredential(vault.id, wrongPassword, newPassword)
-        }
-    }
-
-    @Test
     fun `unlocking refuses a file swapped for another vault's`() = runTest {
         val first = manager.create("First", password, moveUnencryptedData = false)
         val second = manager.create("Second", password, moveUnencryptedData = false)
@@ -488,6 +469,181 @@ class VaultManagerImplTest {
     @Test
     fun `secrets don't appear in toString`() {
         assertFalse("correct" in password.toString())
+    }
+
+    @Test
+    fun `importing drops saved state, so a file can't choose what opens on unlock`() = runTest {
+        val vault = manager.create("Work", password, moveUnencryptedData = false)
+        insertConnection(vaultDatabase, "1", "server")
+        vaultDatabase.preferencesQueries.upsert(name = "session", value_ = "{\"tabs\":[]}")
+        val exported = File(root, "export.sshv")
+        manager.export(vault.id, exported.path)
+        manager.lock()
+
+        val copy = manager.import(exported.path, password)
+        manager.unlock(copy.id, password)
+
+        assertEquals(emptyList(), vaultDatabase.preferencesQueries.index().executeAsList())
+        assertEquals(listOf("server"), connectionNames(vaultDatabase))
+    }
+
+    @Test
+    fun `a vault made before snippets existed migrates when it unlocks`() = runTest {
+        val image = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+            Database.Schema.create(driver).value
+            driver.execute(null, "DROP TABLE snippets", 0)
+            driver.execute(null, "PRAGMA user_version = ${Database.Schema.version - 1}", 0)
+            database(driver).ssh_connectionQueries.upsert(
+                com.sshellspace.core.data.generated.Ssh_connections("1", "old", "h", 22, "u", "{}", "{}"),
+            )
+            driver.getConnection().unwrap(SQLiteConnection::class.java).serialize("main")
+        }
+        val id = "018f0000-0000-7000-8000-000000000001"
+        val key = newVaultKey()
+        val file = File(root, "old.sshv")
+        file.writeBytes(VaultFile.seal(VaultHeader(id, "Old", listOf(newKeySlot(id, password, key))), key, image))
+
+        val vault = manager.import(file.path, password)
+        manager.unlock(vault.id, password)
+
+        assertEquals(listOf("old"), connectionNames(vaultDatabase))
+        vaultDatabase.snippetQueries.upsert(com.sshellspace.core.data.generated.Snippets("s", "n", "ls", 0))
+        assertEquals("n", vaultDatabase.snippetQueries.index().executeAsList().single().name)
+        manager.lock()
+        manager.unlock(vault.id, password)
+        assertEquals(1, vaultDatabase.snippetQueries.index().executeAsList().size)
+    }
+
+    @Test
+    fun `before-unlock actions run with the data readable but the vault not yet shown`() = runTest {
+        val vault = manager.create("Work", password, moveUnencryptedData = false)
+        insertConnection(vaultDatabase, "1", "server")
+        manager.lock()
+        var names: List<String>? = null
+        var shownAsActive: VaultInfo? = vault
+        manager.beforeUnlock {
+            names = connectionNames(vaultDatabase)
+            shownAsActive = manager.activeVault.value
+        }
+
+        manager.unlock(vault.id, password)
+
+        assertEquals(listOf("server"), names)
+        assertNull(shownAsActive)
+    }
+
+    @Test
+    fun `after-delete actions get the deleted vault`() = runTest {
+        val vault = manager.create("Work", password, moveUnencryptedData = false)
+        var deleted: Uuid? = null
+        manager.afterDelete { deleted = it }
+
+        manager.delete(vault.id)
+
+        assertEquals(vault.id, deleted)
+    }
+
+    @Test
+    fun `any password is allowed, but names stay unique`() = runTest {
+        val vault = manager.create("Work", VaultCredential.Password("x"), moveUnencryptedData = false)
+        manager.lock()
+        manager.unlock(vault.id, VaultCredential.Password("x"))
+
+        assertFailsWith<VaultException.Invalid> { manager.create("work", password, moveUnencryptedData = false) }
+    }
+
+    @Test
+    fun `a vault with no password opens without one and survives a restart`() = runTest {
+        val vault = manager.create("Open", VaultCredential.None, moveUnencryptedData = false)
+        insertConnection(vaultDatabase, "1", "server")
+        assertFalse(vault.hasPassword)
+        manager.lock()
+
+        val restarted = manager()
+        assertFalse(restarted.vaults.value.single().hasPassword)
+        restarted.unlock(vault.id, VaultCredential.None)
+
+        assertEquals(listOf("server"), connectionNames(vaultDatabase))
+    }
+
+    @Test
+    fun `a vault with a password can't be opened without it`() = runTest {
+        val vault = manager.create("Work", password, moveUnencryptedData = false)
+        manager.lock()
+
+        assertFailsWith<VaultException.WrongCredential> { manager.unlock(vault.id, VaultCredential.None) }
+    }
+
+    @Test
+    fun `an unlocked vault's password can change, and later writes use the new key`() = runTest {
+        val vault = manager.create("Work", password, moveUnencryptedData = false)
+        insertConnection(vaultDatabase, "1", "before")
+        val newPassword = VaultCredential.Password("something else")
+
+        manager.changeCredential(vault.id, password, newPassword)
+        assertEquals(vault, manager.activeVault.value)
+        insertConnection(vaultDatabase, "2", "after")
+        manager.lock()
+
+        assertFailsWith<VaultException.WrongCredential> { manager.unlock(vault.id, password) }
+        manager.unlock(vault.id, newPassword)
+        assertEquals(listOf("after", "before"), connectionNames(vaultDatabase))
+    }
+
+    @Test
+    fun `changing the password needs the current one`() = runTest {
+        val vault = manager.create("Work", password, moveUnencryptedData = false)
+
+        assertFailsWith<VaultException.WrongCredential> {
+            manager.changeCredential(vault.id, wrongPassword, VaultCredential.None)
+        }
+    }
+
+    @Test
+    fun `a password can be removed and added back`() = runTest {
+        val vault = manager.create("Work", password, moveUnencryptedData = false)
+        insertConnection(vaultDatabase, "1", "server")
+
+        manager.changeCredential(vault.id, password, VaultCredential.None)
+        assertEquals(false, manager.activeVault.value?.hasPassword)
+        assertEquals(false, manager.vaults.value.single().hasPassword)
+
+        manager.changeCredential(vault.id, VaultCredential.None, password)
+        assertEquals(true, manager.activeVault.value?.hasPassword)
+        manager.lock()
+        assertFailsWith<VaultException.WrongCredential> { manager.unlock(vault.id, VaultCredential.None) }
+        manager.unlock(vault.id, password)
+        assertEquals(listOf("server"), connectionNames(vaultDatabase))
+    }
+
+    @Test
+    fun `a vault with no password exports and imports`() = runTest {
+        val vault = manager.create("Open", VaultCredential.None, moveUnencryptedData = false)
+        val exported = File(root, "open.sshv")
+        manager.export(vault.id, exported.path)
+        manager.delete(vault.id)
+
+        val imported = manager.import(exported.path, VaultCredential.None)
+
+        assertFalse(imported.hasPassword)
+        manager.unlock(imported.id, VaultCredential.None)
+    }
+
+    @Test
+    fun `deleting finishes even when locking cancels the coroutine that asked`() = runTest {
+        val vault = manager.create("Work", password, moveUnencryptedData = false)
+        var deleter: Job? = null
+        manager.beforeLock {
+            deleter?.cancel()
+            yield()
+        }
+
+        deleter = launch(Dispatchers.Default, start = CoroutineStart.LAZY) { manager.delete(vault.id) }
+        deleter.start()
+        deleter.join()
+
+        assertFalse(vaultFile(vault).exists())
+        assertEquals(emptyList(), manager.vaults.value)
     }
 
     @Test

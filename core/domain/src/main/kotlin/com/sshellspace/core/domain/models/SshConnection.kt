@@ -75,4 +75,7 @@ data class SshConnectionOptions(
     val startupCommand: String? = null,
     /** Refuse a changed host key outright instead of asking, like OpenSSH's `StrictHostKeyChecking`. */
     val strictHostKeyChecking: Boolean = false,
+    /** The section this connection is listed under, such as `Production`. Null when it isn't in one. */
+    val group: String? = null,
+    val tags: List<String> = emptyList(),
 )
