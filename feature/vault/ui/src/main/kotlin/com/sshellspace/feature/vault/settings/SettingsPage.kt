@@ -201,7 +201,6 @@ private fun VaultActions(
     uiState: SettingsPageUiState,
     onAction: (SettingsPageAction) -> Unit,
 ) {
-    val scope = rememberCoroutineScope()
     val form = uiState.vaultForm
 
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -222,10 +221,12 @@ private fun VaultActions(
                 Text(if (uiState.vaultHasPassword) "Change password" else "Add a password")
             }
             OptionButton(
-                selected = false,
+                selected = form.edit == VaultEdit.Export,
                 onClick = {
-                    scope.launch {
-                        pickVaultExportFile(vaultName)?.let { onAction(SettingsPageAction.ExportVault(it)) }
+                    if (uiState.vaultHasPassword) {
+                        onAction(SettingsPageAction.SetVaultEdit(VaultEdit.Export.takeUnless { form.edit == it }))
+                    } else {
+                        onAction(SettingsPageAction.ExportVault("") { pickVaultExportFile(vaultName) })
                     }
                 },
             ) {
@@ -243,7 +244,8 @@ private fun VaultActions(
         form.notice?.let { Text(it, color = Theme[colors][textSecondary]) }
         when (form.edit) {
             VaultEdit.ChangePassword -> ChangeVaultPasswordForm(uiState.vaultHasPassword, form, onAction)
-            VaultEdit.Delete -> DeleteVaultForm(vaultName, form, onAction)
+            VaultEdit.Export -> ExportVaultForm(vaultName, form, onAction)
+            VaultEdit.Delete -> DeleteVaultForm(vaultName, uiState.vaultHasPassword, form, onAction)
             null -> Unit
         }
         form.error?.let { Text(it, color = Theme[colors][error]) }
@@ -306,12 +308,54 @@ private fun ChangeVaultPasswordForm(
 }
 
 @Composable
-private fun DeleteVaultForm(
+private fun ExportVaultForm(
     vaultName: String,
     form: VaultForm,
     onAction: (SettingsPageAction) -> Unit,
 ) {
+    var password by remember { mutableStateOf("") }
+    val focusRequester = remember { FocusRequester() }
+    val submit = { value: String ->
+        if (value.isNotEmpty() && !form.isBusy) {
+            onAction(SettingsPageAction.ExportVault(value) { pickVaultExportFile(vaultName) })
+        }
+    }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
+
+    Column(
+        modifier = Modifier.widthIn(max = 420.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text("Enter this vault's password to export it.", color = Theme[colors][textSecondary])
+        PasswordField(
+            value = password,
+            onValueChange = {
+                password = it
+                onAction(SettingsPageAction.ClearVaultError)
+            },
+            label = "Vault password",
+            enabled = !form.isBusy,
+            isError = form.error != null,
+            focusRequester = focusRequester,
+            onSubmit = submit,
+        )
+        if (password.isNotEmpty()) {
+            OptionButton(selected = true, onClick = { submit(password) }) {
+                Text(if (form.isBusy) "Working…" else "Choose where to save…")
+            }
+        }
+    }
+}
+
+@Composable
+private fun DeleteVaultForm(
+    vaultName: String,
+    hasPassword: Boolean,
+    form: VaultForm,
+    onAction: (SettingsPageAction) -> Unit,
+) {
     var confirmation by remember { mutableStateOf("") }
+    var password by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier.widthIn(max = 420.dp),
@@ -328,8 +372,20 @@ private fun DeleteVaultForm(
             label = "Type $vaultName to confirm",
             enabled = !form.isBusy,
         )
-        if (confirmation.trim() == vaultName) {
-            OptionButton(selected = true, onClick = { onAction(SettingsPageAction.DeleteVault) }) {
+        if (hasPassword) {
+            PasswordField(
+                value = password,
+                onValueChange = {
+                    password = it
+                    onAction(SettingsPageAction.ClearVaultError)
+                },
+                label = "Vault password",
+                enabled = !form.isBusy,
+                isError = form.error != null,
+            )
+        }
+        if (confirmation.trim() == vaultName && (!hasPassword || password.isNotEmpty())) {
+            OptionButton(selected = true, onClick = { onAction(SettingsPageAction.DeleteVault(password)) }) {
                 Text(if (form.isBusy) "Deleting…" else "Delete $vaultName permanently", color = Theme[colors][error])
             }
         }

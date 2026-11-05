@@ -21,10 +21,14 @@ sealed interface SettingsPageAction {
     data class RemoveTerminalTheme(val name: String) : SettingsPageAction
     data class SetDefaultShell(val value: Shell) : SettingsPageAction
     data object LockVault : SettingsPageAction
-    data class ExportVault(val path: String) : SettingsPageAction
+
+    /** Checks [password], which is empty for a vault without one, and only then asks where to save with [pickDestination]. */
+    data class ExportVault(val password: String, val pickDestination: suspend () -> String?) : SettingsPageAction
     data class SetVaultEdit(val edit: VaultEdit?) : SettingsPageAction
     data class ChangeVaultPassword(val current: String, val password: String, val confirmation: String) : SettingsPageAction
-    data object DeleteVault : SettingsPageAction
+
+    /** [password] is empty for a vault without one. */
+    data class DeleteVault(val password: String) : SettingsPageAction
     data object ClearVaultError : SettingsPageAction
     data class SetAutoReconnect(val enabled: Boolean) : SettingsPageAction
     data class SetRestoreTabs(val enabled: Boolean) : SettingsPageAction

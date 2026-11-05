@@ -36,7 +36,7 @@ data class SettingsPageUiState(
 )
 
 /** A vault action that needs more than one click, open in the Vault section. */
-enum class VaultEdit { ChangePassword, Delete }
+enum class VaultEdit { ChangePassword, Export, Delete }
 
 data class VaultForm(
     val edit: VaultEdit? = null,

@@ -167,12 +167,11 @@ class SettingsPageViewModel(
             SettingsPageAction.LockVault -> viewModelScope.launch { vaultManager.lock() }
             is SettingsPageAction.SetVaultEdit -> vaultForm.update { VaultForm(edit = action.edit) }
             SettingsPageAction.ClearVaultError -> vaultForm.update { it.copy(error = null) }
-            is SettingsPageAction.ExportVault -> runVaultAction { vault ->
-                vaultManager.export(vault.id, action.path)
-                vaultForm.update { it.copy(notice = exportNotice(vault)) }
-            }
+            is SettingsPageAction.ExportVault -> exportVault(action)
             is SettingsPageAction.ChangeVaultPassword -> changeVaultPassword(action)
-            SettingsPageAction.DeleteVault -> runVaultAction { vault -> vaultManager.delete(vault.id) }
+            is SettingsPageAction.DeleteVault -> runVaultAction { vault ->
+                vaultManager.delete(vault.id, credentialFrom(action.password))
+            }
             is SettingsPageAction.SetAutoReconnect -> viewModelScope.launch {
                 terminalPreferencesRepository.set(UpdateTerminalPreferences(autoReconnect = action.enabled))
             }
@@ -192,6 +191,17 @@ class SettingsPageViewModel(
             is SettingsPageAction.Shortcut.Reset -> viewModelScope.launch {
                 shortcutHandler.resetChord(action.shortcut)
             }
+        }
+    }
+
+    private fun exportVault(action: SettingsPageAction.ExportVault) {
+        val credential = credentialFrom(action.password)
+        runVaultAction { vault ->
+            // First, so a mistyped password doesn't send the user through the save dialog for nothing.
+            vaultManager.verifyCredential(vault.id, credential)
+            val path = action.pickDestination() ?: return@runVaultAction
+            vaultManager.export(vault.id, credential, path)
+            vaultForm.update { VaultForm(notice = exportNotice(vault)) }
         }
     }
 

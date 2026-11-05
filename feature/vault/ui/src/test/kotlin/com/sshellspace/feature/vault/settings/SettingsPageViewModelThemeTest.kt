@@ -25,6 +25,8 @@ import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertContains
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
+import kotlin.test.assertFalse
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -145,9 +147,9 @@ class SettingsPageViewModelThemeTest {
         activeVault.value = work
         val viewModel = viewModel()
 
-        viewModel.execute(SettingsPageAction.ExportVault("/tmp/work.sshv"))
+        viewModel.execute(SettingsPageAction.ExportVault("secret") { "/tmp/work.sshv" })
 
-        coVerify { vaultManager.export(work.id, "/tmp/work.sshv") }
+        coVerify { vaultManager.export(work.id, VaultCredential.Password("secret"), "/tmp/work.sshv") }
         assertContains(viewModel.uiState.first { it.vaultForm.notice != null }.vaultForm.notice.orEmpty(), "Exported Work")
     }
 
@@ -156,7 +158,7 @@ class SettingsPageViewModelThemeTest {
         activeVault.value = work.copy(hasPassword = false)
         val viewModel = viewModel()
 
-        viewModel.execute(SettingsPageAction.ExportVault("/tmp/work.sshv"))
+        viewModel.execute(SettingsPageAction.ExportVault("") { "/tmp/work.sshv" })
 
         assertContains(viewModel.uiState.first { it.vaultForm.notice != null }.vaultForm.notice.orEmpty(), "anyone")
     }
@@ -195,9 +197,72 @@ class SettingsPageViewModelThemeTest {
     fun `deleting deletes the unlocked vault`() = runTest {
         activeVault.value = work
 
-        viewModel().execute(SettingsPageAction.DeleteVault)
+        viewModel().execute(SettingsPageAction.DeleteVault("secret"))
 
-        coVerify { vaultManager.delete(work.id) }
+        coVerify { vaultManager.delete(work.id, VaultCredential.Password("secret")) }
+    }
+
+    @Test
+    fun `a wrong password stops an export before the save dialog`() = runTest {
+        activeVault.value = work
+        coEvery { vaultManager.verifyCredential(work.id, any()) } throws VaultException.WrongCredential()
+        var asked = false
+        val viewModel = viewModel()
+
+        viewModel.execute(SettingsPageAction.ExportVault("bad") { asked = true; "/tmp/work.sshv" })
+
+        assertEquals("Wrong password.", viewModel.uiState.first { it.vaultForm.error != null }.vaultForm.error)
+        assertFalse(asked)
+        coVerify(exactly = 0) { vaultManager.export(any(), any(), any()) }
+    }
+
+    @Test
+    fun `cancelling the save dialog exports nothing and keeps the form open`() = runTest {
+        activeVault.value = work
+        val viewModel = viewModel()
+        viewModel.execute(SettingsPageAction.SetVaultEdit(VaultEdit.Export))
+
+        viewModel.execute(SettingsPageAction.ExportVault("secret") { null })
+
+        val form = viewModel.uiState.first { it.vaultForm.edit == VaultEdit.Export && !it.vaultForm.isBusy }.vaultForm
+        assertNull(form.error)
+        assertNull(form.notice)
+        coVerify(exactly = 0) { vaultManager.export(any(), any(), any()) }
+    }
+
+    @Test
+    fun `a finished export closes the password form`() = runTest {
+        activeVault.value = work
+        val viewModel = viewModel()
+        viewModel.execute(SettingsPageAction.SetVaultEdit(VaultEdit.Export))
+
+        viewModel.execute(SettingsPageAction.ExportVault("secret") { "/tmp/work.sshv" })
+
+        assertNull(viewModel.uiState.first { it.vaultForm.notice != null }.vaultForm.edit)
+    }
+
+    @Test
+    fun `a vault with no password exports and deletes without one`() = runTest {
+        activeVault.value = work.copy(hasPassword = false)
+        val viewModel = viewModel()
+
+        viewModel.execute(SettingsPageAction.ExportVault("") { "/tmp/work.sshv" })
+        viewModel.uiState.first { it.vaultForm.notice != null }
+        coVerify { vaultManager.export(work.id, VaultCredential.None, "/tmp/work.sshv") }
+
+        viewModel.execute(SettingsPageAction.DeleteVault(""))
+        coVerify { vaultManager.delete(work.id, VaultCredential.None) }
+    }
+
+    @Test
+    fun `a wrong password when deleting is shown`() = runTest {
+        activeVault.value = work
+        coEvery { vaultManager.delete(work.id, any()) } throws VaultException.WrongCredential()
+        val viewModel = viewModel()
+
+        viewModel.execute(SettingsPageAction.DeleteVault("bad"))
+
+        assertEquals("Wrong password.", viewModel.uiState.first { it.vaultForm.error != null }.vaultForm.error)
     }
 
     @Test

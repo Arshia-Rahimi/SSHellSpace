@@ -40,8 +40,16 @@ interface VaultManager {
     /** Registers [action] to run after a vault is deleted. */
     fun afterDelete(action: suspend (Uuid) -> Unit)
 
-    /** Writes vault [id] to [destination] as an encrypted file. Its password is needed to import it again. */
-    suspend fun export(id: Uuid, destination: String)
+    /** Throws [com.sshellspace.core.domain.models.VaultException.WrongCredential] unless [credential] opens vault [id]. */
+    suspend fun verifyCredential(id: Uuid, credential: VaultCredential)
+
+    /**
+     * Writes vault [id] to [destination] as an encrypted file. Its password is needed to import it again.
+     *
+     * @param credential has to open the vault, even if it is unlocked: someone at an unlocked computer mustn't be able
+     * to carry the vault away.
+     */
+    suspend fun export(id: Uuid, credential: VaultCredential, destination: String)
 
     /** Adds the vault file at [source] after checking that [credential] opens it. Doesn't unlock it. */
     suspend fun import(source: String, credential: VaultCredential): VaultInfo
@@ -52,6 +60,10 @@ interface VaultManager {
      */
     suspend fun changeCredential(id: Uuid, current: VaultCredential, new: VaultCredential)
 
-    /** Permanently deletes vault [id], locking it first if it is unlocked. */
-    suspend fun delete(id: Uuid)
+    /**
+     * Permanently deletes vault [id], locking it first if it is unlocked.
+     *
+     * @param credential has to open the vault, even if it is unlocked. If it doesn't, nothing changes.
+     */
+    suspend fun delete(id: Uuid, credential: VaultCredential)
 }

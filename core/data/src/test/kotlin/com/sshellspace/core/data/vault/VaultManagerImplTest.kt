@@ -231,7 +231,7 @@ class VaultManagerImplTest {
         val vault = manager.create("Work", password, moveUnencryptedData = false)
         insertConnection(vaultDatabase, "1", "server")
         val exported = File(root, "export.sshv")
-        manager.export(vault.id, exported.path)
+        manager.export(vault.id, password, exported.path)
         manager.lock()
 
         val otherRoot = File(root, "other").apply { mkdirs() }
@@ -256,7 +256,7 @@ class VaultManagerImplTest {
     fun `import needs the right password`() = runTest {
         val vault = manager.create("Work", password, moveUnencryptedData = false)
         val exported = File(root, "export.sshv")
-        manager.export(vault.id, exported.path)
+        manager.export(vault.id, password, exported.path)
 
         assertFailsWith<VaultException.WrongCredential> { manager.import(exported.path, wrongPassword) }
         assertEquals(1, manager.vaults.value.size)
@@ -267,7 +267,7 @@ class VaultManagerImplTest {
         val vault = manager.create("Work", password, moveUnencryptedData = false)
         insertConnection(vaultDatabase, "1", "server")
         val exported = File(root, "export.sshv")
-        manager.export(vault.id, exported.path)
+        manager.export(vault.id, password, exported.path)
         manager.lock()
 
         val copy = manager.import(exported.path, password)
@@ -294,7 +294,7 @@ class VaultManagerImplTest {
         val file = vaultFile(vault)
         assertTrue(file.exists())
 
-        manager.delete(vault.id)
+        manager.delete(vault.id, password)
 
         assertFalse(file.exists())
         assertNull(manager.activeVault.value)
@@ -447,8 +447,8 @@ class VaultManagerImplTest {
     fun `importing never overwrites a vault file that isn't listed`() = runTest {
         val vault = manager.create("Work", password, moveUnencryptedData = false)
         val exported = File(root, "export.sshv")
-        manager.export(vault.id, exported.path)
-        manager.delete(vault.id)
+        manager.export(vault.id, password, exported.path)
+        manager.delete(vault.id, password)
         vaultDirectory.mkdirs()
         val damaged = vaultFile(vault).apply { writeText("damaged but maybe recoverable") }
 
@@ -463,7 +463,7 @@ class VaultManagerImplTest {
         val vault = manager.create("Work", password, moveUnencryptedData = false)
         val exported = File(root, "export.sshv")
 
-        manager.export(vault.id, exported.path)
+        manager.export(vault.id, password, exported.path)
 
         assertEquals(PosixFilePermissions.fromString("rw-------"), Files.getPosixFilePermissions(exported.toPath()))
         assertEquals(PosixFilePermissions.fromString("rwx------"), Files.getPosixFilePermissions(vaultDirectory.toPath()))
@@ -521,8 +521,8 @@ class VaultManagerImplTest {
         settings.awaitMinutes(0)
         val exported = File(root, "export.sshv").path
         manager.lock()
-        manager.export(vault.id, exported)
-        manager.delete(vault.id)
+        manager.export(vault.id, password, exported)
+        manager.delete(vault.id, password)
 
         val imported = manager.import(exported, password)
         manager.unlock(imported.id, password)
@@ -536,7 +536,7 @@ class VaultManagerImplTest {
         insertConnection(vaultDatabase, "1", "server")
         vaultDatabase.preferencesQueries.upsert(name = "session", value_ = "{\"tabs\":[]}")
         val exported = File(root, "export.sshv")
-        manager.export(vault.id, exported.path)
+        manager.export(vault.id, password, exported.path)
         manager.lock()
 
         val copy = manager.import(exported.path, password)
@@ -592,12 +592,72 @@ class VaultManagerImplTest {
     }
 
     @Test
+    fun `a wrong password deletes nothing and leaves the vault unlocked`() = runTest {
+        val vault = manager.create("Work", password, moveUnencryptedData = false)
+        var deleted = false
+        manager.afterDelete { deleted = true }
+
+        assertFailsWith<VaultException.WrongCredential> { manager.delete(vault.id, wrongPassword) }
+        assertFailsWith<VaultException.WrongCredential> { manager.delete(vault.id, VaultCredential.None) }
+
+        assertTrue(vaultFile(vault).exists())
+        assertEquals(vault.id, manager.activeVault.value?.id)
+        assertEquals(listOf(vault.id), manager.vaults.value.map { it.id })
+        assertFalse(deleted)
+        insertConnection(vaultDatabase, "1", "still usable")
+    }
+
+    @Test
+    fun `a wrong password exports nothing`() = runTest {
+        val vault = manager.create("Work", password, moveUnencryptedData = false)
+        val exported = File(root, "export.sshv")
+
+        assertFailsWith<VaultException.WrongCredential> { manager.export(vault.id, wrongPassword, exported.path) }
+        assertFailsWith<VaultException.WrongCredential> { manager.export(vault.id, VaultCredential.None, exported.path) }
+
+        assertFalse(exported.exists())
+    }
+
+    @Test
+    fun `a wrong password doesn't overwrite an existing file when exporting`() = runTest {
+        val vault = manager.create("Work", password, moveUnencryptedData = false)
+        val existing = File(root, "precious.txt").apply { writeText("keep me") }
+
+        assertFailsWith<VaultException.WrongCredential> { manager.export(vault.id, wrongPassword, existing.path) }
+
+        assertEquals("keep me", existing.readText())
+    }
+
+    @Test
+    fun `export and delete want the current password after it changes`() = runTest {
+        val vault = manager.create("Work", password, moveUnencryptedData = false)
+        val changed = VaultCredential.Password("a new password")
+        manager.changeCredential(vault.id, password, changed)
+
+        assertFailsWith<VaultException.WrongCredential> { manager.delete(vault.id, password) }
+        manager.verifyCredential(vault.id, changed)
+        manager.delete(vault.id, changed)
+
+        assertFalse(vaultFile(vault).exists())
+    }
+
+    @Test
+    fun `verifying checks the password, and changes nothing`() = runTest {
+        val vault = manager.create("Work", password, moveUnencryptedData = false)
+
+        manager.verifyCredential(vault.id, password)
+        assertFailsWith<VaultException.WrongCredential> { manager.verifyCredential(vault.id, wrongPassword) }
+
+        assertEquals(vault.id, manager.activeVault.value?.id)
+    }
+
+    @Test
     fun `after-delete actions get the deleted vault`() = runTest {
         val vault = manager.create("Work", password, moveUnencryptedData = false)
         var deleted: Uuid? = null
         manager.afterDelete { deleted = it }
 
-        manager.delete(vault.id)
+        manager.delete(vault.id, password)
 
         assertEquals(vault.id, deleted)
     }
@@ -679,8 +739,8 @@ class VaultManagerImplTest {
     fun `a vault with no password exports and imports`() = runTest {
         val vault = manager.create("Open", VaultCredential.None, moveUnencryptedData = false)
         val exported = File(root, "open.sshv")
-        manager.export(vault.id, exported.path)
-        manager.delete(vault.id)
+        manager.export(vault.id, VaultCredential.None, exported.path)
+        manager.delete(vault.id, VaultCredential.None)
 
         val imported = manager.import(exported.path, VaultCredential.None)
 
@@ -697,7 +757,7 @@ class VaultManagerImplTest {
             yield()
         }
 
-        deleter = launch(Dispatchers.Default, start = CoroutineStart.LAZY) { manager.delete(vault.id) }
+        deleter = launch(Dispatchers.Default, start = CoroutineStart.LAZY) { manager.delete(vault.id, password) }
         deleter.start()
         deleter.join()
 

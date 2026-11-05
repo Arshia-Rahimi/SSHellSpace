@@ -144,7 +144,12 @@ class VaultManagerImpl(
         afterDeleteActions += action
     }
 
-    override suspend fun export(id: Uuid, destination: String) = locked {
+    override suspend fun verifyCredential(id: Uuid, credential: VaultCredential) = locked {
+        requireCredential(id, credential)
+    }
+
+    override suspend fun export(id: Uuid, credential: VaultCredential, destination: String) = locked {
+        requireCredential(id, credential)
         val target = Path.of(destination)
         Files.copy(fileOf(id), target, StandardCopyOption.REPLACE_EXISTING)
         restrictToOwner(target)
@@ -201,13 +206,21 @@ class VaultManagerImpl(
     }
 
     // Not cancellable: locking clears the Settings page's ViewModel, which can be what asked for this.
-    override suspend fun delete(id: Uuid) = withContext(NonCancellable) {
+    override suspend fun delete(id: Uuid, credential: VaultCredential) = withContext(NonCancellable) {
         locked {
+            requireCredential(id, credential)
             if (open?.info?.id == id) closeOpenVault()
             Files.deleteIfExists(fileOf(id))
             _vaults.update { vaults -> vaults.filterNot { it.id == id } }
             afterDeleteActions.forEach { it(id) }
         }
+    }
+
+    /** Against the file, not the open vault, so this asks the same thing whether the vault is unlocked or not. */
+    private fun requireCredential(id: Uuid, credential: VaultCredential) {
+        val parsed = VaultFile.read(fileOf(id))
+        if (parsed.header.id != id.toString()) throw VaultException.Invalid("The vault file is damaged or was modified.")
+        unwrapKey(parsed.header, credential).fill(0)
     }
 
     private suspend fun <T> locked(block: suspend () -> T): T =
