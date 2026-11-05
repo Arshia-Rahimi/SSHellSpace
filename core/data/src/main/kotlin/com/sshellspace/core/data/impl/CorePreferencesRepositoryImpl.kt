@@ -37,6 +37,9 @@ internal class CorePreferencesRepositoryImpl(
         .map { rows -> rows.firstOrNull { it.key == lastUpdateCheckKey }?.value?.toLongOrNull() }
         .stateIn(scope, SharingStarted.Eagerly, null)
 
+    // A row of its own for the same reason: it's written at startup, possibly before the row above has loaded.
+    private val welcomeSeenKey = "$key.welcomeSeen"
+
     override fun getTheme() = preference
         .map { it.themePreference }
 
@@ -130,6 +133,14 @@ internal class CorePreferencesRepositoryImpl(
 
     override suspend fun setLastUpdateCheck(epochMillis: Long) {
         datasource.set(lastUpdateCheckKey, epochMillis.toString())
+    }
+
+    // Not a StateFlow: its initial value would show the welcome again until the row had loaded.
+    override fun getWelcomeSeen(): Flow<Boolean> = datasource.observeAll()
+        .map { rows -> rows.any { it.key == welcomeSeenKey } }
+
+    override suspend fun setWelcomeSeen() {
+        datasource.set(welcomeSeenKey, true.toString())
     }
 
     override fun getShortcuts() = preference

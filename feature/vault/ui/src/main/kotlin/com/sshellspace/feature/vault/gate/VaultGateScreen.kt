@@ -91,6 +91,9 @@ internal fun VaultGateContent(
     onAction: (VaultGateAction) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Only for the moment a read takes, and an empty card would flicker.
+    if (uiState.mode == VaultGateMode.Loading) return
+
     BoxWithConstraints(modifier) {
         // Centered when it fits, scrolling when it doesn't, so it still works at the minimum window height.
         val availableHeight = maxHeight
@@ -107,6 +110,8 @@ internal fun VaultGateContent(
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
                 when (val mode = uiState.mode) {
+                    VaultGateMode.Loading -> Unit
+                    VaultGateMode.Welcome -> WelcomeSteps(onAction)
                     is VaultGateMode.Select -> VaultList(uiState, mode.selectedId, onAction)
                     VaultGateMode.Create -> CreateVaultForm(uiState, onAction)
                     is VaultGateMode.Import -> ImportVaultForm(uiState, mode.path, onAction)
@@ -450,7 +455,7 @@ private fun ImportVaultForm(
 }
 
 @Composable
-private fun Heading(title: String, subtitle: String) {
+internal fun Heading(title: String, subtitle: String) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Text(title, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
         Text(subtitle, color = Theme[colors][textSecondary])
@@ -475,7 +480,7 @@ private fun ErrorText(text: String?) {
 }
 
 @Composable
-private fun PrimaryButton(label: String, enabled: Boolean, onClick: () -> Unit) {
+internal fun PrimaryButton(label: String, enabled: Boolean, onClick: () -> Unit) {
     FilledButton(label, Theme[colors][primary], Theme[colors][onPrimary], enabled, onClick)
 }
 
@@ -500,7 +505,7 @@ private fun BackButton(uiState: VaultGateUiState, onAction: (VaultGateAction) ->
 }
 
 @Composable
-private fun GateButton(
+internal fun GateButton(
     label: String,
     modifier: Modifier = Modifier.fillMaxWidth(),
     enabled: Boolean = true,

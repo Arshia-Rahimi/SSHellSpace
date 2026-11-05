@@ -7,17 +7,22 @@ import com.sshellspace.core.domain.models.VaultCredential
 import com.sshellspace.core.domain.models.VaultException
 import com.sshellspace.core.domain.models.VaultInfo
 import com.sshellspace.core.domain.repositories.AppUpdater
+import com.sshellspace.core.domain.repositories.CorePreferencesRepository
 import com.sshellspace.core.domain.repositories.VaultManager
 import java.io.IOException
 import kotlin.uuid.Uuid
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 sealed interface VaultGateMode {
+    /** With no vaults, until the stored answer to whether the welcome is over arrives. */
+    data object Loading : VaultGateMode
+    data object Welcome : VaultGateMode
     data class Select(val selectedId: Uuid? = null) : VaultGateMode
     data object Create : VaultGateMode
     data class Import(val path: String) : VaultGateMode
@@ -38,6 +43,7 @@ data class VaultGateUiState(
 )
 
 sealed interface VaultGateAction {
+    data object FinishWelcome : VaultGateAction
     data class SelectVault(val id: Uuid) : VaultGateAction
     data class Unlock(val id: Uuid, val password: String) : VaultGateAction
     data object ShowCreate : VaultGateAction
@@ -75,23 +81,42 @@ internal fun passwordMismatch(password: String, confirmation: String): String? =
 class VaultGateViewModel(
     private val vaultManager: VaultManager,
     private val appUpdater: AppUpdater,
+    private val preferences: CorePreferencesRepository,
 ) : ViewModel() {
     private val form = MutableStateFlow(VaultGateUiState())
     private val updateRequested = MutableStateFlow(false)
 
-    val uiState = combine(vaultManager.vaults, form, appUpdater.state, updateRequested) { vaults, form, update, requested ->
-        form.copy(vaults = vaults, mode = resolveMode(form.mode, vaults), update = gateUpdate(update, requested))
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), VaultGateUiState(vaults = vaultManager.vaults.value))
+    val uiState = combine(
+        vaultManager.vaults,
+        form,
+        appUpdater.state,
+        updateRequested,
+        preferences.getWelcomeSeen(),
+    ) { vaults, form, update, requested, welcomeSeen ->
+        form.copy(vaults = vaults, mode = resolveMode(form.mode, vaults, welcomeSeen), update = gateUpdate(update, requested))
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), initialState())
 
     init {
         viewModelScope.launch {
             val count = vaultManager.unencryptedItemCount()
             form.update { it.copy(unencryptedItemCount = count) }
         }
+        viewModelScope.launch {
+            // Someone with a vault is past the welcome, so deleting their last vault later shouldn't bring it up.
+            if (vaultManager.vaults.value.isNotEmpty() && !preferences.getWelcomeSeen().first()) {
+                preferences.setWelcomeSeen()
+            }
+        }
+    }
+
+    private fun initialState(): VaultGateUiState {
+        val vaults = vaultManager.vaults.value
+        return VaultGateUiState(vaults = vaults, mode = if (vaults.isEmpty()) VaultGateMode.Loading else VaultGateMode.Select())
     }
 
     fun execute(action: VaultGateAction) {
         when (action) {
+            VaultGateAction.FinishWelcome -> viewModelScope.launch { preferences.setWelcomeSeen() }
             is VaultGateAction.SelectVault -> setMode(VaultGateMode.Select(action.id))
             VaultGateAction.ShowCreate -> setMode(VaultGateMode.Create)
             is VaultGateAction.ShowImport -> setMode(VaultGateMode.Import(action.path))
@@ -128,10 +153,10 @@ class VaultGateViewModel(
         appUpdater.restartToInstall()
     }
 
-    private fun resolveMode(mode: VaultGateMode, vaults: List<VaultInfo>): VaultGateMode = when {
+    private fun resolveMode(mode: VaultGateMode, vaults: List<VaultInfo>, welcomeSeen: Boolean): VaultGateMode = when {
         mode !is VaultGateMode.Select -> mode
         // With no vaults there is nothing to pick from, so the first thing to do is make one.
-        vaults.isEmpty() -> VaultGateMode.Create
+        vaults.isEmpty() -> if (welcomeSeen) VaultGateMode.Create else VaultGateMode.Welcome
         // With only one, choosing it would be a pointless extra click.
         vaults.none { it.id == mode.selectedId } -> VaultGateMode.Select(vaults.singleOrNull()?.id)
         else -> mode

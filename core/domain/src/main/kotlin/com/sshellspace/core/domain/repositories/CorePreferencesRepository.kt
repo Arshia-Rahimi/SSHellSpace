@@ -50,6 +50,10 @@ interface CorePreferencesRepository {
     fun getLastUpdateCheck(): Flow<Long?>
     suspend fun setLastUpdateCheck(epochMillis: Long)
 
+    /** Whether the first-run welcome is over. The first value is the stored one, never a placeholder. */
+    fun getWelcomeSeen(): Flow<Boolean>
+    suspend fun setWelcomeSeen()
+
     /** User overrides keyed by shortcut id. Shortcuts without an entry use their default chord. */
     fun getShortcuts(): Flow<Map<String, KeyChord>>
 

@@ -149,6 +149,23 @@ class CorePreferencesRepositoryImplTest {
         assertEquals(emptyList(), datasource.observeAll().first().filter { it.key == CorePreference::class.qualifiedName })
     }
 
+    @Test
+    fun `the welcome starts unseen and stays seen once set`() = runTest {
+        assertEquals(false, repository.getWelcomeSeen().first())
+
+        repository.setWelcomeSeen()
+
+        assertEquals(true, withContext(Dispatchers.Default) { withTimeout(5_000) { repository.getWelcomeSeen().first() } })
+        assertEquals(true, CorePreferencesRepositoryImpl(datasource).getWelcomeSeen().first())
+    }
+
+    @Test
+    fun `marking the welcome seen leaves the other preferences' row alone`() = runTest {
+        repository.setWelcomeSeen()
+
+        assertEquals(emptyList(), datasource.observeAll().first().filter { it.key == CorePreference::class.qualifiedName })
+    }
+
     private suspend fun awaitTerminalThemeNames(vararg names: String) = withContext(Dispatchers.Default) {
         withTimeout(5_000) {
             repository.getTerminalThemes().first { themes -> themes.map { it.name } == names.toList() }
