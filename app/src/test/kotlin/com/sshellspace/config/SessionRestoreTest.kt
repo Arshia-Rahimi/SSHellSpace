@@ -69,6 +69,8 @@ class SessionRestoreTest {
 
         override fun clearFixedTabs() = Unit
 
+        override fun moveTab(id: TabId, toIndex: Int) = Unit
+
         override fun openTabs() = open.toList()
     }
 

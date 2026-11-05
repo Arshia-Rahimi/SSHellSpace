@@ -12,6 +12,7 @@ import com.composables.icons.radix.Cross2
 import com.composables.icons.radix.Desktop
 import com.composables.icons.radix.DotsHorizontal
 import com.composables.icons.radix.Download
+import com.composables.icons.radix.Exit
 import com.composables.icons.radix.EyeClosed
 import com.composables.icons.radix.EyeOpen
 import com.composables.icons.radix.File
@@ -60,6 +61,8 @@ object Icons {
     val Start = Radix.Play
     val Stop = Radix.Stop
     val Up = Radix.ArrowUp
+    val Exit = Radix.Exit
+    val Terminal = Radix.Code
     val Home = Radix.Home
     val Refresh = Radix.Reload
     val Upload = Radix.Upload

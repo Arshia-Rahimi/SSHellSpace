@@ -75,6 +75,16 @@ class TabManagerImpl(
         }
     }
 
+    override fun moveTab(id: TabId, toIndex: Int) {
+        _tabsState.update { state ->
+            val from = state.tabs.indexOfFirst { it.tab.id == id }
+            if (from == -1) return@update state
+            val moved = state.tabs.toMutableList()
+            moved.add(toIndex.coerceIn(moved.indices), moved.removeAt(from))
+            state.copy(tabs = moved)
+        }
+    }
+
     override fun reset() {
         _tabsState.update { state ->
             state.tabsSequence.forEach { it.tab.viewModelStore.clear() }

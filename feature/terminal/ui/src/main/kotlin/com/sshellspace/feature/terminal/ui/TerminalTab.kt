@@ -1,5 +1,6 @@
 package com.sshellspace.feature.terminal.ui
 
+import com.sshellspace.core.ui.designsystem.Icons
 import com.sshellspace.core.ui.tabs.TabController
 import com.sshellspace.core.ui.tabs.TabItemFactory
 import com.sshellspace.core.ui.tabs.TabItem
@@ -23,6 +24,7 @@ val TerminalTabFactory = TabItemFactory<TerminalParams> { parameters ->
     TabItem(
         type = TerminalTab,
         initialTitle = parameters.shell.name,
+        initialIcon = Icons.Terminal,
         contentProvider = { item ->
             val viewModel: TerminalTabViewModel = koinViewModel {
                 parametersOf(item as TabController, parameters.shell)
@@ -38,6 +40,7 @@ val SshTerminalTabFactory = TabItemFactory<SshTerminalParams> { parameters ->
     TabItem(
         type = SshTerminalTab,
         initialTitle = parameters.title,
+        initialIcon = Icons.Host,
         contentProvider = { item ->
             val viewModel: SshTerminalTabViewModel = koinViewModel {
                 parametersOf(item as TabController, parameters)
@@ -53,6 +56,7 @@ val SftpTabFactory = TabItemFactory<SftpParams> { parameters ->
     TabItem(
         type = SftpTab,
         initialTitle = sftpTabTitle(parameters.title),
+        initialIcon = Icons.Folder,
         contentProvider = { item ->
             val viewModel: SftpBrowserViewModel = koinViewModel {
                 parametersOf(item as TabController, parameters)

@@ -45,6 +45,7 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 
 - `core/tabs` (package `com.sshellspace.core.ui.tabs`) defines `Tab`, which owns a `ViewModelStore` so its ViewModels are scoped per tab, along with `TabManager`, `TabController`, and `TabsState`. `TabManagerImpl` lives in `app`.
 - Fixed tabs are registered in `app/src/main/kotlin/com/sshellspace/config/Tabs.kt` (`fixedTabItems`). New-tab flows go through `NewTabDialogEvent`.
+- The top bar is `titlebar/TitleBar.kt` and `TabStrip.kt` in core/ui. `TabManager` owns the tab order (`moveTab`), so a dragged order is also what gets saved and restored. The strip handles gestures once for all tabs rather than per tab, because a handler on a moving tab measures the pointer against something moving under it. A dragged tab is clamped to the open tabs (`draggedTabPosition`), so it can't slide under the vault tab or the window controls. Use the custom `awaitPress`, not `awaitFirstDown`, which only reports the primary button and would break middle-click closing.
 
 ### UI conventions (core/ui)
 

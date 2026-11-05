@@ -9,6 +9,9 @@ interface TabManager {
     fun setCurrentTab(id: TabId)
     fun closeTab(id: TabId)
 
+    /** Moves an open tab to [toIndex] among the open tabs. */
+    fun moveTab(id: TabId, toIndex: Int)
+
     /** Closes every tab and clears the ViewModels of the fixed ones, back to how the app started. */
     fun reset()
 
