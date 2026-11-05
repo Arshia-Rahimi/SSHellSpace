@@ -2,6 +2,7 @@ import dev.detekt.gradle.extensions.DetektExtension
 import org.gradle.api.Plugin
 import org.gradle.api.Project
 import org.gradle.api.tasks.testing.Test
+import org.gradle.api.tasks.testing.logging.TestExceptionFormat
 import org.gradle.kotlin.dsl.configure
 import org.gradle.kotlin.dsl.withType
 import org.jetbrains.kotlin.gradle.dsl.KotlinJvmExtension
@@ -36,6 +37,9 @@ class KotlinLibraryPlugin : Plugin<Project> {
 
         tasks.withType<Test>().configureEach {
             useJUnitPlatform()
+            testLogging {
+                exceptionFormat = TestExceptionFormat.FULL
+            }
         }
 
         extensions.configure<DetektExtension> {

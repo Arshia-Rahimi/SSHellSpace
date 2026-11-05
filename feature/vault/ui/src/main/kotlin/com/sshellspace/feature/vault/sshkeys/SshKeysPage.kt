@@ -12,11 +12,10 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -120,7 +119,7 @@ private fun KeyList(
                     SshKeyCard(
                         key = key,
                         selected = uiState.sidebarState is SidebarState.Editing &&
-                                (uiState.sidebarState as SidebarState.Editing).key.id == key.id,
+                                uiState.sidebarState.key.id == key.id,
                         onClick = { onAction(SshKeysPageAction.SelectKey(key)) },
                     )
                 }
