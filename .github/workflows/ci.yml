@@ -23,6 +23,8 @@ jobs:
           java-version: 25
       # Only pushes to main write the Gradle cache, so pull requests can't poison it.
       - uses: gradle/actions/setup-gradle@v5
+      # Skiko, which the image preview tests decode with, loads these natively.
+      - run: sudo apt-get update && sudo apt-get install -y libgl1 libfontconfig1 libfreetype6
       - run: ./gradlew check
       - if: failure()
         uses: actions/upload-artifact@v4
