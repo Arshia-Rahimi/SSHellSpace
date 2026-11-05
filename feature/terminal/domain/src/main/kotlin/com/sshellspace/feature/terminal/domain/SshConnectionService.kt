@@ -18,13 +18,23 @@ interface SshPrompter {
     suspend fun answerChallenge(challenge: AuthChallenge): List<String>?
 }
 
+/** Where a connection's trusted host keys are kept, named the way the user is told about it. */
+enum class HostKeyStore(val label: String) {
+    /** `~/.ssh/known_hosts`, shared with the `ssh` command line tool. */
+    KnownHostsFile("known_hosts"),
+
+    /** The vault's own list, for logins that would still work with the vault on another device. */
+    Vault("this vault"),
+}
+
 data class HostKeyPrompt(
     val host: String,
     val port: Int,
     val keyType: String,
     val fingerprint: String,
-    /** Set when known_hosts has a different key for this host, which can mean a man-in-the-middle attack. */
+    /** Set when [store] has a different key for this host, which can mean a man-in-the-middle attack. */
     val expectedFingerprint: String? = null,
+    val store: HostKeyStore = HostKeyStore.KnownHostsFile,
 ) {
     val isChangedKey: Boolean get() = expectedFingerprint != null
 }

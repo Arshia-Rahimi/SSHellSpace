@@ -1,5 +1,6 @@
 package com.sshellspace.feature.terminal.data
 
+import com.sshellspace.core.data.DefaultKnownHostsPath
 import com.sshellspace.feature.terminal.data.ssh.SessionConfigurer
 import com.sshellspace.feature.terminal.data.ssh.agent.SshAgentLocator
 import com.sshellspace.feature.terminal.data.ssh.agent.SystemSshAgentFactory
@@ -13,9 +14,6 @@ import org.apache.sshd.common.keyprovider.KeyIdentityProvider
 import org.apache.sshd.core.CoreModuleProperties
 import org.apache.sshd.server.forward.ForwardingFilter
 import org.apache.sshd.server.forward.TcpForwardingFilter
-
-/** The OpenSSH known_hosts file, shared with the `ssh` command line tool. */
-val DefaultKnownHostsPath: Path = Path.of(System.getProperty("user.home"), ".ssh", "known_hosts")
 
 /**
  * The single MINA client used for every connection. Per-connection settings come from each session's

@@ -1,5 +1,6 @@
 package com.sshellspace.feature.terminal.data
 
+import com.sshellspace.core.data.KnownHostDatasource
 import com.sshellspace.core.data.SshConnectionDatasource
 import com.sshellspace.core.data.SshKeyDatasource
 import com.sshellspace.core.domain.SshKeyService
@@ -8,6 +9,7 @@ import com.sshellspace.core.domain.models.PortForward
 import com.sshellspace.core.domain.models.PortForwardType
 import com.sshellspace.core.domain.models.SshConnection
 import com.sshellspace.core.domain.models.SshConnectionAuth
+import com.sshellspace.core.domain.models.SshKeyType
 import com.sshellspace.feature.terminal.data.ssh.ConnectionContext
 import com.sshellspace.feature.terminal.data.sftp.MinaSftpSession
 import com.sshellspace.feature.terminal.data.ssh.agent.SshAgentLocator
@@ -55,6 +57,7 @@ class MinaSshConnectionService(
     private val keyDatasource: SshKeyDatasource,
     private val sshKeyService: SshKeyService,
     private val agentLocator: SshAgentLocator,
+    private val vaultKnownHosts: KnownHostDatasource,
 ) : SshConnectionService {
 
     override suspend fun connect(connectionId: Uuid, prompter: SshPrompter): SshConnectResult =
@@ -113,7 +116,12 @@ class MinaSshConnectionService(
         jump.createLocalPortForwardingTracker(SshdSocketAddress.LOCALHOST_ADDRESS, SshdSocketAddress(hop.host, hop.port))
 
     private suspend fun openSession(hop: SshConnection, address: SshdSocketAddress, prompter: SshPrompter): ClientSession {
-        val context = ConnectionContext(hop, prompter, keyPairs = loadKeys(hop, prompter))
+        val context = ConnectionContext(
+            connection = hop,
+            prompter = prompter,
+            keyPairs = loadKeys(hop, prompter),
+            vaultKnownHosts = vaultKnownHosts.takeIf { loginMovesWithVault(hop) },
+        )
         if (context.useAgent) checkAgent()
 
         val future = sshClient.connect(
@@ -148,6 +156,17 @@ class MinaSshConnectionService(
             )
         }
         return session
+    }
+
+    /**
+     * Whether this hop could still log in with the vault on another device, in which case its trusted host keys need to
+     * go along. Anything that relies on this computer's own files or agent stays with this computer's known_hosts.
+     * Decided per hop, since a jump host and its target can each log in differently.
+     */
+    private suspend fun loginMovesWithVault(hop: SshConnection): Boolean = when (val auth = hop.auth) {
+        is SshConnectionAuth.Password, is SshConnectionAuth.KeyboardInteractive -> true
+        is SshConnectionAuth.StoredKey -> keyDatasource.get(auth.keyId)?.type == SshKeyType.VAULT
+        is SshConnectionAuth.KeyFile, SshConnectionAuth.Agent -> false
     }
 
     private suspend fun loadKeys(hop: SshConnection, prompter: SshPrompter): List<KeyPair> =

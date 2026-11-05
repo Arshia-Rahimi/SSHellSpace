@@ -54,7 +54,7 @@ fun SshHostKeyCard(prompt: HostKeyPrompt, onAnswer: (trust: Boolean) -> Unit) {
         if (prompt.isChangedKey) {
             Text("Host key changed for $endpoint", color = Theme[colors][error])
             Text(
-                "The key this server sent doesn't match the one saved in known_hosts. Someone could be " +
+                "The key this server sent doesn't match the one saved in ${prompt.store.label}. Someone could be " +
                     "intercepting the connection. Only continue if you know the server's key was changed.",
                 color = Theme[colors][textSecondary],
             )
@@ -71,7 +71,7 @@ fun SshHostKeyCard(prompt: HostKeyPrompt, onAnswer: (trust: Boolean) -> Unit) {
             Text("Trust $endpoint?")
             Text(
                 "You haven't connected to this host before. Check that the fingerprint matches the server's " +
-                    "before trusting it. It will be saved to known_hosts.",
+                    "before trusting it. It will be saved to ${prompt.store.label}.",
                 color = Theme[colors][textSecondary],
             )
             Fingerprint("${prompt.keyType} key fingerprint", prompt.fingerprint)

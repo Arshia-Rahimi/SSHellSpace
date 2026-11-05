@@ -1,6 +1,7 @@
 package com.sshellspace.feature.terminal.data
 
 import com.sshellspace.core.data.PortForwardDatasource
+import com.sshellspace.core.data.KnownHostDatasource
 import com.sshellspace.core.data.SshConnectionDatasource
 import com.sshellspace.core.data.SshKeyDatasource
 import com.sshellspace.core.domain.SshKeyService
@@ -16,6 +17,7 @@ import com.sshellspace.feature.terminal.domain.PortForwardState
 import com.sshellspace.feature.terminal.domain.SecretPrompt
 import com.sshellspace.feature.terminal.domain.SshConnectionService
 import com.sshellspace.feature.terminal.domain.SshPrompter
+import io.mockk.coEvery
 import io.mockk.mockk
 import java.net.InetAddress
 import java.net.InetSocketAddress
@@ -81,6 +83,7 @@ class MinaPortForwardingServiceTest {
             mockk<SshKeyDatasource>(),
             mockk<SshKeyService>(),
             SshAgentLocator { null },
+            mockk<KnownHostDatasource>(relaxUnitFun = true) { coEvery { lines() } returns emptyList() },
         ),
     )
     private val savedForwards = FakeForwards()

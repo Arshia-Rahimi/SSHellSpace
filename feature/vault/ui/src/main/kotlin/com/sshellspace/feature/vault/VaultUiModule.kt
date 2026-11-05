@@ -2,6 +2,7 @@ package com.sshellspace.feature.vault
 
 import com.sshellspace.feature.vault.connections.ConnectionsPageViewModel
 import com.sshellspace.feature.vault.gate.VaultGateViewModel
+import com.sshellspace.feature.vault.knownhosts.KnownHostsPageViewModel
 import com.sshellspace.feature.vault.portforwarding.PortForwardingPageViewModel
 import com.sshellspace.feature.vault.settings.SettingsPageViewModel
 import com.sshellspace.feature.vault.snippets.SnippetsPageViewModel
@@ -14,6 +15,7 @@ val VaultUiModule = module {
     single<VaultTabViewModel>()
     viewModel<ConnectionsPageViewModel>()
     viewModel<SshKeysPageViewModel>()
+    viewModel<KnownHostsPageViewModel>()
     viewModel<PortForwardingPageViewModel>()
     viewModel<SnippetsPageViewModel>()
     viewModel<SettingsPageViewModel>()

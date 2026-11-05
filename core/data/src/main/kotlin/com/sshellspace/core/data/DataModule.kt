@@ -8,6 +8,7 @@ import com.sshellspace.core.data.generated.Port_forwards
 import com.sshellspace.core.data.generated.Vault_ssh_keys
 import com.sshellspace.core.data.impl.CorePreferencesRepositoryImpl
 import com.sshellspace.core.data.impl.MinaSshKeyService
+import com.sshellspace.core.data.impl.SqlDelightKnownHostDatasource
 import com.sshellspace.core.data.impl.SqlDelightPortForwardDatasource
 import com.sshellspace.core.data.impl.SqlDelightPreferencesDatasource
 import com.sshellspace.core.data.impl.SqlDelightSnippetDatasource
@@ -33,6 +34,7 @@ val DataModule = module {
     single<SqlDelightSshConnectionDatasource>() bind SshConnectionDatasource::class
     single<SqlDelightPortForwardDatasource>() bind PortForwardDatasource::class
     single<SqlDelightSnippetDatasource>() bind SnippetDatasource::class
+    single<SqlDelightKnownHostDatasource>() bind KnownHostDatasource::class
     single<VaultPreferencesDatasource> {
         val vaultPreferences = SqlDelightPreferencesDatasource(get())
         object : VaultPreferencesDatasource, PreferencesDatasource by vaultPreferences {}

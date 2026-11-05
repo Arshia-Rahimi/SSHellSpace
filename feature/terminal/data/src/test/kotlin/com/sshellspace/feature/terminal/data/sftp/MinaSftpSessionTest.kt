@@ -1,5 +1,6 @@
 package com.sshellspace.feature.terminal.data.sftp
 
+import com.sshellspace.core.data.KnownHostDatasource
 import com.sshellspace.core.data.SshConnectionDatasource
 import com.sshellspace.core.data.SshKeyDatasource
 import com.sshellspace.core.domain.SshKeyService
@@ -94,6 +95,7 @@ class MinaSftpSessionTest {
             mockk<SshKeyDatasource>(),
             mockk<SshKeyService>(),
             SshAgentLocator { null },
+            mockk<KnownHostDatasource>(relaxUnitFun = true) { coEvery { lines() } returns emptyList() },
         )
         return assertIs<SshConnectResult.Success>(service.connect(connection.id, TrustingPrompter)).session
     }

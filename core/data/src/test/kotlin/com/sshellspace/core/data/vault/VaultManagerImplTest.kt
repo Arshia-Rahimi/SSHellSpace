@@ -548,10 +548,50 @@ class VaultManagerImplTest {
 
     @Test
     fun `a vault made before snippets existed migrates when it unlocks`() = runTest {
+        val vault = importOldVault(version = 3, missingTables = listOf("snippets", "known_hosts"))
+        manager.unlock(vault.id, password)
+
+        assertEquals(listOf("old"), connectionNames(vaultDatabase))
+        vaultDatabase.snippetQueries.upsert(com.sshellspace.core.data.generated.Snippets("s", "n", "ls", 0))
+        assertEquals("n", vaultDatabase.snippetQueries.index().executeAsList().single().name)
+        manager.lock()
+        manager.unlock(vault.id, password)
+        assertEquals(1, vaultDatabase.snippetQueries.index().executeAsList().size)
+    }
+
+    @Test
+    fun `a vault made before its known hosts list existed migrates when it unlocks`() = runTest {
+        val vault = importOldVault(version = 4, missingTables = listOf("known_hosts"))
+        manager.unlock(vault.id, password)
+
+        assertEquals(listOf("old"), connectionNames(vaultDatabase))
+        vaultDatabase.known_hostQueries.insert("example.com ssh-ed25519 AAAA")
+        assertEquals(1, vaultDatabase.known_hostQueries.index().executeAsList().size)
+        manager.lock()
+        manager.unlock(vault.id, password)
+        assertEquals(1, vaultDatabase.known_hostQueries.index().executeAsList().size)
+    }
+
+    @Test
+    fun `a vault's known hosts list comes along when it's exported and imported`() = runTest {
+        val vault = manager.create("Work", password, moveUnencryptedData = false)
+        vaultDatabase.known_hostQueries.insert("example.com ssh-ed25519 AAAA")
+        val exported = File(root, "exported.sshv").path
+        manager.export(vault.id, password, exported)
+        manager.lock()
+
+        val imported = manager.import(exported, password)
+        manager.unlock(imported.id, password)
+
+        assertEquals(listOf("example.com ssh-ed25519 AAAA"), vaultDatabase.known_hostQueries.index().executeAsList())
+    }
+
+    /** A vault file as an older version of the app would have left it, holding a connection called `old`. */
+    private suspend fun importOldVault(version: Long, missingTables: List<String>): VaultInfo {
         val image = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
             Database.Schema.create(driver).value
-            driver.execute(null, "DROP TABLE snippets", 0)
-            driver.execute(null, "PRAGMA user_version = ${Database.Schema.version - 1}", 0)
+            missingTables.forEach { driver.execute(null, "DROP TABLE $it", 0) }
+            driver.execute(null, "PRAGMA user_version = $version", 0)
             database(driver).ssh_connectionQueries.upsert(
                 com.sshellspace.core.data.generated.Ssh_connections("1", "old", "h", 22, "u", "{}", "{}"),
             )
@@ -561,16 +601,7 @@ class VaultManagerImplTest {
         val key = newVaultKey()
         val file = File(root, "old.sshv")
         file.writeBytes(VaultFile.seal(VaultHeader(id, "Old", listOf(newKeySlot(id, password, key))), key, image))
-
-        val vault = manager.import(file.path, password)
-        manager.unlock(vault.id, password)
-
-        assertEquals(listOf("old"), connectionNames(vaultDatabase))
-        vaultDatabase.snippetQueries.upsert(com.sshellspace.core.data.generated.Snippets("s", "n", "ls", 0))
-        assertEquals("n", vaultDatabase.snippetQueries.index().executeAsList().single().name)
-        manager.lock()
-        manager.unlock(vault.id, password)
-        assertEquals(1, vaultDatabase.snippetQueries.index().executeAsList().size)
+        return manager.import(file.path, password)
     }
 
     @Test

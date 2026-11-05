@@ -28,6 +28,7 @@ import com.composables.icons.radix.File
 import com.composables.icons.radix.FileText
 import com.composables.icons.radix.Home
 import com.composables.icons.radix.Gear
+import com.composables.icons.radix.Globe
 import com.composables.icons.radix.IdCard
 import com.composables.icons.radix.Image
 import com.composables.icons.radix.Keyboard
@@ -69,6 +70,7 @@ object Icons {
     val Close = Radix.Cross2
     val Vault = Radix.LockClosed
     val SshKeys = Radix.IdCard
+    val KnownHosts = Radix.Globe
     val PortForwarding = Radix.ArrowLeft
     val Pencil = Radix.Pencil1
     val Trash = Radix.Trash

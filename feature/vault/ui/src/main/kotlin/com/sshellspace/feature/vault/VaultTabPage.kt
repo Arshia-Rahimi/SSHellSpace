@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.sshellspace.core.ui.designsystem.Icons
 import com.sshellspace.feature.vault.connections.ConnectionsPage
+import com.sshellspace.feature.vault.knownhosts.KnownHostsPage
 import com.sshellspace.feature.vault.portforwarding.PortForwardingPage
 import com.sshellspace.feature.vault.settings.SettingsPage
 import com.sshellspace.feature.vault.snippets.SnippetsPage
@@ -16,6 +17,7 @@ enum class VaultTabPage(
 ) {
     Vault("Vault", Icons.Vault, ::ConnectionsPage),
     SshKeys("Ssh Keys", Icons.SshKeys, ::SshKeysPage),
+    KnownHosts("Known Hosts", Icons.KnownHosts, ::KnownHostsPage),
     PortForwarding("Port Forwarding", Icons.PortForwarding, ::PortForwardingPage),
     Snippets("Snippets", Icons.Snippet, ::SnippetsPage),
     Settings("Settings", Icons.Settings, ::SettingsPage),

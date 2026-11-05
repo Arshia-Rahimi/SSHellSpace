@@ -15,7 +15,7 @@ import org.apache.sshd.common.util.net.SshdSocketAddress
  * Checks host keys against an OpenSSH known_hosts file and asks the user about unknown or changed keys.
  * Accepted keys are written back to the file, like OpenSSH does.
  */
-internal class PromptingKnownHostsVerifier(
+internal open class PromptingKnownHostsVerifier(
     private val context: ConnectionContext,
     file: Path,
 ) : KnownHostsServerKeyVerifier(UnknownKeyPrompt(context), file) {
@@ -39,7 +39,7 @@ internal class PromptingKnownHostsVerifier(
     }
 
     override fun handleRevokedKey(clientSession: ClientSession, remoteAddress: SocketAddress, serverKey: PublicKey) {
-        context.failure = "The host key for ${context.connection.host} is marked as revoked in known_hosts."
+        context.failure = "The host key for ${context.connection.host} is marked as revoked in ${context.hostKeyStore.label}."
         super.handleRevokedKey(clientSession, remoteAddress, serverKey)
     }
 
@@ -62,6 +62,7 @@ private fun ConnectionContext.confirm(key: PublicKey, expected: PublicKey?): Boo
         keyType = KeyUtils.getKeyType(key),
         fingerprint = KeyUtils.getFingerPrint(key),
         expectedFingerprint = expected?.let(KeyUtils::getFingerPrint),
+        store = hostKeyStore,
     )
     return ask { confirmHostKey(prompt) }.also { accepted -> if (!accepted) cancel() }
 }

@@ -1,7 +1,9 @@
 package com.sshellspace.feature.terminal.data.ssh
 
+import com.sshellspace.core.data.KnownHostDatasource
 import com.sshellspace.core.domain.models.SshConnection
 import com.sshellspace.core.domain.models.SshConnectionAuth
+import com.sshellspace.feature.terminal.domain.HostKeyStore
 import com.sshellspace.feature.terminal.domain.SshPrompter
 import java.security.KeyPair
 import java.util.concurrent.atomic.AtomicBoolean
@@ -20,7 +22,11 @@ internal class ConnectionContext(
     private val prompter: SshPrompter,
     /** Keys for `publickey` auth, already decrypted. */
     val keyPairs: List<KeyPair> = emptyList(),
+    /** The list to check the host key against, for a hop whose login moves with the vault. Else it's known_hosts. */
+    val vaultKnownHosts: KnownHostDatasource? = null,
 ) {
+    val hostKeyStore: HostKeyStore get() = if (vaultKnownHosts != null) HostKeyStore.Vault else HostKeyStore.KnownHostsFile
+
     /** The real host, even when the TCP connection goes through a jump host tunnel on localhost. */
     val target = SshdSocketAddress(connection.host, connection.port)
     val address = "${connection.username}@${connection.host}"

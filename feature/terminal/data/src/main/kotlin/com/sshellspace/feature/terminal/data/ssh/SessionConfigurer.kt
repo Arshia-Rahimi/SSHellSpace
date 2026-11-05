@@ -20,7 +20,8 @@ internal class SessionConfigurer(
         val clientSession = session as? ClientSession ?: return
         val context = clientSession.connectionContext?.getAttribute(ConnectionContext.KEY) ?: return
 
-        clientSession.serverKeyVerifier = PromptingKnownHostsVerifier(context, knownHosts())
+        clientSession.serverKeyVerifier = context.vaultKnownHosts?.let { VaultKnownHostsVerifier(context, it) }
+            ?: PromptingKnownHostsVerifier(context, knownHosts())
         clientSession.userInteraction = SessionUserInteraction(context)
         clientSession.compressionFactories = if (context.connection.options.compression) COMPRESSED else UNCOMPRESSED
         context.savedPassword?.let(clientSession::addPasswordIdentity)

@@ -1,5 +1,6 @@
 package com.sshellspace.feature.terminal.data
 
+import com.sshellspace.core.data.KnownHostDatasource
 import com.sshellspace.core.data.SshConnectionDatasource
 import com.sshellspace.core.data.SshKeyDatasource
 import com.sshellspace.core.domain.SshKeyService
@@ -13,6 +14,7 @@ import com.sshellspace.core.domain.models.SshKeySecret
 import com.sshellspace.core.domain.models.SshKeyType
 import com.sshellspace.feature.terminal.domain.AuthChallenge
 import com.sshellspace.feature.terminal.domain.HostKeyPrompt
+import com.sshellspace.feature.terminal.domain.HostKeyStore
 import com.sshellspace.feature.terminal.domain.SESSION_LOST_EXIT_CODE
 import com.sshellspace.feature.terminal.domain.SecretPrompt
 import com.sshellspace.feature.terminal.domain.SshConnectResult
@@ -60,6 +62,8 @@ import org.apache.sshd.server.keyprovider.SimpleGeneratorHostKeyProvider
 import org.apache.sshd.server.session.ServerSession
 import org.junit.jupiter.api.Assumptions.assumeTrue
 
+private const val KEY_PASSPHRASE = "key passphrase"
+
 /** Runs real connections against an in-process MINA SSH server. */
 class MinaSshConnectionServiceTest {
 
@@ -87,7 +91,8 @@ class MinaSshConnectionServiceTest {
     private val client = createSshClient(knownHosts, agentLocator)
     private val connections = FakeConnections()
     private val keys = FakeKeys()
-    private val service = MinaSshConnectionService(client, connections, keys, ParsingKeyService, agentLocator)
+    private val vaultKnownHosts = FakeKnownHosts()
+    private val service = MinaSshConnectionService(client, connections, keys, ParsingKeyService, agentLocator, vaultKnownHosts)
 
     @AfterTest
     fun tearDown() {
@@ -129,7 +134,7 @@ class MinaSshConnectionServiceTest {
         assertIs<SshConnectResult.Success>(connect(target, first)).session.close()
         assertEquals(1, first.hostKeys.size)
         assertNull(first.hostKeys.single().expectedFingerprint)
-        assertTrue(Files.readString(knownHosts).contains("[127.0.0.1]:${server.port}"))
+        assertTrue(vaultKnownHosts.stored.single().startsWith("[127.0.0.1]:${server.port}"))
 
         val second = FakePrompter()
         assertIs<SshConnectResult.Success>(connect(target, second)).session.close()
@@ -137,13 +142,14 @@ class MinaSshConnectionServiceTest {
     }
 
     @Test
-    fun `rejecting the host key cancels and leaves known_hosts alone`() {
+    fun `rejecting the host key cancels and leaves both lists alone`() {
         val target = connection(SshConnectionAuth.Password("secret"))
 
         val result = connect(target, FakePrompter(acceptHostKeys = false))
 
         assertIs<SshConnectResult.Cancelled>(result)
-        assertTrue(!Files.exists(knownHosts) || Files.readString(knownHosts).isBlank())
+        assertEquals(emptyList(), vaultKnownHosts.stored)
+        assertEquals("", knownHostsFileText())
     }
 
     @Test
@@ -151,7 +157,7 @@ class MinaSshConnectionServiceTest {
         val other = KeyUtils.generateKeyPair("ssh-ed25519", 256).public
         Files.createDirectories(knownHosts.parent)
         Files.writeString(knownHosts, "[127.0.0.1]:${server.port} ${PublicKeyEntry.toString(other)}\n")
-        val target = connection(SshConnectionAuth.Password("secret"))
+        val target = deviceKeyTarget()
         val prompter = FakePrompter(acceptHostKeys = false)
 
         assertIs<SshConnectResult.Cancelled>(connect(target, prompter))
@@ -229,9 +235,8 @@ class MinaSshConnectionServiceTest {
         session.close()
 
         assertEquals(listOf("localhost", "127.0.0.1"), prompter.hostKeys.map { it.host })
-        val recorded = Files.readString(knownHosts)
-        assertTrue(recorded.contains("[localhost]:${server.port}"))
-        assertTrue(recorded.contains("[127.0.0.1]:${server.port}"))
+        assertTrue(vaultKnownHosts.stored.any { it.startsWith("[localhost]:${server.port}") })
+        assertTrue(vaultKnownHosts.stored.any { it.startsWith("[127.0.0.1]:${server.port}") })
     }
 
     @Test
@@ -259,6 +264,9 @@ class MinaSshConnectionServiceTest {
             val target = connection(SshConnectionAuth.Agent)
 
             assertIs<SshConnectResult.Success>(connect(target, FakePrompter())).session.close()
+            // The agent is on this computer, so the login doesn't move with the vault.
+            assertTrue(knownHostsFileText().contains(hostPattern))
+            assertEquals(emptyList(), vaultKnownHosts.stored)
         } finally {
             agent.destroy()
         }
@@ -300,10 +308,260 @@ class MinaSshConnectionServiceTest {
         shell.close()
     }
 
+    private fun vaultKeyTarget(strictHostKeyChecking: Boolean = false) = connection(
+        SshConnectionAuth.StoredKey(keys.add(SshKeySecret.Vault(clientKey.encrypted(KEY_PASSPHRASE)))),
+        strictHostKeyChecking = strictHostKeyChecking,
+    )
+
+    private fun deviceKeyTarget(strictHostKeyChecking: Boolean = false): SshConnection {
+        val keyFile = tempDir.resolve("device_key")
+        Files.writeString(keyFile, clientKey.encrypted(KEY_PASSPHRASE))
+        return connection(
+            SshConnectionAuth.StoredKey(keys.add(SshKeySecret.Device(keyFile.toString(), KEY_PASSPHRASE))),
+            strictHostKeyChecking = strictHostKeyChecking,
+        )
+    }
+
+    private fun keyFileAuth(): SshConnectionAuth.KeyFile {
+        val keyFile = tempDir.resolve("plain_key")
+        Files.writeString(keyFile, clientKey.encrypted(KEY_PASSPHRASE))
+        return SshConnectionAuth.KeyFile(keyFile.toString(), KEY_PASSPHRASE)
+    }
+
+    private fun answeringKeyPassphrase(acceptHostKeys: Boolean = true) =
+        FakePrompter(acceptHostKeys = acceptHostKeys, secretAnswers = ArrayDeque(listOf(KEY_PASSPHRASE)))
+
+    private val hostPattern get() = "[127.0.0.1]:${server.port}"
+    private val serverKey get() = server.keyPairProvider.loadKeys(null).first().public
+    private fun knownHostsFileText() = if (Files.exists(knownHosts)) Files.readString(knownHosts) else ""
+
+    @Test
+    fun `a vault key trusts through the vault's list and leaves known_hosts alone`() {
+        val target = vaultKeyTarget()
+
+        val first = answeringKeyPassphrase()
+        assertIs<SshConnectResult.Success>(connect(target, first)).session.close()
+        assertEquals(HostKeyStore.Vault, first.hostKeys.single().store)
+        assertTrue(vaultKnownHosts.stored.single().startsWith(hostPattern), vaultKnownHosts.stored.toString())
+        assertEquals("", knownHostsFileText())
+
+        val second = answeringKeyPassphrase()
+        assertIs<SshConnectResult.Success>(connect(target, second)).session.close()
+        assertEquals(emptyList(), second.hostKeys)
+    }
+
+    @Test
+    fun `a device key trusts through known_hosts and leaves the vault's list alone`() {
+        val target = deviceKeyTarget()
+        val prompter = FakePrompter()
+
+        assertIs<SshConnectResult.Success>(connect(target, prompter)).session.close()
+
+        assertEquals(HostKeyStore.KnownHostsFile, prompter.hostKeys.single().store)
+        assertTrue(knownHostsFileText().contains(hostPattern))
+        assertEquals(emptyList(), vaultKnownHosts.stored)
+    }
+
+    @Test
+    fun `a password moves with the vault, so it uses the vault's list`() {
+        val prompter = FakePrompter()
+
+        assertIs<SshConnectResult.Success>(connect(connection(SshConnectionAuth.Password("secret")), prompter)).session.close()
+
+        assertEquals(HostKeyStore.Vault, prompter.hostKeys.single().store)
+        assertEquals(1, vaultKnownHosts.stored.size)
+        assertEquals("", knownHostsFileText())
+    }
+
+    @Test
+    fun `a password asked for at each login still moves with the vault`() {
+        val target = connection(SshConnectionAuth.Password(null))
+
+        assertIs<SshConnectResult.Success>(connect(target, FakePrompter(secrets = ArrayDeque(listOf("secret"))))).session.close()
+
+        assertEquals(1, vaultKnownHosts.stored.size)
+        assertEquals("", knownHostsFileText())
+    }
+
+    @Test
+    fun `keyboard-interactive moves with the vault, so it uses the vault's list`() {
+        val target = connection(SshConnectionAuth.KeyboardInteractive(), username = "otp-user")
+        val prompter = FakePrompter(challengeAnswers = listOf("123456"))
+
+        assertIs<SshConnectResult.Success>(connect(target, prompter)).session.close()
+
+        assertEquals(HostKeyStore.Vault, prompter.hostKeys.single().store)
+        assertEquals(1, vaultKnownHosts.stored.size)
+        assertEquals("", knownHostsFileText())
+    }
+
+    @Test
+    fun `a key file is on this computer, so it uses known_hosts`() {
+        val prompter = FakePrompter()
+
+        assertIs<SshConnectResult.Success>(connect(connection(keyFileAuth()), prompter)).session.close()
+
+        assertEquals(HostKeyStore.KnownHostsFile, prompter.hostKeys.single().store)
+        assertTrue(knownHostsFileText().contains(hostPattern))
+        assertEquals(emptyList(), vaultKnownHosts.stored)
+    }
+
+    @Test
+    fun `a changed key in known_hosts asks, says where, and accepting replaces it`() {
+        saveDifferentHostKeyInFile()
+        val prompter = FakePrompter()
+
+        assertIs<SshConnectResult.Success>(connect(deviceKeyTarget(), prompter)).session.close()
+
+        assertEquals(HostKeyStore.KnownHostsFile, prompter.hostKeys.single().store)
+        assertTrue(prompter.hostKeys.single().isChangedKey)
+        assertTrue(knownHostsFileText().contains(PublicKeyEntry.toString(serverKey)))
+        assertEquals(emptyList(), vaultKnownHosts.stored)
+    }
+
+    @Test
+    fun `strict checking refuses a changed key in known_hosts without asking`() {
+        saveDifferentHostKeyInFile()
+        val prompter = FakePrompter()
+
+        val failed = assertIs<SshConnectResult.Failed>(connect(deviceKeyTarget(strictHostKeyChecking = true), prompter))
+
+        assertTrue(failed.message.contains("changed"), failed.message)
+        assertEquals(emptyList(), prompter.hostKeys)
+    }
+
+    @Test
+    fun `a key revoked in known_hosts is refused and says where`() {
+        Files.createDirectories(knownHosts.parent)
+        Files.writeString(knownHosts, "@revoked $hostPattern ${PublicKeyEntry.toString(serverKey)}\n")
+        val prompter = FakePrompter()
+
+        val failed = assertIs<SshConnectResult.Failed>(connect(deviceKeyTarget(), prompter))
+
+        assertTrue(failed.message.contains("revoked in known_hosts"), failed.message)
+        assertEquals(emptyList(), prompter.hostKeys)
+    }
+
+    @Test
+    fun `a host trusted only in known_hosts is still unknown to a vault key`() {
+        Files.createDirectories(knownHosts.parent)
+        Files.writeString(knownHosts, "$hostPattern ${PublicKeyEntry.toString(serverKey)}\n")
+        val prompter = answeringKeyPassphrase()
+
+        assertIs<SshConnectResult.Success>(connect(vaultKeyTarget(), prompter)).session.close()
+
+        assertEquals(1, prompter.hostKeys.size)
+    }
+
+    @Test
+    fun `a host trusted only in the vault is still unknown to a device key`() {
+        vaultKnownHosts.stored += "$hostPattern ${PublicKeyEntry.toString(serverKey)}"
+        val prompter = FakePrompter()
+
+        assertIs<SshConnectResult.Success>(connect(deviceKeyTarget(), prompter)).session.close()
+
+        assertEquals(1, prompter.hostKeys.size)
+    }
+
+    @Test
+    fun `a jump host and its target each use the list for how they log in`() {
+        val jump = connection(keyFileAuth())
+        val target = connection(SshConnectionAuth.Password("secret"), host = "localhost", jumpHostId = jump.id)
+
+        assertIs<SshConnectResult.Success>(connect(target, FakePrompter())).session.close()
+
+        assertTrue(knownHostsFileText().contains("[127.0.0.1]:${server.port}"))
+        assertTrue(!knownHostsFileText().contains("localhost"))
+        assertTrue(vaultKnownHosts.stored.single().startsWith("[localhost]:${server.port}"))
+    }
+
+    @Test
+    fun `a changed key in the vault's list asks, and accepting replaces it`() {
+        val old = KeyUtils.generateKeyPair("ssh-ed25519", 256).public
+        vaultKnownHosts.stored += "$hostPattern ${PublicKeyEntry.toString(old)}"
+        val prompter = answeringKeyPassphrase()
+
+        assertIs<SshConnectResult.Success>(connect(vaultKeyTarget(), prompter)).session.close()
+
+        val prompt = prompter.hostKeys.single()
+        assertEquals(KeyUtils.getFingerPrint(old), prompt.expectedFingerprint)
+        assertEquals(HostKeyStore.Vault, prompt.store)
+        assertEquals(listOf("$hostPattern ${PublicKeyEntry.toString(serverKey)}"), vaultKnownHosts.stored)
+    }
+
+    @Test
+    fun `declining a changed key keeps the vault's list as it was`() {
+        val line = "$hostPattern ${PublicKeyEntry.toString(KeyUtils.generateKeyPair("ssh-ed25519", 256).public)}"
+        vaultKnownHosts.stored += line
+
+        assertIs<SshConnectResult.Cancelled>(connect(vaultKeyTarget(), answeringKeyPassphrase(acceptHostKeys = false)))
+
+        assertEquals(listOf(line), vaultKnownHosts.stored)
+    }
+
+    @Test
+    fun `strict checking refuses a changed key in the vault's list without asking`() {
+        vaultKnownHosts.stored += "$hostPattern ${PublicKeyEntry.toString(KeyUtils.generateKeyPair("ssh-ed25519", 256).public)}"
+        val prompter = answeringKeyPassphrase()
+
+        val failed = assertIs<SshConnectResult.Failed>(connect(vaultKeyTarget(strictHostKeyChecking = true), prompter))
+
+        assertTrue(failed.message.contains("changed"), failed.message)
+        assertEquals(emptyList(), prompter.hostKeys)
+    }
+
+    @Test
+    fun `a key revoked in the vault's list is refused and says where`() {
+        vaultKnownHosts.stored += "@revoked $hostPattern ${PublicKeyEntry.toString(serverKey)}"
+        val prompter = answeringKeyPassphrase()
+
+        val failed = assertIs<SshConnectResult.Failed>(connect(vaultKeyTarget(), prompter))
+
+        assertTrue(failed.message.contains("revoked in this vault"), failed.message)
+        assertEquals(emptyList(), prompter.hostKeys)
+    }
+
+    @Test
+    fun `a wildcard line in the vault's list trusts nothing`() {
+        // What a crafted vault file would hold to impersonate any server, using a key it controls.
+        vaultKnownHosts.stored += "* ${PublicKeyEntry.toString(serverKey)}"
+        val prompter = answeringKeyPassphrase()
+
+        assertIs<SshConnectResult.Success>(connect(vaultKeyTarget(), prompter)).session.close()
+
+        assertEquals(1, prompter.hostKeys.size)
+    }
+
+    @Test
+    fun `a certificate authority line in the vault's list trusts nothing`() {
+        vaultKnownHosts.stored += "@cert-authority $hostPattern ${PublicKeyEntry.toString(serverKey)}"
+        val prompter = answeringKeyPassphrase()
+
+        assertIs<SshConnectResult.Success>(connect(vaultKeyTarget(), prompter)).session.close()
+
+        assertEquals(1, prompter.hostKeys.size)
+    }
+
+    @Test
+    fun `a vault that locks while connecting fails rather than asking to trust the key`() {
+        val target = vaultKeyTarget()
+        vaultKnownHosts.isLocked = true
+        val prompter = answeringKeyPassphrase()
+
+        val failed = assertIs<SshConnectResult.Failed>(connect(target, prompter))
+
+        assertTrue(failed.message.contains("locked"), failed.message)
+        assertEquals(emptyList(), prompter.hostKeys)
+    }
+
     private fun saveDifferentHostKey() {
+        vaultKnownHosts.stored += "$hostPattern ${PublicKeyEntry.toString(KeyUtils.generateKeyPair("ssh-ed25519", 256).public)}"
+    }
+
+    private fun saveDifferentHostKeyInFile() {
         val other = KeyUtils.generateKeyPair("ssh-ed25519", 256).public
         Files.createDirectories(knownHosts.parent)
-        Files.writeString(knownHosts, "[127.0.0.1]:${server.port} ${PublicKeyEntry.toString(other)}\n")
+        Files.writeString(knownHosts, "$hostPattern ${PublicKeyEntry.toString(other)}\n")
     }
 
     @Test
@@ -398,6 +656,23 @@ class MinaSshConnectionServiceTest {
         override suspend fun answerChallenge(challenge: AuthChallenge) = challengeAnswers.also { challenges += challenge }
     }
 
+    private class FakeKnownHosts : KnownHostDatasource {
+        val stored = mutableListOf<String>()
+        var isLocked = false
+
+        override fun index(): Flow<List<String>> = flowOf(stored.toList())
+        override suspend fun lines(): List<String> {
+            check(!isLocked) { "locked" }
+            return stored.toList()
+        }
+        override suspend fun add(lines: List<String>) { stored += lines }
+        override suspend fun replace(old: String, new: String) {
+            stored -= old
+            stored += new
+        }
+        override suspend fun delete(line: String) { stored -= line }
+    }
+
     private class FakeConnections : SshConnectionDatasource {
         private val byId = mutableMapOf<Uuid, SshConnection>()
         fun add(connection: SshConnection) = byId.put(connection.id, connection)
@@ -412,8 +687,9 @@ class MinaSshConnectionServiceTest {
 
         fun add(secret: SshKeySecret): Uuid = Uuid.random().also { secrets[it] = secret }
 
-        override suspend fun get(id: Uuid) =
-            if (id in secrets) SshKeyInfo(id, "test key", Algorithm.Ed25519, SshKeyType.DEVICE) else null
+        override suspend fun get(id: Uuid) = secrets[id]?.let { secret ->
+            SshKeyInfo(id, "test key", Algorithm.Ed25519, if (secret is SshKeySecret.Vault) SshKeyType.VAULT else SshKeyType.DEVICE)
+        }
 
         override suspend fun getSecret(id: Uuid) = secrets[id]
     }

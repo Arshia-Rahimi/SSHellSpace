@@ -1,5 +1,6 @@
 package com.sshellspace.feature.vault.data
 
+import com.sshellspace.feature.vault.domain.KnownHostRepository
 import com.sshellspace.feature.vault.domain.PortForwardRepository
 import com.sshellspace.feature.vault.domain.SnippetRepository
 import com.sshellspace.feature.vault.domain.SshConfigImporter
@@ -15,4 +16,5 @@ val VaultDataModule = module {
     single<PortForwardRepositoryImpl>() bind PortForwardRepository::class
     single<SnippetRepositoryImpl>() bind SnippetRepository::class
     single { SshConfigImporterImpl(connectionRepository = get()) } bind SshConfigImporter::class
+    single { KnownHostRepositoryImpl(datasource = get()) } bind KnownHostRepository::class
 }

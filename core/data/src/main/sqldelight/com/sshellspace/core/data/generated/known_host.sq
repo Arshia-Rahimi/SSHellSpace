@@ -1,0 +1,15 @@
+CREATE TABLE known_hosts (
+    -- A line in the OpenSSH known_hosts format, so exporting needs no conversion.
+    line TEXT NOT NULL PRIMARY KEY
+);
+
+index:
+SELECT line FROM known_hosts
+ORDER BY line;
+
+insert:
+INSERT OR IGNORE INTO known_hosts VALUES (?);
+
+delete:
+DELETE FROM known_hosts
+WHERE line = ?;
