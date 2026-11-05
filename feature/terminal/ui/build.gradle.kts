@@ -13,4 +13,6 @@ dependencies {
     implementation(libs.pty4j)
     implementation(libs.filekit.core)
     implementation(libs.filekit.dialogs)
+    // The image preview tests decode with Skia, whose native library is per OS.
+    testRuntimeOnly(compose.desktop.currentOs)
 }
