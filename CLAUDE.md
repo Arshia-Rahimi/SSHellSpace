@@ -11,8 +11,8 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 - Single test: `./gradlew :core:data:test --tests "com.sshellspace.core.data.impl.MinaSshKeyServiceTest"` (append `.methodName`, or use a `*` pattern for backtick-named tests).
 - `./gradlew graphUpdate` regenerates each module's `DependencyGraph.md` (Mermaid). The task comes from the `project.root` plugin (`build-logic/src/main/kotlin/utils/Graph.kt`).
 - The project requires the JDK 25 toolchain (`jvmToolchain(25)`), which the foojay resolver auto-provisions.
-- Gradle runs with its stock defaults (`gradle.properties` is empty), and there are no dependency lockfiles or verification metadata.
-- If the Kotlin compiler runs out of memory, run `./gradlew --stop` and rebuild, or raise the heap in `gradle.properties`.
+- `gradle.properties` only sets the Gradle and Kotlin daemon heap sizes. There are no dependency lockfiles or verification metadata.
+- If the Kotlin compiler runs out of memory, run `./gradlew --stop` and rebuild, or raise the heap sizes in `gradle.properties`.
 
 ## Build structure
 
