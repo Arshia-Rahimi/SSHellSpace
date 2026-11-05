@@ -42,11 +42,6 @@ dependencies {
     implementation(libs.bouncy.castle)
 }
 
-// What ships is pinned exactly, so a dependency can't change version without showing up in a diff.
-configurations.runtimeClasspath {
-    resolutionStrategy.activateDependencyLocking()
-}
-
 nucleus.application {
     mainClass = "com.sshellspace.MainKt"
 
