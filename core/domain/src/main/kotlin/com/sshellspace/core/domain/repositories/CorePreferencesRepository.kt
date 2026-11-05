@@ -1,6 +1,7 @@
 package com.sshellspace.core.domain.repositories
 
 import com.sshellspace.core.domain.models.KeyChord
+import com.sshellspace.core.domain.models.TerminalColors
 import com.sshellspace.core.domain.models.ThemePreference
 import com.sshellspace.core.domain.models.UserTheme
 import kotlinx.coroutines.flow.Flow
@@ -26,6 +27,17 @@ interface CorePreferencesRepository {
     suspend fun importUserTheme(json: String): UserTheme
     suspend fun setActiveUserTheme(name: String)
     suspend fun deleteUserTheme(name: String)
+
+    fun getTerminalThemes(): Flow<List<TerminalColors>>
+
+    /**
+     * Parses [json] as terminal colors and saves them. A saved theme with the same name is replaced.
+     *
+     * @param fallbackName the name to use when the file doesn't give one.
+     * @throws IllegalArgumentException when [json] isn't a valid terminal theme.
+     */
+    suspend fun importTerminalTheme(json: String, fallbackName: String): TerminalColors
+    suspend fun deleteTerminalTheme(name: String)
 
     fun getAutoLockMinutes(): Flow<Int>
 

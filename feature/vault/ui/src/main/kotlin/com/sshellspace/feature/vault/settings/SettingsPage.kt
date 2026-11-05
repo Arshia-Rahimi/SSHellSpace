@@ -40,6 +40,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.Text
 import com.composeunstyled.theme.Theme
+import com.sshellspace.core.domain.models.TerminalColors
 import com.sshellspace.core.domain.models.ThemePreference
 import com.sshellspace.core.ui.designsystem.adaptive.currentWindowClass
 import com.sshellspace.core.ui.designsystem.components.Button
@@ -542,6 +543,9 @@ private fun TerminalThemeSelector(
     uiState: SettingsPageUiState,
     onAction: (SettingsPageAction) -> Unit,
 ) {
+    val scope = rememberCoroutineScope()
+    val selectedName = uiState.terminalThemeName?.takeIf { name -> uiState.terminalThemes.any { it.name == name } }
+
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text("Terminal colors", color = Theme[colors][textSecondary])
         FlowRow(
@@ -549,19 +553,71 @@ private fun TerminalThemeSelector(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             OptionButton(
-                selected = uiState.terminalThemeName == null,
+                selected = selectedName == null,
                 onClick = { onAction(SettingsPageAction.SetTerminalTheme(null)) },
             ) {
                 Text("Follow app theme")
             }
-            uiState.userThemes.forEach { theme ->
-                ColorSchemeOption(
-                    label = theme.name,
-                    swatch = theme.terminal.background.toColor(),
-                    selected = theme.name == uiState.terminalThemeName,
+            uiState.terminalThemes.forEach { theme ->
+                TerminalThemeOption(
+                    theme = theme,
+                    selected = theme.name == selectedName,
                     onClick = { onAction(SettingsPageAction.SetTerminalTheme(theme.name)) },
                 )
             }
+            OptionButton(
+                selected = false,
+                onClick = {
+                    scope.launch { pickThemeFile()?.let { onAction(SettingsPageAction.ImportTerminalTheme(it)) } }
+                },
+            ) {
+                Text("Import terminal theme…")
+            }
+            selectedName?.takeIf { it in uiState.importedTerminalThemes }?.let { name ->
+                OptionButton(
+                    selected = false,
+                    onClick = { onAction(SettingsPageAction.RemoveTerminalTheme(name)) },
+                ) {
+                    Text("Remove \"$name\"")
+                }
+            }
+        }
+        Text(
+            "Imports take this app's terminal tokens, a Windows Terminal color scheme, or an app theme file.",
+            color = Theme[colors][textSecondary],
+        )
+        uiState.terminalThemeImportError?.let {
+            Text(it, color = Theme[colors][error])
+        }
+    }
+}
+
+/** Shows the theme's page color with its text and cursor colors on it, which is most of what sets themes apart. */
+@Composable
+private fun TerminalThemeOption(
+    theme: TerminalColors,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    val swatchShape = RoundedCornerShape(3.dp)
+    OptionButton(selected = selected, onClick = onClick) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(
+                modifier = Modifier
+                    .clip(swatchShape)
+                    .background(theme.background.toColor())
+                    .border(1.dp, Theme[colors][border], swatchShape)
+                    .padding(horizontal = 4.dp, vertical = 3.dp),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(modifier = Modifier.size(width = 9.dp, height = 3.dp).background(theme.foreground.toColor()))
+                Box(modifier = Modifier.size(width = 3.dp, height = 8.dp).background(theme.cursor.toColor()))
+            }
+            Text(theme.name)
         }
     }
 }

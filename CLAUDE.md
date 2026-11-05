@@ -96,7 +96,9 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 
 - A theme file is JSON with `name`, `dark` and `light` (`ThemePalette`, the app tokens) and `terminal` (`TerminalColors`); every token is required. `core/data/src/test/resources/custom-theme.json` is a complete example. `parseUserTheme` accepts `#RRGGBB`, `#AARRGGBB` and `0xAARRGGBB`, and stores `0xAARRGGBB` only: BossTerm parses a six-digit value as fully transparent.
 - Imported themes live in `CorePreference`. A theme's name is its identity, so re-importing a name replaces that theme.
-- Terminal colors resolve in `resolveTerminalColors`: the theme picked in `TerminalPreferences.terminalThemeName`, else the active imported theme's `terminal`, else colors derived from the app tokens (`deriveTerminalColors`).
+- Terminal colors resolve in `resolveTerminalColors`: the theme picked in `TerminalPreferences.terminalThemeName` (null by default, which follows the app), else the active imported theme's `terminal`, else colors derived from the app tokens (`deriveTerminalColors`).
+- The terminal's choices come from `terminalThemeChoices`: themes imported for the terminal alone (`CorePreference.terminalThemes`, parsed by `parseTerminalTheme`), then app themes, then `BuiltInTerminalThemes`, which reuse BossTerm's palettes. A name is the identity, so the first of these wins. `parseTerminalTheme` also reads Windows Terminal schemes and whole app theme files, and fills in colors only the app uses.
+- The color schemes share one `textPrimary`, so `deriveTerminalColors` mixes `primary` into the text and neutral ANSI colors, or only the cursor would change with the scheme. `tintedTextColor` backs off to keep 7:1 contrast. Red, green, yellow and blue stay put, because programs use them to mean things.
 - Themes have to stay readable: `parseUserTheme` requires opaque surfaces, text and error colors, plus minimum contrast, so a theme can't hide the host key warning.
 - BossTerm renders from its global `ThemeManager`, not from the settings passed to `EmbeddableTerminal`, so `ApplyTerminalTheme` goes through it. That persists the colors to `~/.bossterm/settings.json`.
 

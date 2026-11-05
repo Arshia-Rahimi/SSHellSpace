@@ -1,6 +1,7 @@
 package com.sshellspace.feature.vault.settings
 
 import com.sshellspace.core.domain.models.DEFAULT_COLOR_SCHEME_ID
+import com.sshellspace.core.domain.models.TerminalColors
 import com.sshellspace.core.domain.models.ThemePreference
 import com.sshellspace.core.domain.models.VaultCredential
 import com.sshellspace.core.domain.models.VaultException
@@ -17,6 +18,8 @@ import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import java.io.File
+import com.sshellspace.feature.terminal.ui.screen.emulators.bossterm.BuiltInTerminalThemes
+import java.nio.file.Files
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -36,11 +39,13 @@ import kotlinx.coroutines.test.setMain
 @OptIn(ExperimentalCoroutinesApi::class)
 class SettingsPageViewModelThemeTest {
 
+    private val terminalThemes = MutableStateFlow(emptyList<TerminalColors>())
     private val corePreferences = mockk<CorePreferencesRepository>(relaxed = true) {
         every { getTheme() } returns flowOf(ThemePreference.DARK)
         every { getColorScheme() } returns flowOf(DEFAULT_COLOR_SCHEME_ID)
         every { getUserThemes() } returns flowOf(emptyList())
         every { getActiveUserTheme() } returns flowOf(null)
+        every { getTerminalThemes() } returns terminalThemes
     }
     private val vaultPreferences = mockk<VaultPreferencesRepository>(relaxed = true) {
         every { getAutoLockMinutes() } returns flowOf(30)
@@ -72,6 +77,56 @@ class SettingsPageViewModelThemeTest {
     )
 
     private val work = VaultInfo(Uuid.random(), "Work")
+
+    private fun themeFile(name: String, content: String) =
+        Files.createTempDirectory("theme-test").resolve(name).also { Files.writeString(it, content) }.toString()
+
+    @Test
+    fun `built-in terminal themes are on offer without importing anything`() = runTest {
+        val names = viewModel().uiState.first { it.terminalThemes.isNotEmpty() }.terminalThemes.map { it.name }
+
+        assertContains(names, "Dracula")
+        assertContains(names, "Solarized Light")
+    }
+
+    @Test
+    fun `importing a terminal theme switches the terminal to it, and doesn't change the app theme`() = runTest {
+        val imported = BuiltInTerminalThemes.first().copy(name = "Mine")
+        coEvery { corePreferences.importTerminalTheme(any(), any()) } returns imported
+
+        viewModel().execute(SettingsPageAction.ImportTerminalTheme(themeFile("mine.json", "{}")))
+
+        coVerify { corePreferences.importTerminalTheme("{}", "mine") }
+        coVerify { terminalPreferences.setTerminalThemeName("Mine") }
+        coVerify(exactly = 0) { corePreferences.importUserTheme(any()) }
+    }
+
+    @Test
+    fun `a terminal theme that won't import shows why and keeps the current one`() = runTest {
+        coEvery { corePreferences.importTerminalTheme(any(), any()) } throws IllegalArgumentException("The file has no red color.")
+        val viewModel = viewModel()
+
+        viewModel.execute(SettingsPageAction.ImportTerminalTheme(themeFile("bad.json", "{}")))
+
+        val error = viewModel.uiState.first { it.terminalThemeImportError != null }.terminalThemeImportError.orEmpty()
+        assertContains(error, "no red color")
+        coVerify(exactly = 0) { terminalPreferences.setTerminalThemeName(any()) }
+    }
+
+    @Test
+    fun `removing the terminal theme in use goes back to following the app`() = runTest {
+        viewModel().execute(SettingsPageAction.RemoveTerminalTheme("nord"))
+
+        coVerify { corePreferences.deleteTerminalTheme("nord") }
+        coVerify { terminalPreferences.setTerminalThemeName(null) }
+    }
+
+    @Test
+    fun `removing another terminal theme leaves the one in use alone`() = runTest {
+        viewModel().execute(SettingsPageAction.RemoveTerminalTheme("other"))
+
+        coVerify(exactly = 0) { terminalPreferences.setTerminalThemeName(any()) }
+    }
 
     @Test
     fun `the idle timeout shown and changed is the unlocked vault's`() = runTest {

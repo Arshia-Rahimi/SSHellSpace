@@ -15,8 +15,11 @@ import java.util.Properties
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 
 class CorePreferencesRepositoryImplTest {
 
@@ -118,5 +121,34 @@ class CorePreferencesRepositoryImplTest {
 
         repository.setShortcut("new_tab", null)
         assertEquals(emptyMap(), repository.getShortcuts().first { it.isEmpty() })
+    }
+
+    private suspend fun awaitTerminalThemeNames(vararg names: String) = withContext(Dispatchers.Default) {
+        withTimeout(5_000) {
+            repository.getTerminalThemes().first { themes -> themes.map { it.name } == names.toList() }
+        }
+    }
+
+    @Test
+    fun `terminal themes are saved, replaced by name and deleted`() = runTest {
+        repository.importTerminalTheme(exampleTheme, "file")
+        awaitTerminalThemeNames("Example")
+
+        val changed = exampleTheme.replace("\"foreground\": \"#E6EDF3\"", "\"foreground\": \"#FFFFFF\"")
+        repository.importTerminalTheme(changed, "file")
+        val replaced = withContext(Dispatchers.Default) {
+            withTimeout(5_000) { repository.getTerminalThemes().first { it.singleOrNull()?.foreground == "0xFFFFFFFF" } }
+        }
+        assertEquals(1, replaced.size)
+
+        repository.deleteTerminalTheme("Example")
+        awaitTerminalThemeNames()
+    }
+
+    @Test
+    fun `an invalid terminal theme saves nothing`() = runTest {
+        kotlin.test.assertFailsWith<IllegalArgumentException> { repository.importTerminalTheme("{}", "file") }
+
+        assertEquals(emptyList(), repository.getTerminalThemes().first())
     }
 }

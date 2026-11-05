@@ -2,6 +2,7 @@ package com.sshellspace.feature.vault.settings
 
 import com.sshellspace.core.domain.models.DEFAULT_AUTO_LOCK_MINUTES
 import com.sshellspace.core.domain.models.KeyChord
+import com.sshellspace.core.domain.models.TerminalColors
 import com.sshellspace.core.domain.models.ThemePreference
 import com.sshellspace.core.domain.models.UserTheme
 import com.sshellspace.core.ui.designsystem.theme.AppColorScheme
@@ -14,6 +15,11 @@ data class SettingsPageUiState(
     val userThemes: List<UserTheme> = emptyList(),
     val activeUserThemeName: String? = null,
     val terminalThemeName: String? = null,
+    /** Every theme the terminal can use, including [importedTerminalThemes]. */
+    val terminalThemes: List<TerminalColors> = emptyList(),
+    /** The names of themes imported for the terminal alone, which can be removed. */
+    val importedTerminalThemes: Set<String> = emptySet(),
+    val terminalThemeImportError: String? = null,
     val themeImportError: String? = null,
     val vaultName: String? = null,
     val vaultHasPassword: Boolean = true,

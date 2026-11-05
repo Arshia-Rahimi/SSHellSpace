@@ -15,6 +15,10 @@ sealed interface SettingsPageAction {
 
     /** A null [name] makes the terminal follow the app theme. */
     data class SetTerminalTheme(val name: String?) : SettingsPageAction
+
+    /** Imports terminal colors from the file at [path] and switches the terminal to them. */
+    data class ImportTerminalTheme(val path: String) : SettingsPageAction
+    data class RemoveTerminalTheme(val name: String) : SettingsPageAction
     data class SetDefaultShell(val value: Shell) : SettingsPageAction
     data object LockVault : SettingsPageAction
     data class ExportVault(val path: String) : SettingsPageAction

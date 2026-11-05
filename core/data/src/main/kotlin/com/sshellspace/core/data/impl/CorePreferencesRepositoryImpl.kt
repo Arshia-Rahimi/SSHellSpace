@@ -4,6 +4,7 @@ import com.sshellspace.core.common.JsonSerializer
 import com.sshellspace.core.domain.repositories.PreferencesDatasource
 import com.sshellspace.core.domain.models.CorePreference
 import com.sshellspace.core.domain.models.KeyChord
+import com.sshellspace.core.domain.models.TerminalColors
 import com.sshellspace.core.domain.models.ThemePreference
 import com.sshellspace.core.domain.models.UserTheme
 import com.sshellspace.core.domain.repositories.CorePreferencesRepository
@@ -78,6 +79,23 @@ internal class CorePreferencesRepositoryImpl(
             userThemes = current.userThemes.filterNot { it.name == name },
             activeUserThemeName = current.activeUserThemeName.takeUnless { it == name },
         )
+        datasource.set(key, JsonSerializer.encodeToString(CorePreference.serializer(), updated))
+    }
+
+    override fun getTerminalThemes() = preference
+        .map { it.terminalThemes }
+
+    override suspend fun importTerminalTheme(json: String, fallbackName: String): TerminalColors {
+        val theme = parseTerminalTheme(json, fallbackName)
+        val current = preference.value
+        val updated = current.copy(terminalThemes = current.terminalThemes.filterNot { it.name == theme.name } + theme)
+        datasource.set(key, JsonSerializer.encodeToString(CorePreference.serializer(), updated))
+        return theme
+    }
+
+    override suspend fun deleteTerminalTheme(name: String) {
+        val current = preference.value
+        val updated = current.copy(terminalThemes = current.terminalThemes.filterNot { it.name == name })
         datasource.set(key, JsonSerializer.encodeToString(CorePreference.serializer(), updated))
     }
 

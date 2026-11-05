@@ -40,6 +40,15 @@ private const val DARK_LUMINANCE_THRESHOLD = 0.5f
 private const val BRIGHT_MIX = 0.25f
 private const val SELECTION_ALPHA = 0.35f
 
+/** How much of the scheme's color goes into the terminal's text, enough to see which scheme is on. */
+private const val TEXT_TINT = 0.35f
+private const val NEUTRAL_ANSI_TINT = 0.2f
+private const val TINT_STEP = 0.05f
+
+/** WCAG's enhanced level. Terminals are read for long stretches, and this is the color most of their text uses. */
+private const val MIN_TEXT_CONTRAST = 7f
+private const val CONTRAST_OFFSET = 0.05f
+
 private val AppTokens = listOf(background, textPrimary, primary, onPrimary, error, success, warning, info)
 
 /** The ANSI colors the app tokens have no equivalent for. */
@@ -85,12 +94,14 @@ internal fun ApplyTerminalTheme() {
 
     LaunchedEffect(Unit) {
         combine(
+            corePreferences.getTerminalThemes(),
             corePreferences.getUserThemes(),
             corePreferences.getActiveUserTheme(),
             terminalPreferences.get(),
             snapshotFlow { appColors },
-        ) { userThemes, activeTheme, preferences, followed ->
-            resolveTerminalColors(preferences.terminalThemeName, userThemes, activeTheme, followed)
+        ) { imported, userThemes, activeTheme, preferences, followed ->
+            val choices = terminalThemeChoices(imported, userThemes)
+            resolveTerminalColors(preferences.terminalThemeName, choices, activeTheme, followed)
         }
             .distinctUntilChanged()
             .collect { withContext(Dispatchers.IO) { applyToBossTerm(it) } }
@@ -103,18 +114,38 @@ internal fun ApplyTerminalTheme() {
  */
 internal fun resolveTerminalColors(
     terminalThemeName: String?,
-    userThemes: List<UserTheme>,
+    choices: List<TerminalColors>,
     activeTheme: UserTheme?,
     appColors: TerminalColors,
-): TerminalColors {
-    val picked = userThemes.firstOrNull { it.name == terminalThemeName }
-    return (picked ?: activeTheme)?.terminal ?: appColors
+): TerminalColors =
+    choices.firstOrNull { it.name == terminalThemeName } ?: activeTheme?.terminal ?: appColors
+
+/** [text] with as much of [brand] as it can take, up to [TEXT_TINT], while staying easy to read on [page]. */
+internal fun tintedTextColor(text: Color, brand: Color, page: Color): Color {
+    var amount = TEXT_TINT
+    while (amount > 0f) {
+        val tinted = lerp(text, brand, amount)
+        if (contrast(tinted, page) >= MIN_TEXT_CONTRAST) return tinted
+        amount -= TINT_STEP
+    }
+    return text
 }
 
-/** Builds a terminal palette from the app's color tokens, so a built-in scheme also themes the terminal. */
+private fun contrast(first: Color, second: Color): Float {
+    val lighter = maxOf(first.luminance(), second.luminance())
+    val darker = minOf(first.luminance(), second.luminance())
+    return (lighter + CONTRAST_OFFSET) / (darker + CONTRAST_OFFSET)
+}
+
+/**
+ * Builds a terminal palette from the app's color tokens, so a built-in scheme also themes the terminal. The schemes all
+ * share one text token, so the scheme's color is mixed into the text to make it follow. Red, green, yellow and blue keep
+ * their usual hues, since programs rely on them to mean things like an error.
+ */
 internal fun deriveTerminalColors(tokens: Map<ThemeToken<Color>, Color>): TerminalColors {
     val backgroundColor = tokens.getValue(background)
-    val foregroundColor = tokens.getValue(textPrimary)
+    val brand = tokens.getValue(primary)
+    val foregroundColor = tintedTextColor(tokens.getValue(textPrimary), brand, backgroundColor)
     val isDark = backgroundColor.luminance() < DARK_LUMINANCE_THRESHOLD
     val ansi = if (isDark) DarkAnsi else LightAnsi
     val brighten = { color: Color -> lerp(color, if (isDark) Color.White else Color.Black, BRIGHT_MIX) }
@@ -122,19 +153,20 @@ internal fun deriveTerminalColors(tokens: Map<ThemeToken<Color>, Color>): Termin
     val green = tokens.getValue(success)
     val yellow = tokens.getValue(warning)
     val blue = tokens.getValue(info)
+    val neutral = { color: Color -> lerp(color, brand, NEUTRAL_ANSI_TINT).toColorHex() }
 
     return TerminalColors(
         name = FOLLOW_APP_THEME_NAME,
         background = backgroundColor.toColorHex(),
         foreground = foregroundColor.toColorHex(),
-        cursor = tokens.getValue(primary).toColorHex(),
+        cursor = brand.toColorHex(),
         cursorText = tokens.getValue(onPrimary).toColorHex(),
-        selection = tokens.getValue(primary).copy(alpha = SELECTION_ALPHA).compositeOver(backgroundColor).toColorHex(),
+        selection = brand.copy(alpha = SELECTION_ALPHA).compositeOver(backgroundColor).toColorHex(),
         selectionText = foregroundColor.toColorHex(),
         searchMatch = yellow.toColorHex(),
-        hyperlink = blue.toColorHex(),
-        black = ansi.black.toColorHex(),
-        brightBlack = ansi.brightBlack.toColorHex(),
+        hyperlink = brand.toColorHex(),
+        black = neutral(ansi.black),
+        brightBlack = neutral(ansi.brightBlack),
         red = red.toColorHex(),
         brightRed = brighten(red).toColorHex(),
         green = green.toColorHex(),
@@ -147,8 +179,8 @@ internal fun deriveTerminalColors(tokens: Map<ThemeToken<Color>, Color>): Termin
         brightPurple = brighten(ansi.purple).toColorHex(),
         cyan = ansi.cyan.toColorHex(),
         brightCyan = brighten(ansi.cyan).toColorHex(),
-        white = ansi.white.toColorHex(),
-        brightWhite = ansi.brightWhite.toColorHex(),
+        white = neutral(ansi.white),
+        brightWhite = neutral(ansi.brightWhite),
     )
 }
 

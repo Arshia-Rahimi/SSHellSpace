@@ -3,6 +3,7 @@ package com.sshellspace.feature.vault.settings
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sshellspace.core.domain.models.KeyChord
+import com.sshellspace.core.domain.models.TerminalColors
 import com.sshellspace.core.domain.models.VaultException
 import com.sshellspace.core.domain.models.VaultInfo
 import com.sshellspace.core.domain.repositories.CorePreferencesRepository
@@ -16,6 +17,7 @@ import com.sshellspace.feature.terminal.domain.ShellDiscoveryService
 import com.sshellspace.feature.terminal.domain.TerminalPreferencesRepository
 import com.sshellspace.feature.terminal.domain.models.Shell
 import com.sshellspace.feature.terminal.domain.models.UpdateTerminalPreferences
+import com.sshellspace.feature.terminal.ui.screen.emulators.bossterm.terminalThemeChoices
 import com.sshellspace.feature.vault.gate.credentialFrom
 import com.sshellspace.feature.vault.gate.passwordMismatch
 import java.io.File
@@ -31,6 +33,12 @@ import kotlinx.coroutines.withContext
 
 private const val MAX_THEME_FILE_BYTES = 1024 * 1024L
 
+private data class TerminalThemeState(
+    val choices: List<TerminalColors>,
+    val imported: Set<String>,
+    val importError: String?,
+)
+
 class SettingsPageViewModel(
     private val corePreferencesRepository: CorePreferencesRepository,
     private val terminalPreferencesRepository: TerminalPreferencesRepository,
@@ -43,6 +51,7 @@ class SettingsPageViewModel(
     private val recording = MutableStateFlow<ShortcutRecording?>(null)
 
     private val themeImportError = MutableStateFlow<String?>(null)
+    private val terminalThemeImportError = MutableStateFlow<String?>(null)
     private val vaultForm = MutableStateFlow(VaultForm())
 
     private val appearance = combine(
@@ -61,17 +70,33 @@ class SettingsPageViewModel(
         )
     }
 
+    private val terminalThemes = combine(
+        corePreferencesRepository.getTerminalThemes(),
+        corePreferencesRepository.getUserThemes(),
+        terminalThemeImportError,
+    ) { imported, userThemes, importError ->
+        TerminalThemeState(
+            choices = terminalThemeChoices(imported, userThemes),
+            imported = imported.mapTo(mutableSetOf()) { it.name },
+            importError = importError,
+        )
+    }
+
     private val appearanceAndVault = combine(
         appearance,
         vaultManager.activeVault,
         vaultPreferencesRepository.getAutoLockMinutes(),
         vaultForm,
-    ) { appearance, vault, autoLockMinutes, form ->
+        terminalThemes,
+    ) { appearance, vault, autoLockMinutes, form, terminalThemes ->
         appearance.copy(
             vaultName = vault?.name,
             vaultHasPassword = vault?.hasPassword ?: true,
             autoLockMinutes = autoLockMinutes,
             vaultForm = form,
+            terminalThemes = terminalThemes.choices,
+            importedTerminalThemes = terminalThemes.imported,
+            terminalThemeImportError = terminalThemes.importError,
         )
     }
 
@@ -125,7 +150,15 @@ class SettingsPageViewModel(
                 }
             }
             is SettingsPageAction.SetTerminalTheme -> viewModelScope.launch {
+                terminalThemeImportError.update { null }
                 terminalPreferencesRepository.setTerminalThemeName(action.name)
+            }
+            is SettingsPageAction.ImportTerminalTheme -> importTerminalTheme(action.path)
+            is SettingsPageAction.RemoveTerminalTheme -> viewModelScope.launch {
+                corePreferencesRepository.deleteTerminalTheme(action.name)
+                if (terminalPreferencesRepository.get().value.terminalThemeName == action.name) {
+                    terminalPreferencesRepository.setTerminalThemeName(null)
+                }
             }
             is SettingsPageAction.SetDefaultShell -> viewModelScope.launch {
                 terminalPreferencesRepository.set(UpdateTerminalPreferences(defaultShell = action.value))
@@ -205,12 +238,7 @@ class SettingsPageViewModel(
     private fun importTheme(path: String) {
         viewModelScope.launch {
             val error = try {
-                val json = withContext(Dispatchers.IO) {
-                    val file = File(path)
-                    if (file.length() > MAX_THEME_FILE_BYTES) throw IOException("it's too large to be a theme")
-                    file.readText()
-                }
-                corePreferencesRepository.importUserTheme(json)
+                corePreferencesRepository.importUserTheme(readThemeFile(path))
                 null
             } catch (e: IOException) {
                 "Couldn't read the file: ${e.message}"
@@ -219,6 +247,27 @@ class SettingsPageViewModel(
             }
             themeImportError.update { error }
         }
+    }
+
+    private fun importTerminalTheme(path: String) {
+        viewModelScope.launch {
+            val error = try {
+                val theme = corePreferencesRepository.importTerminalTheme(readThemeFile(path), File(path).nameWithoutExtension)
+                terminalPreferencesRepository.setTerminalThemeName(theme.name)
+                null
+            } catch (e: IOException) {
+                "Couldn't read the file: ${e.message}"
+            } catch (e: IllegalArgumentException) {
+                "Couldn't import the theme: ${e.message}"
+            }
+            terminalThemeImportError.update { error }
+        }
+    }
+
+    private suspend fun readThemeFile(path: String): String = withContext(Dispatchers.IO) {
+        val file = File(path)
+        if (file.length() > MAX_THEME_FILE_BYTES) throw IOException("it's too large to be a theme")
+        file.readText()
     }
 
     private fun record(chord: KeyChord) {
