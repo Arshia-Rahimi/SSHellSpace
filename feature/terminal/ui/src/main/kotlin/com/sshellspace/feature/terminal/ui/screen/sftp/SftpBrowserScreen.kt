@@ -148,7 +148,19 @@ private fun Browser(uiState: SftpUiState, onAction: (SftpAction) -> Unit) {
         Unit
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(Theme[colors][background])) {
+    var isDropHovering by remember { mutableStateOf(false) }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Theme[colors][background])
+            .fileDropTarget(
+                // A drop mustn't land behind an open question, such as whether to replace a file.
+                enabled = state.dialog == null,
+                onHoverChange = { isDropHovering = it },
+                onDrop = { onAction(SftpAction.Upload(it)) },
+            ),
+    ) {
         Column(modifier = Modifier.fillMaxSize()) {
             Toolbar(state, onAction, onDownload = download)
             state.notice?.let { Notice(it) { onAction(SftpAction.DismissNotice) } }
@@ -164,6 +176,7 @@ private fun Browser(uiState: SftpUiState, onAction: (SftpAction) -> Unit) {
             if (uiState.transfers.isNotEmpty()) TransfersPanel(uiState.transfers, onAction)
         }
         state.dialog?.let { Dialog(it, onAction) }
+        if (isDropHovering && state.dialog == null) FileDropOverlay(state.path)
     }
 }
 
@@ -350,7 +363,7 @@ private fun FileList(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    if (state.entries.isEmpty()) "This folder is empty." else "Only dotfiles here. Show them with the eye button.",
+                    if (state.entries.isEmpty()) "This folder is empty. Drop files here to upload them." else "Only dotfiles here. Show them with the eye button.",
                     color = Theme[colors][textSecondary],
                 )
             }

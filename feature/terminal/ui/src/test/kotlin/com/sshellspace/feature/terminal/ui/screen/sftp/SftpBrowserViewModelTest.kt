@@ -393,6 +393,32 @@ class SftpBrowserViewModelTest {
     }
 
     @Test
+    fun `several dropped files each upload to the folder on show, and asks before replacing`() = runTest {
+        fakeSftp.folders["/home/alice"] = emptyList()
+        fakeSftp.folders["/home/alice/logs"] = emptyList()
+        fakeSftp.existing += "/home/alice/logs/taken.txt"
+        val vm = viewModel()
+        vm.settled { it.browser.path == "/home/alice" }
+        vm.execute(SftpAction.Navigate("/home/alice/logs"))
+        vm.settled { it.browser.path == "/home/alice/logs" }
+        val free = localDir.resolve("free.txt")
+        val taken = localDir.resolve("taken.txt")
+
+        vm.execute(SftpAction.Upload(listOf(free, taken)))
+
+        assertEquals(listOf("taken.txt"), assertIs<SftpDialog.Conflict>(vm.settled { it.browser.dialog != null }.browser.dialog).names)
+        assertEquals(emptyList(), fakeSftp.uploads)
+
+        vm.execute(SftpAction.ResolveConflict(SftpConflictChoice.KeepBoth))
+
+        vm.settled { state -> state.transfers.size == 2 && state.transfers.all { it.status == SftpTransferStatus.Done } }
+        assertEquals(
+            setOf(Triple(free, "/home/alice/logs/free.txt", false), Triple(taken, "/home/alice/logs/taken (1).txt", false)),
+            fakeSftp.uploads.toSet(),
+        )
+    }
+
+    @Test
     fun `a failed transfer shows the reason, and a cancelled one stays cancelled`() = runTest {
         val a = file("a.txt")
         fakeSftp.folders["/home/alice"] = listOf(a)
