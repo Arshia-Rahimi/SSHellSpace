@@ -48,6 +48,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import org.jetbrains.skia.EncodedImageFormat
 import org.jetbrains.skia.Surface
 import org.junit.jupiter.api.io.TempDir
@@ -167,6 +168,16 @@ class SftpBrowserViewModelTest {
         { error("A saved connection never opens this computer's files.") },
     )
 
+    /**
+     * The selected file names, once [expected] shows up. The state is built on another thread, so a read right
+     * after an action can still be the one before it.
+     */
+    private suspend fun SftpBrowserViewModel.selectedNames(expected: List<String>): List<String> {
+        val names = { state: SftpUiState -> state.browser.selectedFiles().map { it.name } }
+        withContext(Dispatchers.Default) { withTimeoutOrNull(5_000) { uiState.first { names(it) == expected } } }
+        return names(uiState.value)
+    }
+
     /** Waits for work that left the main dispatcher (`Dispatchers.IO`) to report back. */
     private suspend fun SftpBrowserViewModel.settled(condition: (SftpUiState) -> Boolean): SftpUiState =
         withContext(Dispatchers.Default) { withTimeout(5_000) { uiState.first(condition) } }
@@ -276,17 +287,16 @@ class SftpBrowserViewModelTest {
         fakeSftp.folders["/home/alice"] = files
         val vm = viewModel()
         vm.settled { it.browser.path == "/home/alice" }
-        val selectedNames = { vm.uiState.value.browser.selectedFiles().map { it.name } }
 
         vm.execute(SftpAction.Click(files[1], SftpClickMode.Single))
-        assertEquals(listOf("b"), selectedNames())
+        assertEquals(listOf("b"), vm.selectedNames(listOf("b")))
         vm.execute(SftpAction.Click(files[3], SftpClickMode.Toggle))
-        assertEquals(listOf("b", "d"), selectedNames())
+        assertEquals(listOf("b", "d"), vm.selectedNames(listOf("b", "d")))
         vm.execute(SftpAction.Click(files[3], SftpClickMode.Single))
         vm.execute(SftpAction.Click(files[1], SftpClickMode.Range))
-        assertEquals(listOf("b", "c", "d"), selectedNames())
+        assertEquals(listOf("b", "c", "d"), vm.selectedNames(listOf("b", "c", "d")))
         vm.execute(SftpAction.SelectAll)
-        assertEquals(listOf("a", "b", "c", "d"), selectedNames())
+        assertEquals(listOf("a", "b", "c", "d"), vm.selectedNames(listOf("a", "b", "c", "d")))
     }
 
     @Test
@@ -521,25 +531,24 @@ class SftpBrowserViewModelTest {
         fakeSftp.folders["/home/alice"] = files
         val vm = viewModel()
         vm.settled { it.browser.path == "/home/alice" }
-        val selectedNames = { vm.uiState.value.browser.selectedFiles().map { it.name } }
 
         vm.execute(SftpAction.Click(files[1], SftpClickMode.Single))
         assertEquals(false, vm.uiState.value.browser.revealCursor)
         vm.execute(SftpAction.MoveSelection(1, extend = true))
-        assertEquals(listOf("b", "c"), selectedNames())
+        assertEquals(listOf("b", "c"), vm.selectedNames(listOf("b", "c")))
         assertEquals(true, vm.uiState.value.browser.revealCursor)
         vm.execute(SftpAction.MoveSelection(1, extend = true))
-        assertEquals(listOf("b", "c", "d"), selectedNames())
+        assertEquals(listOf("b", "c", "d"), vm.selectedNames(listOf("b", "c", "d")))
         vm.execute(SftpAction.MoveSelection(-1, extend = true))
-        assertEquals(listOf("b", "c"), selectedNames())
+        assertEquals(listOf("b", "c"), vm.selectedNames(listOf("b", "c")))
         vm.execute(SftpAction.MoveSelection(-1))
-        assertEquals(listOf("b"), selectedNames())
+        assertEquals(listOf("b"), vm.selectedNames(listOf("b")))
         vm.execute(SftpAction.MoveSelection(-10))
-        assertEquals(listOf("a"), selectedNames())
+        assertEquals(listOf("a"), vm.selectedNames(listOf("a")))
         vm.execute(SftpAction.MoveSelection(10))
-        assertEquals(listOf("d"), selectedNames())
+        assertEquals(listOf("d"), vm.selectedNames(listOf("d")))
         vm.execute(SftpAction.ClearSelection)
-        assertEquals(emptyList(), selectedNames())
+        assertEquals(emptyList(), vm.selectedNames(emptyList()))
     }
 
     @Test
