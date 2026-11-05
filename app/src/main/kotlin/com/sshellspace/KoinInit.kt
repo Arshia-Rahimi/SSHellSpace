@@ -8,16 +8,22 @@ import com.sshellspace.config.createSqliteDriver
 import com.sshellspace.config.fixedTabItems
 import com.sshellspace.config.registerShortcuts
 import com.sshellspace.config.registerVaultLock
+import com.sshellspace.config.update.AppUpdaterImpl
+import com.sshellspace.config.update.NucleusUpdateEngine
+import com.sshellspace.config.update.UpdateVerifier
+import com.sshellspace.config.update.registerAppUpdates
 import com.sshellspace.config.vaultsDirectory
 import com.sshellspace.core.data.DataModule
 import com.sshellspace.core.data.vault.VaultAutoLock
 import com.sshellspace.core.data.vault.VaultManagerImpl
+import com.sshellspace.core.domain.repositories.AppUpdater
 import com.sshellspace.core.domain.repositories.VaultManager
 import com.sshellspace.core.ui.CoreUiModule
 import com.sshellspace.core.ui.tabs.TabManager
 import com.sshellspace.feature.newtab.ui.NewTabUiModule
 import com.sshellspace.feature.settings.SettingsUiModule
 import com.sshellspace.feature.terminal.data.TerminalDataModule
+import com.sshellspace.feature.terminal.domain.PortForwardingService
 import com.sshellspace.feature.terminal.ui.TerminalUiModule
 import com.sshellspace.feature.vault.VaultUiModule
 import com.sshellspace.feature.vault.data.VaultDataModule
@@ -30,6 +36,7 @@ fun initKoin() {
     startKoin { modules(AppModule) }.koin.apply {
         registerShortcuts()
         registerVaultLock()
+        registerAppUpdates()
     }
 }
 
@@ -55,6 +62,16 @@ val AppModule = module {
         )
     }
     single { VaultAutoLock(vaultManager = get(), preferences = get()) }
+    single {
+        AppUpdaterImpl(
+            engine = NucleusUpdateEngine(),
+            verifier = UpdateVerifier(),
+            preferences = get(),
+            vaultManager = get(),
+            tabManager = get(),
+            portForwarding = { get<PortForwardingService>() },
+        )
+    } bind AppUpdater::class
     single {
         SessionRestore(
             vaultManager = get(),

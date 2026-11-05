@@ -1,6 +1,8 @@
 package com.sshellspace.feature.vault.settings
 
+import com.sshellspace.core.domain.models.AppUpdateState
 import com.sshellspace.core.domain.models.DEFAULT_AUTO_LOCK_MINUTES
+import com.sshellspace.core.domain.models.DEFAULT_UPDATE_CHECK_INTERVAL_HOURS
 import com.sshellspace.core.domain.models.KeyChord
 import com.sshellspace.core.domain.models.TerminalColors
 import com.sshellspace.core.domain.models.ThemePreference
@@ -33,6 +35,18 @@ data class SettingsPageUiState(
     val isDiscoveringShells: Boolean = true,
     val shortcuts: List<ShortcutBinding> = emptyList(),
     val recording: ShortcutRecording? = null,
+    val updates: UpdateSettings = UpdateSettings(),
+)
+
+data class UpdateSettings(
+    val currentVersion: String = "",
+    val status: AppUpdateState = AppUpdateState.Idle,
+    val automatic: Boolean = true,
+    val checkIntervalHours: Int = DEFAULT_UPDATE_CHECK_INTERVAL_HOURS,
+    /** Epoch milliseconds. */
+    val lastChecked: Long? = null,
+    /** How many tabs and port forwards a restart would close, while asking whether to go ahead. */
+    val confirmingRestart: Int? = null,
 )
 
 /** A vault action that needs more than one click, open in the Vault section. */

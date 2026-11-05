@@ -68,7 +68,7 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 
 ### Preferences
 
-- `CorePreferencesRepository` (theme, color scheme, shortcuts) and `TerminalPreferencesRepository` (default shell) each store one `@Serializable` object as JSON in the SQLDelight preferences table, keyed by its qualified class name.
+- `CorePreferencesRepository` (theme, color scheme, shortcuts, updates) and `TerminalPreferencesRepository` (default shell) each store one `@Serializable` object as JSON in the SQLDelight preferences table, keyed by its qualified class name.
 - Implementations keep a **single** `stateIn` StateFlow and build updates from `preference.value.copy(...)`. If you create a new `stateIn` per `get()` call, it returns the defaults, not the stored value.
 - The user-facing Settings UI is the **Settings page inside the Vault tab** (`feature/vault/ui/.../settings`). `feature/settings` is currently only a placeholder tab.
 
@@ -81,7 +81,7 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 - Schema migrations run per vault when it unlocks, in `OpenVault.load`. The same `Database` schema is used for vaults and the app database, so each has empty tables it doesn't use.
 - Export copies the already encrypted file. Import treats the file as hostile even when the password is right: `VaultFile` caps its size, key slots and Argon2 costs, and `loadImage` refuses a damaged database or one with triggers or views.
 - `VaultAutoLock` locks after the unlocked vault's idle time and on waking from sleep. `VaultPreferencesRepository` keeps it per vault as `VaultPreference.autoLockMinutes` (0 turns it off), inside the vault. A vault with none, which includes every imported one since import clears that table, uses `CorePreference.autoLockMinutes` (default 15), so a crafted file can't turn its own auto-lock off. Only key and pointer input from `Main.kt` count as activity. The JVM has no portable way to detect the OS screen locking.
-- The gate (`VaultGateScreen`) only unlocks, creates and imports. Changing a password, export and delete live in Settings > Vault, so they need the vault unlocked. Export and delete also take the vault's credential, checked in `VaultManagerImpl` against the file before anything changes, so an unlocked computer isn't enough. Forgetting a password therefore means the vault can't be exported or deleted from the app, even while it's unlocked.
+- The gate (`VaultGateScreen`) only unlocks, creates and imports, apart from offering updates. Changing a password, export and delete live in Settings > Vault, so they need the vault unlocked. Export and delete also take the vault's credential, checked in `VaultManagerImpl` against the file before anything changes, so an unlocked computer isn't enough. Forgetting a password therefore means the vault can't be exported or deleted from the app, even while it's unlocked.
 - Changing a password (`changeCredential`) re-encrypts under a new vault key. Saved passwords in the connection form can't be revealed; only newly typed ones can.
 - `SessionRestore` (app) saves a vault's open tabs in that vault's `preferences_table` through `VaultPreferencesDatasource`, and reopens them when a vault unlocks with no tabs open, such as after a restart. Import deletes that table's contents, and a saved local shell only reopens if this computer offers that shell: otherwise a crafted vault file could run a program on unlock with no click.
 - Tests must never point `VaultManagerImpl` at the real user-data dir: creating a vault with `moveUnencryptedData` erases those tables from `sshellspace.db`.
@@ -148,10 +148,26 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 - **BossTerm's defaults are for its own app, not this one.** `EmbeddedTerminalSettings` turns off kitty file reads, AI assistant interception, MCP, the daemon and voice. `handleTerminalLink` only opens http(s) links, because BossTerm would pass link text to `cmd /c start`, `open` or `xdg-open`. Re-check both, and that nothing starts listening on a port, when upgrading BossTerm.
 - Terminal emulators implement the `Terminal` interface (`feature/terminal/ui/.../screen/emulators/Terminal.kt`). BossTerm is the concrete emulator. `BossTermSshProcessHandleAdapter` bridges it to Apache MINA sshd (ssh-common/sftp/scp) for remote sessions, and pty4j handles local PTYs.
 
+### Updates
+
+- `AppUpdaterImpl` (`app/.../config/update`) schedules checks and holds a verified download, `NucleusUpdateEngine` wraps Nucleus's updater, and Settings > Updates drives it through `AppUpdater` (core/domain). Checks need the clock to pass `CorePreference.updateCheckIntervalHours` since the last one, so sleep doesn't stretch them.
+- **Everything from the release host is hostile until verified.** Nucleus only checks SHA-512 against a manifest from the same host, so `UpdateVerifier` checks an Ed25519 signature over the version and the file's hash, using the public key in the app. Signing the version stops an old release being offered as new. The manifest's file name and version are validated before downloading, because Nucleus uses the name as a path.
+- Nucleus's `installAndRestart` and `installAndQuit` both exit the process at once, so they only run when the user restarts or quits. `restartToInstall` runs in the updater's own scope, because locking clears the Settings ViewModel, which would cancel it.
+- With automatic updates off, nothing is checked or downloaded unless asked, and nothing installs on quit.
+- The unlock screen shows a new version once one is known (`UpdateHint` in `VaultGateScreen`). Restarting from there warns about open tabs and forwards, since `keepSessionsWhenLocked` leaves them running behind the lock. A failure only shows if the user asked for what failed, so being offline doesn't put an error on every unlock.
+- The last check has its own preferences row, because it's written in the background and `CorePreference` writes start from a copy that can lag behind.
+- The release signing key defaults to `~/.sshellspace/update-signing.key`, or set `-PupdateSigningKey` or `UPDATE_SIGNING_KEY`. Keep it out of the repo and backed up: without it, installed copies can never update again. `generateUpdateSigningKey` only runs if no key exists.
+- **To release:** set `packageVersion` in `app/build.gradle.kts`, then on each OS run `./gradlew :app:packageDmg :app:packageZip` (macOS), `:app:packageNsis` (Windows) or `:app:packageAppImage` (Linux), followed by `:app:signUpdates`. Output is under `app/build/compose/binaries/main`. Upload each artifact, `.blockmap`, `.sig` and manifest to a draft GitHub release tagged `v<packageVersion>`, then publish it when all three OSes are up. Clients only see published releases, so none can find a manifest whose signatures aren't there yet. A version with `-beta` or `-alpha` in it stays on that channel.
+- **On macOS, upload only `zip/latest-mac.yml`.** The DMG gets a manifest of the same name, and on GitHub whichever goes up last wins. With the DMG's, updates would only open the DMG for the user to finish. The plugin's manifest merge task only exists for S3.
+
 ### Packaging
 
 - Release signing isn't configured. It needs your own certificates.
-- The nucleus plugin packages the app (`app/build.gradle.kts`): main class `com.sshellspace.MainKt`, Tao backend, GraalVM native image enabled, and Dmg/Msi/AppImage target formats.
+- The nucleus plugin packages the app (`app/build.gradle.kts`): main class `com.sshellspace.MainKt`, Tao backend, and Dmg/Zip/Nsis/AppImage target formats.
+- **Releases use the JVM packaging tasks.** GraalVM is enabled, but `nativeImageCompile` crashes the compiler (`GraalGraphError`) on BossTerm's `ComposeTerminalDisplay`, so the `packageGraalvm*` tasks don't currently work.
+- jpackage on macOS rejects a version whose first number is 0, so packaging there needs `packageVersion` of at least `1.0.0`.
+- A packaged app only has the JDK modules in `modules(...)`, and a missing one only fails when that code runs. After adding a dependency, re-run `suggestRuntimeModules`.
+- Packaging resolves tools that `resolve-all.init.gradle` doesn't, so a first build on another OS may need `--write-verification-metadata sha256` on the packaging task.
 
 ## Tests
 

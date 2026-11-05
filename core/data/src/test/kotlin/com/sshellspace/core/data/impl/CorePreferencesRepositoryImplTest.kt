@@ -123,6 +123,32 @@ class CorePreferencesRepositoryImplTest {
         assertEquals(emptyMap(), repository.getShortcuts().first { it.isEmpty() })
     }
 
+    @Test
+    fun `updates default to on and daily, with no check yet`() = runTest {
+        assertEquals(true, repository.getAutoUpdate().first())
+        assertEquals(24, repository.getUpdateCheckIntervalHours().first())
+        assertNull(repository.getLastUpdateCheck().first())
+    }
+
+    @Test
+    fun `update settings are stored`() = runTest {
+        repository.setAutoUpdate(false)
+        withContext(Dispatchers.Default) { withTimeout(5_000) { repository.getAutoUpdate().first { !it } } }
+
+        repository.setUpdateCheckIntervalHours(6)
+
+        withContext(Dispatchers.Default) { withTimeout(5_000) { repository.getUpdateCheckIntervalHours().first { it == 6 } } }
+        assertEquals(false, repository.getAutoUpdate().first())
+    }
+
+    @Test
+    fun `recording a check leaves the other preferences' row alone`() = runTest {
+        repository.setLastUpdateCheck(1_234L)
+
+        withContext(Dispatchers.Default) { withTimeout(5_000) { repository.getLastUpdateCheck().first { it == 1_234L } } }
+        assertEquals(emptyList(), datasource.observeAll().first().filter { it.key == CorePreference::class.qualifiedName })
+    }
+
     private suspend fun awaitTerminalThemeNames(vararg names: String) = withContext(Dispatchers.Default) {
         withTimeout(5_000) {
             repository.getTerminalThemes().first { themes -> themes.map { it.name } == names.toList() }

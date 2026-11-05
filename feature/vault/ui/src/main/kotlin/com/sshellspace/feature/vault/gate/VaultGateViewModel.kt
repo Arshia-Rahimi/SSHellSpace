@@ -2,9 +2,11 @@ package com.sshellspace.feature.vault.gate
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.sshellspace.core.domain.models.AppUpdateState
 import com.sshellspace.core.domain.models.VaultCredential
 import com.sshellspace.core.domain.models.VaultException
 import com.sshellspace.core.domain.models.VaultInfo
+import com.sshellspace.core.domain.repositories.AppUpdater
 import com.sshellspace.core.domain.repositories.VaultManager
 import java.io.IOException
 import kotlin.uuid.Uuid
@@ -29,6 +31,10 @@ data class VaultGateUiState(
     /** Confirms something that finished without changing what's on screen, such as an export. */
     val notice: String? = null,
     val unencryptedItemCount: Long = 0,
+    /** What to tell the user about a new version, or null when there's nothing worth interrupting them for. */
+    val update: AppUpdateState? = null,
+    /** How many tabs and port forwards a restart would close, while asking whether to go ahead. Locking leaves them running. */
+    val confirmingRestart: Int? = null,
 )
 
 sealed interface VaultGateAction {
@@ -47,6 +53,15 @@ sealed interface VaultGateAction {
 
     /** The user started correcting their input, so the last error no longer applies. */
     data object ClearError : VaultGateAction
+
+    sealed interface Update : VaultGateAction {
+        data object Download : Update
+
+        /** Installs the downloaded update, first asking if that would close anything. */
+        data object Restart : Update
+        data object ConfirmRestart : Update
+        data object CancelRestart : Update
+    }
 }
 
 /** An empty password means the vault has none. */
@@ -59,11 +74,13 @@ internal fun passwordMismatch(password: String, confirmation: String): String? =
 
 class VaultGateViewModel(
     private val vaultManager: VaultManager,
+    private val appUpdater: AppUpdater,
 ) : ViewModel() {
     private val form = MutableStateFlow(VaultGateUiState())
+    private val updateRequested = MutableStateFlow(false)
 
-    val uiState = combine(vaultManager.vaults, form) { vaults, form ->
-        form.copy(vaults = vaults, mode = resolveMode(form.mode, vaults))
+    val uiState = combine(vaultManager.vaults, form, appUpdater.state, updateRequested) { vaults, form, update, requested ->
+        form.copy(vaults = vaults, mode = resolveMode(form.mode, vaults), update = gateUpdate(update, requested))
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), VaultGateUiState(vaults = vaultManager.vaults.value))
 
     init {
@@ -83,7 +100,32 @@ class VaultGateViewModel(
             is VaultGateAction.Unlock -> unlock(action)
             is VaultGateAction.Create -> create(action)
             is VaultGateAction.Import -> import(action)
+            VaultGateAction.Update.Download -> {
+                updateRequested.update { true }
+                appUpdater.download()
+            }
+            VaultGateAction.Update.Restart -> {
+                val open = appUpdater.openSessionCount()
+                if (open > 0) form.update { it.copy(confirmingRestart = open) } else restart()
+            }
+            VaultGateAction.Update.ConfirmRestart -> restart()
+            VaultGateAction.Update.CancelRestart -> form.update { it.copy(confirmingRestart = null) }
         }
+    }
+
+    /** A failure only shows if the user asked for what failed: being offline shouldn't put an error on every unlock. */
+    private fun gateUpdate(state: AppUpdateState, requested: Boolean): AppUpdateState? = when (state) {
+        is AppUpdateState.Available, is AppUpdateState.Downloading, is AppUpdateState.Ready -> state
+        is AppUpdateState.Failed -> state.takeIf { requested }
+        else -> null
+    }
+
+    private fun restart() {
+        // Installing ends the process, so it mustn't start while a vault operation is writing.
+        if (form.value.isBusy) return
+        form.update { it.copy(confirmingRestart = null) }
+        updateRequested.update { true }
+        appUpdater.restartToInstall()
     }
 
     private fun resolveMode(mode: VaultGateMode, vaults: List<VaultInfo>): VaultGateMode = when {

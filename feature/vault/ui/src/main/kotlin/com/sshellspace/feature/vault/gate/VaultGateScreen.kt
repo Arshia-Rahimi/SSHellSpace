@@ -43,6 +43,7 @@ import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledIcon
 import com.composeunstyled.theme.Theme
+import com.sshellspace.core.domain.models.AppUpdateState
 import com.sshellspace.core.domain.models.VaultInfo
 import com.sshellspace.core.ui.designsystem.Icons
 import com.sshellspace.core.ui.designsystem.components.Button
@@ -128,6 +129,7 @@ private fun VaultList(
         subtitle = "Choose the vault to open.",
     )
     uiState.notice?.let { Callout(it, Theme[colors][success]) }
+    uiState.update?.let { UpdateHint(it, uiState, onAction) }
     if (uiState.unencryptedItemCount > 0) {
         Callout(
             "${uiState.unencryptedItemCount} hosts, keys and forwards from an earlier version aren't encrypted yet. " +
@@ -158,6 +160,72 @@ private fun VaultList(
             modifier = Modifier.weight(1f),
             enabled = !uiState.isBusy,
             onClick = { scope.launch { pickVaultFile()?.let { onAction(VaultGateAction.ShowImport(it)) } } },
+        )
+    }
+}
+
+@Composable
+private fun UpdateHint(
+    update: AppUpdateState,
+    uiState: VaultGateUiState,
+    onAction: (VaultGateAction) -> Unit,
+) {
+    val color = Theme[colors][if (update is AppUpdateState.Failed) error else primary]
+    Column(
+        modifier = Modifier.fillMaxWidth()
+            .clip(ButtonShape)
+            .background(color.copy(alpha = CALLOUT_ALPHA))
+            .padding(10.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        when (update) {
+            is AppUpdateState.Available -> {
+                Text("Version ${update.version} is available.")
+                GateButton("Download", onClick = { onAction(VaultGateAction.Update.Download) })
+            }
+            is AppUpdateState.Downloading -> Text("Downloading version ${update.version}… ${update.percent}%")
+            is AppUpdateState.Ready -> {
+                Text("Version ${update.version} is ready to install.")
+                RestartToUpdate(uiState, onAction)
+            }
+            is AppUpdateState.Failed -> Text(update.message)
+            else -> Unit
+        }
+    }
+}
+
+@Composable
+private fun RestartToUpdate(
+    uiState: VaultGateUiState,
+    onAction: (VaultGateAction) -> Unit,
+) {
+    val open = uiState.confirmingRestart
+    if (open == null) {
+        GateButton(
+            "Restart to update",
+            enabled = !uiState.isBusy,
+            onClick = { onAction(VaultGateAction.Update.Restart) },
+        )
+        return
+    }
+    Text(
+        if (open == 1) {
+            "1 tab or port forward is still running behind this lock, and will close."
+        } else {
+            "$open tabs and port forwards are still running behind this lock, and will close."
+        },
+    )
+    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        GateButton(
+            "Restart anyway",
+            modifier = Modifier.weight(1f),
+            enabled = !uiState.isBusy,
+            onClick = { onAction(VaultGateAction.Update.ConfirmRestart) },
+        )
+        GateButton(
+            "Cancel",
+            modifier = Modifier.weight(1f),
+            onClick = { onAction(VaultGateAction.Update.CancelRestart) },
         )
     }
 }

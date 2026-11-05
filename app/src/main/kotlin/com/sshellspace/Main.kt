@@ -23,6 +23,7 @@ import com.sshellspace.core.data.vault.VaultAutoLock
 import com.sshellspace.core.domain.emit
 import com.sshellspace.core.domain.models.DEFAULT_COLOR_SCHEME_ID
 import com.sshellspace.core.domain.models.ThemePreference
+import com.sshellspace.core.domain.repositories.AppUpdater
 import com.sshellspace.core.domain.repositories.CorePreferencesRepository
 import com.sshellspace.core.domain.repositories.VaultManager
 import com.sshellspace.core.ui.designsystem.adaptive.DefaultWindowSize
@@ -53,9 +54,13 @@ fun main() {
     nucleusApplication(backend = NucleusBackend.Tao) {
         val shortcutHandler = koinInject<ShortcutHandler>()
         val autoLock = koinInject<VaultAutoLock>()
+        val appUpdater = koinInject<AppUpdater>()
 
         DecoratedWindow(
-            onCloseRequest = ::exitApplication,
+            onCloseRequest = {
+                appUpdater.installOnQuit()
+                exitApplication()
+            },
             state = rememberWindowState(size = DefaultWindowSize),
             title = Res.string.title.asString(),
             minimumSize = MinWindowSize,
@@ -96,6 +101,7 @@ fun main() {
                                             try {
                                                 vaultManager.lock()
                                             } finally {
+                                                appUpdater.installOnQuit()
                                                 exitApplication()
                                             }
                                         }

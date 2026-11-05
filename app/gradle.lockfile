@@ -137,6 +137,7 @@ dev.nucleusframework:nucleus.menu-macos:2.5.18=runtimeClasspath
 dev.nucleusframework:nucleus.nucleus-application:2.5.18=runtimeClasspath
 dev.nucleusframework:nucleus.sf-symbols:2.5.18=runtimeClasspath
 dev.nucleusframework:nucleus.spellcheck:2.5.18=runtimeClasspath
+dev.nucleusframework:nucleus.updater-runtime:2.5.18=runtimeClasspath
 dev.whyoleg.cryptography:cryptography-bigint-jvm:0.6.0=runtimeClasspath
 dev.whyoleg.cryptography:cryptography-bigint:0.6.0=runtimeClasspath
 dev.whyoleg.cryptography:cryptography-bom:0.6.0=runtimeClasspath

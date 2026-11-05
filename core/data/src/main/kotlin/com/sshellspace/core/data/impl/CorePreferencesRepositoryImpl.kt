@@ -11,6 +11,7 @@ import com.sshellspace.core.domain.repositories.CorePreferencesRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
@@ -28,6 +29,13 @@ internal class CorePreferencesRepositoryImpl(
         .map { stored -> stored?.let { JsonSerializer.decodeFromString(CorePreference.serializer(), it) } }
         .mapNotNull { it }
         .stateIn(scope, SharingStarted.Eagerly, CorePreference())
+
+    // A row of its own: it's written in the background, and every write to the row above starts from a copy that can lag
+    // behind, so sharing that row could undo a setting the user had just changed.
+    private val lastUpdateCheckKey = "$key.lastUpdateCheck"
+    private val lastUpdateCheck: StateFlow<Long?> = datasource.observeAll()
+        .map { rows -> rows.firstOrNull { it.key == lastUpdateCheckKey }?.value?.toLongOrNull() }
+        .stateIn(scope, SharingStarted.Eagerly, null)
 
     override fun getTheme() = preference
         .map { it.themePreference }
@@ -101,6 +109,28 @@ internal class CorePreferencesRepositoryImpl(
 
     override fun getAutoLockMinutes() = preference
         .map { it.autoLockMinutes }
+
+    override fun getAutoUpdate() = preference
+        .map { it.autoUpdate }
+
+    override suspend fun setAutoUpdate(enabled: Boolean) {
+        val updated = preference.value.copy(autoUpdate = enabled)
+        datasource.set(key, JsonSerializer.encodeToString(CorePreference.serializer(), updated))
+    }
+
+    override fun getUpdateCheckIntervalHours() = preference
+        .map { it.updateCheckIntervalHours }
+
+    override suspend fun setUpdateCheckIntervalHours(hours: Int) {
+        val updated = preference.value.copy(updateCheckIntervalHours = hours)
+        datasource.set(key, JsonSerializer.encodeToString(CorePreference.serializer(), updated))
+    }
+
+    override fun getLastUpdateCheck(): Flow<Long?> = lastUpdateCheck
+
+    override suspend fun setLastUpdateCheck(epochMillis: Long) {
+        datasource.set(lastUpdateCheckKey, epochMillis.toString())
+    }
 
     override fun getShortcuts() = preference
         .map { it.shortcuts }

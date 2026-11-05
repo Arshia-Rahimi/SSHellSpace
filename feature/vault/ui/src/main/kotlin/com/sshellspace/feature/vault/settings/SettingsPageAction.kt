@@ -35,6 +35,18 @@ sealed interface SettingsPageAction {
     data class SetKeepSessionsWhenLocked(val enabled: Boolean) : SettingsPageAction
     data class SetAutoLockMinutes(val minutes: Int) : SettingsPageAction
 
+    sealed interface Update : SettingsPageAction {
+        data class SetAutomatic(val enabled: Boolean) : Update
+        data class SetCheckInterval(val hours: Int) : Update
+        data object Check : Update
+        data object Download : Update
+
+        /** Installs the downloaded update, first asking if that would close anything. */
+        data object Restart : Update
+        data object ConfirmRestart : Update
+        data object CancelRestart : Update
+    }
+
     sealed interface Shortcut : SettingsPageAction {
         data class StartRecording(val shortcut: AppShortcut) : Shortcut
         data class Record(val chord: KeyChord) : Shortcut

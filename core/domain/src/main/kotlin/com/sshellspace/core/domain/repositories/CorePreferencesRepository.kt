@@ -41,6 +41,15 @@ interface CorePreferencesRepository {
 
     fun getAutoLockMinutes(): Flow<Int>
 
+    fun getAutoUpdate(): Flow<Boolean>
+    suspend fun setAutoUpdate(enabled: Boolean)
+    fun getUpdateCheckIntervalHours(): Flow<Int>
+    suspend fun setUpdateCheckIntervalHours(hours: Int)
+
+    /** When a check for updates last got an answer, in epoch milliseconds. Null if none has. */
+    fun getLastUpdateCheck(): Flow<Long?>
+    suspend fun setLastUpdateCheck(epochMillis: Long)
+
     /** User overrides keyed by shortcut id. Shortcuts without an entry use their default chord. */
     fun getShortcuts(): Flow<Map<String, KeyChord>>
 

@@ -4,6 +4,7 @@ import kotlinx.serialization.Serializable
 
 const val DEFAULT_COLOR_SCHEME_ID = "default"
 const val DEFAULT_AUTO_LOCK_MINUTES = 15
+const val DEFAULT_UPDATE_CHECK_INTERVAL_HOURS = 24
 
 @Serializable
 data class CorePreference(
@@ -20,6 +21,9 @@ data class CorePreference(
      * 0 turns that off, including locking on sleep. Settings no longer changes this.
      */
     val autoLockMinutes: Int = DEFAULT_AUTO_LOCK_MINUTES,
+    /** Whether to check for, download and install new versions without being asked. */
+    val autoUpdate: Boolean = true,
+    val updateCheckIntervalHours: Int = DEFAULT_UPDATE_CHECK_INTERVAL_HOURS,
 )
 
 @Serializable

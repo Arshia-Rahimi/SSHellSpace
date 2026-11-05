@@ -40,6 +40,7 @@ import androidx.compose.ui.input.key.type
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.Text
 import com.composeunstyled.theme.Theme
+import com.sshellspace.core.domain.models.AppUpdateState
 import com.sshellspace.core.domain.models.TerminalColors
 import com.sshellspace.core.domain.models.ThemePreference
 import com.sshellspace.core.ui.designsystem.adaptive.currentWindowClass
@@ -61,11 +62,22 @@ import com.sshellspace.core.ui.shortcuts.toKeyChord
 import com.sshellspace.feature.vault.gate.NewPasswordFields
 import com.sshellspace.feature.vault.gate.PasswordField
 import com.sshellspace.feature.vault.gate.pickVaultExportFile
+import java.time.Instant
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
 
 private val SettingsMaxWidth = 720.dp
 private val AUTO_LOCK_OPTIONS = listOf(5, 15, 30, 60, 0)
+private val UPDATE_CHECK_INTERVALS = listOf(
+    1 to "Hourly",
+    6 to "Every 6 hours",
+    12 to "Every 12 hours",
+    24 to "Daily",
+    168 to "Weekly",
+)
+private val UPDATE_CHECK_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 
 @Composable
 fun SettingsPage() {
@@ -181,6 +193,8 @@ private fun SettingsSections(
         }
     }
 
+    UpdatesSection(uiState.updates, onAction)
+
     SettingsSection(
         title = "Shortcuts",
         description = "Click a shortcut, then press the new key combination. Esc cancels.",
@@ -194,6 +208,115 @@ private fun SettingsSections(
         }
     }
 }
+
+@Composable
+private fun UpdatesSection(
+    updates: UpdateSettings,
+    onAction: (SettingsPageAction) -> Unit,
+) {
+    val status = updates.status
+    SettingsSection(
+        title = "Updates",
+        description = "This is version ${updates.currentVersion}.",
+    ) {
+        if (status == AppUpdateState.Unsupported) {
+            Text("This copy of the app can't update itself.", color = Theme[colors][textSecondary])
+            return@SettingsSection
+        }
+        ToggleRow(
+            title = "Update automatically",
+            description = "Checks GitHub for new versions, downloads them, and installs them when you quit.",
+            checked = updates.automatic,
+            onCheckedChange = { onAction(SettingsPageAction.Update.SetAutomatic(it)) },
+        )
+        if (updates.automatic) {
+            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Text("Check for updates", color = Theme[colors][textSecondary])
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    UPDATE_CHECK_INTERVALS.forEach { (hours, label) ->
+                        OptionButton(
+                            selected = hours == updates.checkIntervalHours,
+                            onClick = { onAction(SettingsPageAction.Update.SetCheckInterval(hours)) },
+                        ) {
+                            Text(label)
+                        }
+                    }
+                }
+            }
+        }
+        UpdateActions(updates, onAction)
+    }
+}
+
+@Composable
+private fun UpdateActions(
+    updates: UpdateSettings,
+    onAction: (SettingsPageAction) -> Unit,
+) {
+    val status = updates.status
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        FlowRow(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            if (status !is AppUpdateState.Checking && status !is AppUpdateState.Downloading) {
+                OptionButton(selected = false, onClick = { onAction(SettingsPageAction.Update.Check) }) {
+                    Text("Check for updates")
+                }
+            }
+            if (status is AppUpdateState.Available) {
+                OptionButton(selected = true, onClick = { onAction(SettingsPageAction.Update.Download) }) {
+                    Text("Download version ${status.version}")
+                }
+            }
+            if (status is AppUpdateState.Ready && updates.confirmingRestart == null) {
+                OptionButton(selected = true, onClick = { onAction(SettingsPageAction.Update.Restart) }) {
+                    Text("Restart to update")
+                }
+            }
+        }
+        status.message(updates.automatic)?.let { message ->
+            Text(message, color = Theme[colors][if (status is AppUpdateState.Failed) error else textSecondary])
+        }
+        updates.lastChecked?.let { Text("Last checked ${formatUpdateCheckTime(it)}", color = Theme[colors][textSecondary]) }
+        updates.confirmingRestart?.let { open ->
+            Text(
+                if (open == 1) "1 open tab or port forward will close." else "$open open tabs and port forwards will close.",
+            )
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                OptionButton(selected = true, onClick = { onAction(SettingsPageAction.Update.ConfirmRestart) }) {
+                    Text("Restart anyway")
+                }
+                OptionButton(selected = false, onClick = { onAction(SettingsPageAction.Update.CancelRestart) }) {
+                    Text("Cancel")
+                }
+            }
+        }
+    }
+}
+
+private fun AppUpdateState.message(automatic: Boolean): String? = when (this) {
+    AppUpdateState.Unsupported, AppUpdateState.Idle -> null
+    AppUpdateState.Checking -> "Checking…"
+    AppUpdateState.UpToDate -> "You have the latest version."
+    is AppUpdateState.Available -> "Version $version is available."
+    is AppUpdateState.Downloading -> "Downloading version $version… $percent%"
+    is AppUpdateState.Ready -> if (automatic) {
+        "Version $version is ready, and installs when you quit."
+    } else {
+        "Version $version is ready."
+    }
+    is AppUpdateState.Failed -> message
+}
+
+private fun formatUpdateCheckTime(epochMillis: Long): String =
+    UPDATE_CHECK_TIME_FORMAT.format(Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()))
 
 @Composable
 private fun VaultActions(

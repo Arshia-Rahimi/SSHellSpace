@@ -6,6 +6,7 @@ import com.sshellspace.core.domain.models.KeyChord
 import com.sshellspace.core.domain.models.TerminalColors
 import com.sshellspace.core.domain.models.VaultException
 import com.sshellspace.core.domain.models.VaultInfo
+import com.sshellspace.core.domain.repositories.AppUpdater
 import com.sshellspace.core.domain.repositories.CorePreferencesRepository
 import com.sshellspace.core.domain.repositories.VaultManager
 import com.sshellspace.core.domain.repositories.VaultPreferencesRepository
@@ -46,6 +47,7 @@ class SettingsPageViewModel(
     private val shortcutHandler: ShortcutHandler,
     private val vaultManager: VaultManager,
     private val vaultPreferencesRepository: VaultPreferencesRepository,
+    private val appUpdater: AppUpdater,
 ) : ViewModel() {
     private val discoveredShells = MutableStateFlow<List<Shell>?>(null)
     private val recording = MutableStateFlow<ShortcutRecording?>(null)
@@ -53,6 +55,7 @@ class SettingsPageViewModel(
     private val themeImportError = MutableStateFlow<String?>(null)
     private val terminalThemeImportError = MutableStateFlow<String?>(null)
     private val vaultForm = MutableStateFlow(VaultForm())
+    private val confirmingRestart = MutableStateFlow<Int?>(null)
 
     private val appearance = combine(
         corePreferencesRepository.getTheme(),
@@ -100,8 +103,29 @@ class SettingsPageViewModel(
         )
     }
 
+    private val updates = combine(
+        appUpdater.state,
+        corePreferencesRepository.getAutoUpdate(),
+        corePreferencesRepository.getUpdateCheckIntervalHours(),
+        corePreferencesRepository.getLastUpdateCheck(),
+        confirmingRestart,
+    ) { status, automatic, intervalHours, lastChecked, confirming ->
+        UpdateSettings(
+            currentVersion = appUpdater.currentVersion,
+            status = status,
+            automatic = automatic,
+            checkIntervalHours = intervalHours,
+            lastChecked = lastChecked,
+            confirmingRestart = confirming,
+        )
+    }
+
+    private val appearanceVaultAndUpdates = combine(appearanceAndVault, updates) { state, updates ->
+        state.copy(updates = updates)
+    }
+
     val uiState = combine(
-        appearanceAndVault,
+        appearanceVaultAndUpdates,
         terminalPreferencesRepository.get(),
         discoveredShells,
         shortcutHandler.bindings,
@@ -184,6 +208,24 @@ class SettingsPageViewModel(
             is SettingsPageAction.SetAutoLockMinutes -> viewModelScope.launch {
                 vaultPreferencesRepository.setAutoLockMinutes(action.minutes)
             }
+
+            is SettingsPageAction.Update.SetAutomatic -> viewModelScope.launch {
+                corePreferencesRepository.setAutoUpdate(action.enabled)
+            }
+            is SettingsPageAction.Update.SetCheckInterval -> viewModelScope.launch {
+                corePreferencesRepository.setUpdateCheckIntervalHours(action.hours)
+            }
+            SettingsPageAction.Update.Check -> appUpdater.check()
+            SettingsPageAction.Update.Download -> appUpdater.download()
+            SettingsPageAction.Update.Restart -> {
+                val open = appUpdater.openSessionCount()
+                if (open > 0) confirmingRestart.update { open } else appUpdater.restartToInstall()
+            }
+            SettingsPageAction.Update.ConfirmRestart -> {
+                confirmingRestart.update { null }
+                appUpdater.restartToInstall()
+            }
+            SettingsPageAction.Update.CancelRestart -> confirmingRestart.update { null }
 
             is SettingsPageAction.Shortcut.StartRecording -> setRecording(ShortcutRecording(action.shortcut))
             is SettingsPageAction.Shortcut.Record -> record(action.chord)

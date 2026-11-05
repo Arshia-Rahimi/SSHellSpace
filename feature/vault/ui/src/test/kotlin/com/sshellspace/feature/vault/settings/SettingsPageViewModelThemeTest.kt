@@ -1,11 +1,13 @@
 package com.sshellspace.feature.vault.settings
 
+import com.sshellspace.core.domain.models.AppUpdateState
 import com.sshellspace.core.domain.models.DEFAULT_COLOR_SCHEME_ID
 import com.sshellspace.core.domain.models.TerminalColors
 import com.sshellspace.core.domain.models.ThemePreference
 import com.sshellspace.core.domain.models.VaultCredential
 import com.sshellspace.core.domain.models.VaultException
 import com.sshellspace.core.domain.models.VaultInfo
+import com.sshellspace.core.domain.repositories.AppUpdater
 import com.sshellspace.core.domain.repositories.CorePreferencesRepository
 import com.sshellspace.core.domain.repositories.VaultManager
 import com.sshellspace.core.domain.repositories.VaultPreferencesRepository
@@ -17,6 +19,7 @@ import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import java.io.File
 import com.sshellspace.feature.terminal.ui.screen.emulators.bossterm.BuiltInTerminalThemes
 import java.nio.file.Files
@@ -48,6 +51,13 @@ class SettingsPageViewModelThemeTest {
         every { getUserThemes() } returns flowOf(emptyList())
         every { getActiveUserTheme() } returns flowOf(null)
         every { getTerminalThemes() } returns terminalThemes
+        every { getAutoUpdate() } returns flowOf(true)
+        every { getUpdateCheckIntervalHours() } returns flowOf(24)
+        every { getLastUpdateCheck() } returns flowOf(null)
+    }
+    private val appUpdater = mockk<AppUpdater>(relaxed = true) {
+        every { currentVersion } returns "1.0.0"
+        every { state } returns MutableStateFlow(AppUpdateState.Ready("1.1.0"))
     }
     private val vaultPreferences = mockk<VaultPreferencesRepository>(relaxed = true) {
         every { getAutoLockMinutes() } returns flowOf(30)
@@ -76,9 +86,49 @@ class SettingsPageViewModelThemeTest {
         shortcutHandler,
         vaultManager,
         vaultPreferences,
+        appUpdater,
     )
 
     private val work = VaultInfo(Uuid.random(), "Work")
+
+    @Test
+    fun `update settings reach the page and are saved`() = runTest {
+        val viewModel = viewModel()
+
+        val updates = viewModel.uiState.first { it.updates.currentVersion.isNotEmpty() }.updates
+        viewModel.execute(SettingsPageAction.Update.SetAutomatic(false))
+        viewModel.execute(SettingsPageAction.Update.SetCheckInterval(6))
+        viewModel.execute(SettingsPageAction.Update.Check)
+
+        assertEquals(AppUpdateState.Ready("1.1.0"), updates.status)
+        coVerify { corePreferences.setAutoUpdate(false) }
+        coVerify { corePreferences.setUpdateCheckIntervalHours(6) }
+        verify { appUpdater.check() }
+    }
+
+    @Test
+    fun `restarting asks first when it would close sessions`() = runTest {
+        every { appUpdater.openSessionCount() } returns 2
+        val viewModel = viewModel()
+
+        viewModel.execute(SettingsPageAction.Update.Restart)
+
+        assertEquals(2, viewModel.uiState.first { it.updates.confirmingRestart != null }.updates.confirmingRestart)
+        verify(exactly = 0) { appUpdater.restartToInstall() }
+
+        viewModel.execute(SettingsPageAction.Update.ConfirmRestart)
+
+        verify { appUpdater.restartToInstall() }
+    }
+
+    @Test
+    fun `restarting doesn't ask when nothing is open`() = runTest {
+        every { appUpdater.openSessionCount() } returns 0
+
+        viewModel().execute(SettingsPageAction.Update.Restart)
+
+        verify { appUpdater.restartToInstall() }
+    }
 
     private fun themeFile(name: String, content: String) =
         Files.createTempDirectory("theme-test").resolve(name).also { Files.writeString(it, content) }.toString()
@@ -98,8 +148,9 @@ class SettingsPageViewModelThemeTest {
 
         viewModel().execute(SettingsPageAction.ImportTerminalTheme(themeFile("mine.json", "{}")))
 
-        coVerify { corePreferences.importTerminalTheme("{}", "mine") }
-        coVerify { terminalPreferences.setTerminalThemeName("Mine") }
+        // The file is read on another dispatcher, so these have to wait for it.
+        coVerify(timeout = 5_000) { corePreferences.importTerminalTheme("{}", "mine") }
+        coVerify(timeout = 5_000) { terminalPreferences.setTerminalThemeName("Mine") }
         coVerify(exactly = 0) { corePreferences.importUserTheme(any()) }
     }
 
