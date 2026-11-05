@@ -4,6 +4,7 @@ import com.sshellspace.core.data.PortForwardDatasource
 import com.sshellspace.core.data.SshConnectionDatasource
 import com.sshellspace.core.data.SshKeyDatasource
 import com.sshellspace.core.data.generateUuid
+import com.sshellspace.core.data.isPlainHost
 import com.sshellspace.core.domain.models.SshConnection
 import com.sshellspace.core.domain.models.SshConnectionAuth
 import com.sshellspace.feature.vault.domain.SaveSshConnectionResult
@@ -59,6 +60,7 @@ class SshConnectionRepositoryImpl(
         return when {
             draft.name.isBlank() -> "Name cannot be empty"
             draft.host.isBlank() -> "Host cannot be empty"
+            !isPlainHost(draft.host.trim()) -> "Host must be a host name or IP address"
             draft.username.isBlank() -> "Username cannot be empty"
             draft.port !in PORT_RANGE -> "Port must be between 1 and 65535"
             connections.values.any { it.id != id && it.name.equals(draft.name.trim(), ignoreCase = true) } ->

@@ -35,6 +35,7 @@ import kotlin.concurrent.thread
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertIs
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
@@ -223,6 +224,23 @@ class MinaSshConnectionServiceTest {
         val result = connect(target, FakePrompter(challengeAnswers = listOf("000000")))
 
         assertTrue(assertIs<SshConnectResult.Failed>(result).message.startsWith("Authentication failed"))
+    }
+
+    @Test
+    fun `a saved host that isn't a name or address never reaches a prompt or known_hosts`() {
+        val jump = connection(SshConnectionAuth.Password("secret"), host = "localhost")
+        val badTarget = connection(SshConnectionAuth.Agent, host = "localhost,*", jumpHostId = jump.id)
+        val badJump = connection(SshConnectionAuth.Agent, host = "@cert-authority *")
+        val behindBadJump = connection(SshConnectionAuth.Password("secret"), jumpHostId = badJump.id)
+
+        listOf(badTarget, behindBadJump).forEach { connection ->
+            val prompter = FakePrompter()
+
+            assertIs<SshConnectResult.Failed>(connect(connection, prompter))
+            assertEquals(emptyList(), prompter.hostKeys)
+        }
+        assertFalse(Files.exists(knownHosts))
+        assertEquals(emptyList(), vaultKnownHosts.stored.toList())
     }
 
     @Test

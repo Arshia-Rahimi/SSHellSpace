@@ -389,6 +389,9 @@ class VaultManagerImpl(
 /**
  * Loads [image] into [driver] and refuses what the app's own schema never contains. A vault someone else exported can
  * hold any SQLite database, and triggers or views would run their own SQL whenever the app touches those tables.
+ *
+ * Lists what's allowed instead of what isn't: SQLite ignores case when it loads a schema row, so a row whose type is
+ * `TRIGGER`, or `trigger` stored as a blob, is a live trigger that a comparison with `'trigger'` doesn't see.
  */
 private fun loadImage(driver: JdbcSqliteDriver, connection: SQLiteConnection, image: ByteArray) {
     try {
@@ -405,7 +408,8 @@ private fun loadImage(driver: JdbcSqliteDriver, connection: SQLiteConnection, im
         ).value
         val unexpected = driver.executeQuery(
             identifier = null,
-            sql = "SELECT COUNT(*) FROM sqlite_master WHERE type IN ('trigger', 'view')",
+            sql = "SELECT COUNT(*) FROM sqlite_master " +
+                "WHERE type IS NULL OR typeof(type) <> 'text' OR type NOT IN ('table', 'index')",
             mapper = { cursor ->
                 cursor.next()
                 QueryResult.Value(cursor.getLong(0) ?: 0L)

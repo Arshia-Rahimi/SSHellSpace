@@ -6,6 +6,7 @@ import java.security.MessageDigest
 import java.util.Base64
 import org.apache.sshd.client.config.hosts.KnownHostEntry
 import org.apache.sshd.common.config.keys.PublicKeyEntryResolver
+import org.apache.sshd.common.util.net.SshdSocketAddress
 
 /** The OpenSSH known_hosts file, shared with the `ssh` command line tool. */
 val DefaultKnownHostsPath: Path = Path.of(System.getProperty("user.home"), ".ssh", "known_hosts")
@@ -15,7 +16,18 @@ private const val MARKER_CERTIFICATE_AUTHORITY = "cert-authority"
 private const val COMMENT = '#'
 private const val MARKER_PREFIX = '@'
 private const val WILDCARDS = "*?!"
+private val KNOWN_MARKERS = setOf(null, MARKER_REVOKED, MARKER_CERTIFICATE_AUTHORITY)
 private val BRACKETED_HOST = Regex("""^\[(.+)]:(\d+)$""")
+private val HOST_NAME = Regex("""[A-Za-z0-9_][A-Za-z0-9._-]*""")
+private val IPV6_CHARACTERS = Regex("""[A-Za-z0-9._:%-]+""")
+
+/**
+ * Whether [host] is one host name or IP address, and nothing else. MINA writes a connection's host as it is into the
+ * known_hosts file `ssh` also reads, so a host from a crafted vault such as `prod.internal,*` or `@cert-authority *`
+ * would make the key the user accepts trusted for every server.
+ */
+fun isPlainHost(host: String): Boolean =
+    HOST_NAME.matches(host) || (IPV6_CHARACTERS.matches(host) && SshdSocketAddress.isIPv6Address(host))
 
 /** What the text of a known_hosts file holds. */
 data class ParsedKnownHosts(
@@ -39,7 +51,8 @@ fun parseKnownHostLine(line: String): KnownHost? {
     } catch (_: RuntimeException) {
         null
     }
-    val key = entry?.keyEntry ?: return null
+    // OpenSSH skips a line with any other marker, but MINA would trust it like one with no marker at all.
+    val key = entry?.takeIf { it.marker in KNOWN_MARKERS }?.keyEntry ?: return null
     return KnownHost(
         line = entry.configLine,
         hosts = if (entry.hashedEntry != null) emptyList() else hostField(entry.configLine).split(',').map(::displayHost),
@@ -67,10 +80,13 @@ val KnownHost.hasUsableKey: Boolean
         KnownHostEntry.parseKnownHostEntry(line).keyEntry.resolvePublicKey(null, PublicKeyEntryResolver.FAILING)
     }.getOrNull() != null
 
-/** The host names of a line, which come after its marker if it has one. */
+/**
+ * The host names of a line, which come after its marker if it has one. Reads [line], an entry's config line, the way
+ * MINA does, since MINA decides what a line matches: any amount of space can follow the marker.
+ */
 private fun hostField(line: String): String {
-    val fields = line.split(' ')
-    return if (fields.first().startsWith(MARKER_PREFIX)) fields[1] else fields[0]
+    val hosts = if (line.startsWith(MARKER_PREFIX)) line.substringAfter(' ').trim() else line
+    return hosts.substringBefore(' ')
 }
 
 private fun displayHost(pattern: String): String =

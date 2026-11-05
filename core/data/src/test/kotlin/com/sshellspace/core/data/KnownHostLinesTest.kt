@@ -2,6 +2,7 @@ package com.sshellspace.core.data
 
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFalse
 import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -88,6 +89,49 @@ class KnownHostLinesTest {
         assertNull(parseVaultKnownHostLine("example.com,!other.com $key"))
         assertNull(parseVaultKnownHostLine("example.com,* $key"))
         assertNull(parseVaultKnownHostLine("@cert-authority example.com $key"))
+    }
+
+    @Test
+    fun `extra space after a marker doesn't hide a wildcard from the vault's list`() {
+        assertNull(parseVaultKnownHostLine("@revoked  * $key"))
+        assertNull(parseVaultKnownHostLine("@revoked\t\t* $key"))
+        assertEquals(listOf("example.com"), parseKnownHostLine("@revoked  example.com $key")?.hosts)
+    }
+
+    @Test
+    fun `an unknown marker isn't an entry, since MINA would trust it like an unmarked line`() {
+        assertNull(parseKnownHostLine("@x example.com $key"))
+        assertNull(parseKnownHostLine("@Revoked example.com $key"))
+        assertNull(parseVaultKnownHostLine("@x  * $key"))
+        assertNull(parseVaultKnownHostLine("@x\t\t* $key"))
+    }
+
+    @Test
+    fun `a plain host is one name or address`() {
+        listOf("example.com", "web-1.internal", "_dmarc.example.com", "localhost", "10.0.0.1", "::1", "2001:db8::1", "fe80::1%en0")
+            .forEach { assertTrue(isPlainHost(it), it) }
+    }
+
+    @Test
+    fun `a pattern, a marker or a second word isn't a plain host`() {
+        listOf(
+            "",
+            "*",
+            "prod.internal,*",
+            "a,b",
+            "exampl?.com",
+            "!example.com",
+            "@cert-authority *",
+            "* ssh-ed25519 AAAA",
+            "|1|salt|hash",
+            "[example.com]:2222",
+            "[::1]",
+            "fe80::1%a,*",
+            "not:an:address",
+            "-oProxyCommand=x",
+            "example.com\nevil.com",
+            "exämple.com",
+        ).forEach { assertFalse(isPlainHost(it), it) }
     }
 
     @Test

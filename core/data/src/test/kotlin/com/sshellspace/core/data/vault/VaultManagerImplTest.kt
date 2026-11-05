@@ -10,6 +10,7 @@ import com.sshellspace.core.data.impl.SqlDelightPreferencesDatasource
 import com.sshellspace.core.data.impl.VaultPreferencesRepositoryImpl
 import com.sshellspace.core.domain.models.DEFAULT_AUTO_LOCK_MINUTES
 import com.sshellspace.core.domain.models.PasswordStrength
+import com.sshellspace.core.domain.models.VAULT_FILE_EXTENSION
 import com.sshellspace.core.domain.models.VaultCredential
 import com.sshellspace.core.domain.models.VaultException
 import com.sshellspace.core.domain.models.VaultInfo
@@ -45,6 +46,8 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import org.sqlite.SQLiteConnection
+
+private const val CRAFTED_VAULT_ID = "018f0000-0000-7000-8000-000000000000"
 
 class VaultManagerImplTest {
 
@@ -422,25 +425,71 @@ class VaultManagerImplTest {
 
     @Test
     fun `importing a vault whose database has a trigger is refused`() = runTest {
-        val image = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
-            Database.Schema.create(driver).value
-            driver.execute(null, "PRAGMA user_version = ${Database.Schema.version}", 0)
+        val file = craftedVault { driver ->
             driver.execute(
                 null,
                 "CREATE TRIGGER evil AFTER INSERT ON ssh_connections BEGIN DELETE FROM ssh_connections; END",
                 0,
             )
-            driver.getConnection().unwrap(SQLiteConnection::class.java).serialize("main")
         }
-        val id = "018f0000-0000-7000-8000-000000000000"
-        val key = newVaultKey()
-        val file = File(root, "crafted.sshv")
-        file.writeBytes(
-            VaultFile.seal(VaultHeader(id, "Crafted", listOf(newKeySlot(id, password, key))), key, image),
-        )
 
         assertFailsWith<VaultException.Invalid> { manager.import(file.path, password) }
         assertEquals(emptyList(), manager.vaults.value)
+    }
+
+    @Test
+    fun `importing refuses a trigger or view however its schema row spells the type`() = runTest {
+        val objects = mapOf(
+            "CREATE TRIGGER evil BEFORE DELETE ON preferences_table BEGIN SELECT RAISE(IGNORE); END" to
+                listOf("'TRIGGER'", "'Trigger'", "CAST('trigger' AS BLOB)"),
+            "CREATE VIEW evil AS SELECT 1" to listOf("'VIEW'", "CAST('view' AS BLOB)"),
+        )
+        objects.forEach { (sql, types) ->
+            types.forEach { type ->
+                val file = craftedVault { driver -> respellSchemaType(driver, sql, type) }
+
+                assertFailsWith<VaultException.Invalid>("$sql as $type") { manager.import(file.path, password) }
+            }
+        }
+        assertEquals(emptyList(), manager.vaults.value)
+    }
+
+    @Test
+    fun `unlocking refuses a vault already here whose trigger hides behind its type's spelling`() = runTest {
+        val file = craftedVault { driver ->
+            respellSchemaType(
+                driver,
+                "CREATE TRIGGER evil AFTER INSERT ON ssh_connections BEGIN DELETE FROM ssh_connections; END",
+                "'TRIGGER'",
+            )
+        }
+        vaultDirectory.mkdirs()
+        val id = Uuid.parse(CRAFTED_VAULT_ID)
+        file.copyTo(File(vaultDirectory, "$id.$VAULT_FILE_EXTENSION"))
+
+        assertFailsWith<VaultException.Invalid> { manager().unlock(id, password) }
+    }
+
+    private fun respellSchemaType(driver: JdbcSqliteDriver, sql: String, type: String) {
+        driver.execute(null, sql, 0)
+        driver.execute(null, "PRAGMA writable_schema = ON", 0)
+        driver.execute(null, "UPDATE sqlite_master SET type = $type WHERE name = 'evil'", 0)
+        driver.execute(null, "PRAGMA writable_schema = OFF", 0)
+    }
+
+    /** A sealed vault file, holding the app's schema with whatever [edit] does to it. */
+    private fun craftedVault(edit: (JdbcSqliteDriver) -> Unit): File {
+        val image = JdbcSqliteDriver(JdbcSqliteDriver.IN_MEMORY).use { driver ->
+            Database.Schema.create(driver).value
+            driver.execute(null, "PRAGMA user_version = ${Database.Schema.version}", 0)
+            edit(driver)
+            driver.getConnection().unwrap(SQLiteConnection::class.java).serialize("main")
+        }
+        val key = newVaultKey()
+        val slots = listOf(newKeySlot(CRAFTED_VAULT_ID, password, key))
+        return File(root, "crafted.sshv").apply {
+            writeBytes(VaultFile.seal(VaultHeader(CRAFTED_VAULT_ID, "Crafted", slots), key, image))
+        }
     }
 
     @Test

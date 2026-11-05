@@ -3,6 +3,7 @@ package com.sshellspace.feature.terminal.data
 import com.sshellspace.core.data.KnownHostDatasource
 import com.sshellspace.core.data.SshConnectionDatasource
 import com.sshellspace.core.data.SshKeyDatasource
+import com.sshellspace.core.data.isPlainHost
 import com.sshellspace.core.domain.SshKeyService
 import com.sshellspace.core.domain.SshKeyValidationResult
 import com.sshellspace.core.domain.models.PortForward
@@ -105,6 +106,10 @@ class MinaSshConnectionService(
             val connection = connectionDatasource.get(nextId) ?: throw ConnectFailure(
                 if (chain.isEmpty()) "This connection no longer exists." else "The jump host of ${chain.first().name} was deleted.",
             )
+            // Saving checks this too, but an imported vault's connections were never saved here.
+            if (!isPlainHost(connection.host)) {
+                throw ConnectFailure("The host of ${connection.name} isn't a host name or IP address.")
+            }
             chain.addFirst(connection)
             nextId = connection.options.jumpHostId
         }

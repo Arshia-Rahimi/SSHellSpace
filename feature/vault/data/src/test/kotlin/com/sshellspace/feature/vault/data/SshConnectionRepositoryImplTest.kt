@@ -30,9 +30,10 @@ class SshConnectionRepositoryImplTest {
         name: String = "server",
         auth: SshConnectionAuth = SshConnectionAuth.Agent,
         jumpHostId: Uuid? = null,
+        host: String = " example.com ",
     ) = SshConnectionDraft(
         name = name,
-        host = " example.com ",
+        host = host,
         port = 22,
         username = "root",
         auth = auth,
@@ -60,6 +61,15 @@ class SshConnectionRepositoryImplTest {
 
         assertEquals("example.com", result.connection.host)
         coVerify { connectionDatasource.upsert(result.connection) }
+    }
+
+    @Test
+    fun `save rejects a host that isn't a name or address`() = runTest {
+        givenStored()
+
+        listOf("*", "prod.internal,*", "@cert-authority *", "user@example.com").forEach { host ->
+            assertIs<SaveSshConnectionResult.Error>(repository.save(null, draft(host = host)), host)
+        }
     }
 
     @Test
