@@ -227,12 +227,12 @@ class SftpBrowserViewModelTest {
                 SshConnectResult.Cancelled
             },
         )
-        assertEquals(SftpConnectionState.AwaitingHostKey(prompt), vm.uiState.value.connection)
+        assertEquals(SftpConnectionState.AwaitingHostKey(prompt), vm.settled { it.connection == SftpConnectionState.AwaitingHostKey(prompt) }.connection)
 
         vm.execute(SftpAction.AnswerHostKey(trust = true))
 
         assertTrue(answer.await())
-        assertEquals(SftpConnectionState.Cancelled, vm.uiState.value.connection)
+        assertEquals(SftpConnectionState.Cancelled, vm.settled { it.connection == SftpConnectionState.Cancelled }.connection)
     }
 
     @Test
@@ -312,7 +312,7 @@ class SftpBrowserViewModelTest {
 
         vm.execute(SftpAction.RequestDelete)
 
-        assertEquals(listOf(shown), assertIs<SftpDialog.ConfirmDelete>(vm.uiState.value.browser.dialog).files)
+        assertEquals(listOf(shown), assertIs<SftpDialog.ConfirmDelete>(vm.settled { it.browser.dialog is SftpDialog.ConfirmDelete }.browser.dialog).files)
     }
 
     @Test
@@ -323,13 +323,12 @@ class SftpBrowserViewModelTest {
 
         vm.execute(SftpAction.RequestNewFolder)
         vm.execute(SftpAction.CreateFolder("../escape"))
-        assertTrue(assertIs<SftpDialog.NewFolder>(vm.uiState.value.browser.dialog).error != null)
+        assertTrue(assertIs<SftpDialog.NewFolder>(vm.settled { (it.browser.dialog as? SftpDialog.NewFolder)?.error != null }.browser.dialog).error != null)
         assertEquals(emptyList(), fakeSftp.created)
 
         vm.execute(SftpAction.CreateFolder(" photos "))
-        vm.settled { it.browser.busyMessage == null && !it.browser.isLoading }
+        vm.settled { it.browser.busyMessage == null && !it.browser.isLoading && it.browser.dialog == null }
         assertEquals(listOf("/home/alice/photos"), fakeSftp.created)
-        assertNull(vm.uiState.value.browser.dialog)
     }
 
     @Test
@@ -465,7 +464,7 @@ class SftpBrowserViewModelTest {
         assertEquals(SftpTransferStatus.Failed("disk full"), failed.status)
 
         vm.execute(SftpAction.ClearFinishedTransfers)
-        assertEquals(emptyList(), vm.uiState.value.transfers)
+        assertEquals(emptyList(), vm.settled { it.transfers.isEmpty() }.transfers)
 
         fakeSftp.transferFailure = null
         fakeSftp.transferGate = CompletableDeferred()
@@ -474,7 +473,7 @@ class SftpBrowserViewModelTest {
 
         vm.execute(SftpAction.CancelTransfer(running.id))
 
-        assertEquals(SftpTransferStatus.Cancelled, vm.uiState.value.transfers.single().status)
+        assertEquals(SftpTransferStatus.Cancelled, vm.settled { it.transfers.singleOrNull()?.status == SftpTransferStatus.Cancelled }.transfers.single().status)
     }
 
     @Test
@@ -511,11 +510,11 @@ class SftpBrowserViewModelTest {
 
         vm.execute(SftpAction.SelectAll)
         vm.execute(SftpAction.SetFilter("note"))
-        val filtered = vm.uiState.value.browser
+        val filtered = vm.settled { it.browser.filter == "note" && it.browser.selection.size == 3 }.browser
         assertEquals(listOf("NOTES.md", "notes.txt"), filtered.visibleEntries().map { it.name })
         assertEquals(listOf("NOTES.md", "notes.txt"), filtered.selectedFiles().map { it.name })
         vm.execute(SftpAction.RequestDelete)
-        val confirm = assertIs<SftpDialog.ConfirmDelete>(vm.uiState.value.browser.dialog)
+        val confirm = assertIs<SftpDialog.ConfirmDelete>(vm.settled { it.browser.dialog is SftpDialog.ConfirmDelete }.browser.dialog)
         assertEquals(listOf("NOTES.md", "notes.txt"), confirm.files.map { it.name })
         vm.execute(SftpAction.DismissDialog)
 
@@ -533,10 +532,10 @@ class SftpBrowserViewModelTest {
         vm.settled { it.browser.path == "/home/alice" }
 
         vm.execute(SftpAction.Click(files[1], SftpClickMode.Single))
-        assertEquals(false, vm.uiState.value.browser.revealCursor)
+        assertEquals(false, vm.settled { !it.browser.revealCursor }.browser.revealCursor)
         vm.execute(SftpAction.MoveSelection(1, extend = true))
         assertEquals(listOf("b", "c"), vm.selectedNames(listOf("b", "c")))
-        assertEquals(true, vm.uiState.value.browser.revealCursor)
+        assertEquals(true, vm.settled { it.browser.revealCursor }.browser.revealCursor)
         vm.execute(SftpAction.MoveSelection(1, extend = true))
         assertEquals(listOf("b", "c", "d"), vm.selectedNames(listOf("b", "c", "d")))
         vm.execute(SftpAction.MoveSelection(-1, extend = true))
@@ -556,18 +555,18 @@ class SftpBrowserViewModelTest {
         fakeSftp.folders["/home/alice"] = listOf(file("a"), file("b"), file("c"), file("d"))
         val vm = viewModel()
         vm.settled { it.browser.path == "/home/alice" }
-        val after = { action: SftpAction ->
+        suspend fun after(action: SftpAction, expected: String): List<String> {
             vm.execute(SftpAction.ClearSelection)
             vm.execute(action)
-            vm.uiState.value.browser.selectedFiles().map { it.name }
+            return vm.selectedNames(listOf(expected))
         }
 
-        assertEquals(listOf("a"), after(SftpAction.MoveSelection(0)))
-        assertEquals(listOf("a"), after(SftpAction.MoveSelection(1)))
-        assertEquals(listOf("d"), after(SftpAction.MoveSelection(-1)))
+        assertEquals(listOf("a"), after(SftpAction.MoveSelection(0), "a"))
+        assertEquals(listOf("a"), after(SftpAction.MoveSelection(1), "a"))
+        assertEquals(listOf("d"), after(SftpAction.MoveSelection(-1), "d"))
         // What Home and End send: the length of the list.
-        assertEquals(listOf("d"), after(SftpAction.MoveSelection(4)))
-        assertEquals(listOf("a"), after(SftpAction.MoveSelection(-4)))
+        assertEquals(listOf("d"), after(SftpAction.MoveSelection(4), "d"))
+        assertEquals(listOf("a"), after(SftpAction.MoveSelection(-4), "a"))
     }
 
     @Test
@@ -682,7 +681,7 @@ class SftpBrowserViewModelTest {
         assertEquals(listOf("a.png", "c.JPG", "d.webp"), fakeSftp.reads)
 
         vm.execute(SftpAction.DismissDialog)
-        assertNull(vm.uiState.value.browser.dialog)
+        assertNull(vm.settled { it.browser.dialog == null }.browser.dialog)
     }
 
     @Test
@@ -694,7 +693,7 @@ class SftpBrowserViewModelTest {
         vm.settled { it.browser.path == "/home/alice" }
 
         vm.execute(SftpAction.OpenPreview(picture))
-        assertNull((vm.uiState.value.browser.dialog as SftpDialog.Preview).image)
+        assertNull((vm.settled { it.browser.dialog is SftpDialog.Preview }.browser.dialog as SftpDialog.Preview).image)
         vm.execute(SftpAction.DismissDialog)
         fakeSftp.readGate!!.complete(Unit)
 
