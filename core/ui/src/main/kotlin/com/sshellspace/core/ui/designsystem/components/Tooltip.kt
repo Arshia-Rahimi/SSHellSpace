@@ -3,6 +3,7 @@ package com.sshellspace.core.ui.designsystem.components
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -19,6 +20,7 @@ import com.sshellspace.core.ui.designsystem.theme.colors
 import com.sshellspace.core.ui.designsystem.theme.surfaceElevated
 
 private val TooltipShape = RoundedCornerShape(6.dp)
+private val TooltipMaxWidth = 480.dp
 
 /** Shows [text] next to [anchor] on hover or keyboard focus. Needs a TooltipHost above it (see SSHellSpaceTheme). */
 @Composable
@@ -38,6 +40,7 @@ fun Tooltip(
                 Text(
                     text = text,
                     modifier = Modifier
+                        .widthIn(max = TooltipMaxWidth)
                         .shadow(4.dp, TooltipShape)
                         .clip(TooltipShape)
                         .background(Theme[colors][surfaceElevated])

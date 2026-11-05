@@ -25,4 +25,9 @@ sealed interface SavedTab {
     @Serializable
     @SerialName("local")
     data class Local(val shell: Shell) : SavedTab
+
+    /** Only lists this computer's files. Unlike [Local] it runs nothing, so a crafted vault file can't do harm with it. */
+    @Serializable
+    @SerialName("local-files")
+    data object LocalFiles : SavedTab
 }

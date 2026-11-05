@@ -56,6 +56,7 @@ fun NewTabDialog(
         onSelectShell = { select(NewTabDialogAction.CreateNewTab(it)) },
         onSelectConnection = { select(NewTabDialogAction.Connect(it)) },
         onBrowseFiles = { select(NewTabDialogAction.BrowseFiles(it)) },
+        onBrowseThisDevice = { select(NewTabDialogAction.BrowseThisDevice) },
     )
 }
 
@@ -65,6 +66,7 @@ private fun NewTabDialogContent(
     onSelectShell: (Shell) -> Unit,
     onSelectConnection: (SshConnection) -> Unit,
     onBrowseFiles: (SshConnection) -> Unit,
+    onBrowseThisDevice: () -> Unit,
 ) {
     val shape = RoundedCornerShape(8.dp)
 
@@ -120,6 +122,15 @@ private fun NewTabDialogContent(
                     )
                 }
             }
+            Separator()
+            SectionLabel("Files")
+            OptionRow(
+                title = "This device",
+                subtitle = "Browse this computer's files",
+                highlighted = false,
+                trailing = null,
+                onClick = onBrowseThisDevice,
+            )
             if (!uiState.isLoading && uiState.otherShells.isNotEmpty()) {
                 Separator()
                 SectionLabel("Other shells")

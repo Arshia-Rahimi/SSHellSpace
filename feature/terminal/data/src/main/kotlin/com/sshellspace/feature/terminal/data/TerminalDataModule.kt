@@ -1,5 +1,7 @@
 package com.sshellspace.feature.terminal.data
 
+import com.sshellspace.feature.terminal.data.sftp.LocalFileSession
+import com.sshellspace.feature.terminal.domain.LocalFilesService
 import com.sshellspace.feature.terminal.domain.PortForwardingService
 import com.sshellspace.feature.terminal.domain.SavedSessionRepository
 import com.sshellspace.feature.terminal.domain.ShellDiscoveryService
@@ -19,5 +21,6 @@ val TerminalDataModule = module {
     single { SshAgentLocator() }
     single<SshClient> { createSshClient(agentLocator = get()) }
     factory<MinaSshConnectionService>() bind SshConnectionService::class
+    single<LocalFilesService> { LocalFilesService { LocalFileSession() } }
     single<PortForwardingService> { MinaPortForwardingService(connectionService = get(), forwardDatasource = get()) }
 }

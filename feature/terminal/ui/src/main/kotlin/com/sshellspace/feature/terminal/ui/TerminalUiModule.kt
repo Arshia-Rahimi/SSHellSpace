@@ -18,6 +18,6 @@ val TerminalUiModule = module {
         SshTerminalTabViewModel(tabController, params, get(), get(), get())
     }
     viewModel { (tabController: TabController, params: SftpParams) ->
-        SftpBrowserViewModel(tabController, params, get(), get())
+        SftpBrowserViewModel(tabController, params, get(), get(), get())
     }
 }

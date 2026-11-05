@@ -60,6 +60,7 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
   - The window minimum size is `MinWindowSize` (720×480dp).
   - `ProvideWindowClass` in `Main.kt` exposes `currentWindowClass`: `Compact` below 960dp wide, `Expanded` at 960dp and above.
   - In Compact, the vault nav shows icons only and side panels float over the content. Tall content must scroll, so it still fits at 480dp height.
+- **Esc in menus:** compose-unstyled's `EscapeHandler` listens to AWT's `KeyboardFocusManager`, but the Tao backend sends keys straight to the Compose scene, so it doesn't fire. That's why `MenuPanel` requires `onDismiss`, which it calls on Esc.
 - **Shortcuts:**
   - Global shortcuts are `AppShortcut` entries (`core/ui/.../shortcuts`), with default chords from `primaryChord()` (Cmd on macOS, Ctrl elsewhere).
   - Actions are registered in `app/.../config/Shortcuts.kt` (`Koin.registerShortcuts()`).
@@ -135,6 +136,9 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 - **Links aren't followed when walking a folder**, in either direction or when deleting: a link could reach outside what the user chose. A link the user picked directly is followed, using `stat`, since a listing only gives the link's own size and mode.
 - **Modes stay private.** Downloads arrive in a private temp file beside the target, then move to the real name once whole, with the remote mode masked by 755. New uploads get the local mode before any data is written, because the server's default would make a private key readable. MINA's `open` can't send a mode, hence the open, `setStat`, then write sequence.
 - Conflicts are decided by the ViewModel (`SftpDialog.Conflict`), and `replace = false` still fails rather than overwriting if a file appears in the meantime.
+- **This device:** `SftpParams.ThisDevice`, with no connection id, browses this computer through `LocalFileSession` (feature/terminal/data) with no SSH. It opens from the new tab dialog. It's another `SftpSession`, so the browser works the same and the rules above still apply. Paths stay absolute and `/`-separated (`LocalPaths`): on Windows `C:\Users` is `/C:/Users`, and `/` lists the drives. A restored tab (`SavedTab.LocalFiles`) only lists files, so unlike a saved shell it needs no check against a crafted vault file.
+- **Image previews** (`SftpDialog.Preview`, `SftpImagePreview.kt`) read through `readBytes` and decode with the Skia that Compose bundles. A few dozen bytes can claim to be a huge picture, so `decodePreview` reads the dimensions with `Codec` and refuses before decoding. Don't add an image library with a disk cache: it would keep pictures from a vault's servers on disk in the clear.
+- **Focus** (`SftpFocus`): the keyboard belongs to the list unless something is being typed or asked. A clicked `Button` takes focus and keeps it, so `Browser` hands it back on every mouse release. A menu is a layer of its own, so focus can only return a few frames after one closes.
 - Files dragged in from the desktop go through `fileDropTarget`, then the same `SftpAction.Upload` as the file picker, so conflicts and modes work the same. Use Compose's `awtTransferable`: Nucleus's Tao backend fills it in on all three desktops, but only at the drop, so a drag can't be checked for files beforehand.
 - Rows use the desktop `Modifier.onClick`. Each handler must match only its own modifier keys: one matching any keys takes every click from the others.
 

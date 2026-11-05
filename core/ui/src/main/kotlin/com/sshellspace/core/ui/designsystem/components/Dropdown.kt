@@ -29,6 +29,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
@@ -108,7 +113,7 @@ fun <T> Dropdown(
                 }
             },
             panel = {
-                MenuPanel(width = anchorWidth) {
+                MenuPanel(width = anchorWidth, onDismiss = { expanded = false }) {
                     options.forEach { option ->
                         MenuItem(
                             onClick = { onSelected(option) },
@@ -131,14 +136,25 @@ fun <T> Dropdown(
     }
 }
 
-/** A styled [DropdownMenuPanel]. Pass [width] to size it, e.g. to match its anchor. */
+/**
+ * A styled [DropdownMenuPanel]. Pass [width] to size it, e.g. to match its anchor.
+ *
+ * @param onDismiss closes the menu on Esc. The menu's own Esc handling listens for AWT key events, which the Tao
+ * backend doesn't send.
+ */
 @Composable
 fun DropdownMenuScope.MenuPanel(
+    onDismiss: () -> Unit,
     width: Dp = Dp.Unspecified,
     content: @Composable () -> Unit,
 ) {
     DropdownMenuPanel(
         modifier = Modifier
+            .onPreviewKeyEvent { event ->
+                val isEscape = event.type == KeyEventType.KeyDown && event.key == Key.Escape
+                if (isEscape) onDismiss()
+                isEscape
+            }
             .then(if (width != Dp.Unspecified && width > 0.dp) Modifier.width(width) else Modifier)
             .heightIn(max = MenuMaxHeight)
             .shadow(8.dp, MenuShape)

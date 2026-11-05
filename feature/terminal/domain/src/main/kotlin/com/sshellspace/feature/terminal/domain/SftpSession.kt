@@ -17,6 +17,15 @@ interface SftpSession : AutoCloseable {
 
     suspend fun list(path: String): RemoteListing
     suspend fun exists(path: String): Boolean
+
+    /** True when [text], as typed by the user, doesn't need joining to the folder on show. */
+    fun isAbsolutePath(text: String): Boolean = text.startsWith(SEPARATOR)
+
+    /**
+     * What [file] holds, following a link. Fails past [maxBytes] however small a listing says it is, and for anything
+     * but a regular file: reading a named pipe would never finish.
+     */
+    suspend fun readBytes(file: RemoteFile, maxBytes: Long): ByteArray
     suspend fun createDirectory(path: String)
     suspend fun rename(from: String, to: String)
 
@@ -51,6 +60,11 @@ interface SftpSession : AutoCloseable {
 }
 
 class SftpFailure(override val message: String) : Exception(message)
+
+/** Opens this computer's own files through the same interface as a server's, with no SSH involved. */
+fun interface LocalFilesService {
+    fun open(): SftpSession
+}
 
 enum class RemoteFileKind { File, Directory, Other }
 

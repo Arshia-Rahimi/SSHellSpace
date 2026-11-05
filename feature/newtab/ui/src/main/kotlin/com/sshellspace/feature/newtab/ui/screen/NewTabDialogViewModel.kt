@@ -63,6 +63,7 @@ class NewTabDialogViewModel(
         when (action) {
             is NewTabDialogAction.CreateNewTab -> createNewTab(action.shell)
             is NewTabDialogAction.Connect -> connect(action.connection)
+            NewTabDialogAction.BrowseThisDevice -> tabManager.createNewTab(SftpParams.ThisDevice)
             is NewTabDialogAction.BrowseFiles -> tabManager.createNewTab(
                 SftpParams(connectionId = action.connection.id, title = action.connection.name),
             )

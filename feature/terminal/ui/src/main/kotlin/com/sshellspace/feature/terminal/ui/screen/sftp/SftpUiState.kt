@@ -39,14 +39,26 @@ data class SftpBrowserState(
     val selection: Set<String> = emptySet(),
     /** Where a shift-click range starts. */
     val selectionAnchor: String? = null,
+    /** Where the arrow keys move from: the last row clicked or moved to. */
+    val selectionCursor: String? = null,
+    /**
+     * The list should scroll to the cursor. Only for the keyboard and for leaving a folder: scrolling on a click would
+     * move the row out from under the pointer, and turn a double click into single clicks on two rows.
+     */
+    val revealCursor: Boolean = false,
     val showHidden: Boolean = false,
+    /** Narrows the list to names containing this. It only lasts while in the folder. */
+    val filter: String = "",
     val sortColumn: SftpSortColumn = SftpSortColumn.Name,
     val sortAscending: Boolean = true,
     val dialog: SftpDialog? = null,
+    val transfersCollapsed: Boolean = false,
+    /** Browsing this computer's own files rather than a server's. */
+    val isThisDevice: Boolean = false,
 ) {
     /** What the list shows, in order: folders first, then the chosen sort. */
     fun visibleEntries(): List<RemoteFile> {
-        val shown = if (showHidden) entries else entries.filterNot { it.name.startsWith('.') }
+        val shown = entries.filter { (showHidden || !it.isDotfile) && it.displayName.contains(filter, ignoreCase = true) }
         val byColumn: Comparator<RemoteFile> = when (sortColumn) {
             SftpSortColumn.Name -> compareBy(String.CASE_INSENSITIVE_ORDER) { it.name }
             // The size a server gives a folder or link says nothing about what's in it.
@@ -57,9 +69,11 @@ data class SftpBrowserState(
         return shown.sortedWith(compareBy<RemoteFile> { !it.isDirectory }.then(ordered))
     }
 
-    /** Selected files still on show, so hiding dotfiles also keeps them out of a delete. */
+    /** Selected files still on show, so hiding dotfiles or filtering also keeps them out of a delete. */
     fun selectedFiles(): List<RemoteFile> = visibleEntries().filter { it.path in selection }
 }
+
+internal val RemoteFile.isDotfile: Boolean get() = name.startsWith('.')
 
 sealed interface SftpDialog {
     data class NewFolder(val error: String? = null) : SftpDialog
@@ -68,6 +82,9 @@ sealed interface SftpDialog {
 
     /** Some of what [pending] would write already exists under [names]. */
     data class Conflict(val names: List<String>, val pending: PendingTransfer) : SftpDialog
+
+    /** A picture being looked at. Until [image] or [error] is set, it's still loading. */
+    data class Preview(val file: RemoteFile, val image: SftpPreviewImage? = null, val error: String? = null) : SftpDialog
 }
 
 sealed interface PendingTransfer {
@@ -118,10 +135,20 @@ sealed interface SftpAction {
     data object GoHome : SftpAction
     data object Refresh : SftpAction
     data object ToggleHidden : SftpAction
+    data class SetFilter(val text: String) : SftpAction
     data class Sort(val column: SftpSortColumn) : SftpAction
     data class Click(val file: RemoteFile, val mode: SftpClickMode) : SftpAction
+
+    /** Moves the cursor [delta] rows, staying inside the list. With no cursor on show, it counts from an end of the list. */
+    data class MoveSelection(val delta: Int, val extend: Boolean = false) : SftpAction
     data object SelectAll : SftpAction
+    data object ClearSelection : SftpAction
     data object DismissNotice : SftpAction
+
+    data class OpenPreview(val file: RemoteFile) : SftpAction
+
+    /** Goes [delta] pictures along, among those on show in the list, and stops at the ends. */
+    data class MovePreview(val delta: Int) : SftpAction
 
     data object RequestNewFolder : SftpAction
     data class CreateFolder(val name: String) : SftpAction
@@ -136,4 +163,5 @@ sealed interface SftpAction {
     data class ResolveConflict(val choice: SftpConflictChoice) : SftpAction
     data class CancelTransfer(val id: Long) : SftpAction
     data object ClearFinishedTransfers : SftpAction
+    data object ToggleTransfers : SftpAction
 }

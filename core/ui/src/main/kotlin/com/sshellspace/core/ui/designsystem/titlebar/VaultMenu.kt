@@ -61,7 +61,7 @@ internal fun VaultMenu(
             )
         },
         panel = {
-            MenuPanel(width = MenuWidth) {
+            MenuPanel(width = MenuWidth, onDismiss = { expanded = false }) {
                 Column(
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
                     verticalArrangement = Arrangement.spacedBy(2.dp),

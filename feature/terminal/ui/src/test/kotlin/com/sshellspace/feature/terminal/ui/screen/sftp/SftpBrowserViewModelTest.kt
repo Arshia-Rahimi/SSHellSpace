@@ -4,6 +4,7 @@ import com.sshellspace.core.domain.models.SshConnection
 import com.sshellspace.core.domain.models.SshConnectionAuth
 import com.sshellspace.core.domain.models.VaultInfo
 import com.sshellspace.core.domain.repositories.VaultManager
+import com.sshellspace.core.ui.designsystem.Icons
 import com.sshellspace.core.ui.tabs.TabController
 import com.sshellspace.feature.terminal.domain.HostKeyPrompt
 import com.sshellspace.feature.terminal.domain.RemoteFile
@@ -21,12 +22,17 @@ import com.sshellspace.feature.terminal.domain.models.SftpParams
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import java.io.ByteArrayOutputStream
+import java.nio.ByteBuffer
 import java.nio.file.Files
 import java.nio.file.Path
+import java.util.zip.CRC32
+import java.util.zip.DeflaterOutputStream
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 import kotlin.test.assertIs
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
@@ -42,6 +48,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import org.jetbrains.skia.EncodedImageFormat
+import org.jetbrains.skia.Surface
 import org.junit.jupiter.api.io.TempDir
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -90,6 +98,10 @@ class SftpBrowserViewModelTest {
         var transferGate: CompletableDeferred<Unit>? = null
         var transferFailure: String? = null
         var closed = false
+        val contents = mutableMapOf<String, ByteArray>()
+        val reads = mutableListOf<String>()
+        var readGate: CompletableDeferred<Unit>? = null
+        var readFailure: String? = null
 
         override suspend fun home() = "/home/alice"
         override suspend fun resolve(path: String) =
@@ -97,6 +109,12 @@ class SftpBrowserViewModelTest {
         override suspend fun list(path: String) =
             RemoteListing(folders[path] ?: throw SftpFailure("$path doesn't exist."))
         override suspend fun exists(path: String) = path in existing
+        override suspend fun readBytes(file: RemoteFile, maxBytes: Long): ByteArray {
+            reads += file.name
+            readGate?.await()
+            readFailure?.let { throw SftpFailure(it) }
+            return contents[file.name] ?: testPng(2, 3)
+        }
         override suspend fun createDirectory(path: String) {
             created += path
         }
@@ -141,7 +159,13 @@ class SftpBrowserViewModelTest {
 
     private fun viewModel(
         service: SshConnectionService = service { SshConnectResult.Success(ssh, connection) },
-    ) = SftpBrowserViewModel(tabController, SftpParams(connection.id, "server"), service, vaultManager)
+    ) = SftpBrowserViewModel(
+        tabController,
+        SftpParams(connection.id, "server"),
+        service,
+        vaultManager,
+        { error("A saved connection never opens this computer's files.") },
+    )
 
     /** Waits for work that left the main dispatcher (`Dispatchers.IO`) to report back. */
     private suspend fun SftpBrowserViewModel.settled(condition: (SftpUiState) -> Boolean): SftpUiState =
@@ -460,6 +484,257 @@ class SftpBrowserViewModelTest {
     }
 
     @Test
+    fun `a name listed twice only makes one row`() = runTest {
+        // The list can't show two rows for one path, so this would take down the app.
+        fakeSftp.folders["/home/alice"] = listOf(file("a"), file("a"), file("b"))
+        val state = viewModel().settled { it.browser.path == "/home/alice" }.browser
+
+        assertEquals(listOf("a", "b"), state.visibleEntries().map { it.name })
+    }
+
+    @Test
+    fun `the filter narrows the list and keeps what it hides out of a delete, until the folder changes`() = runTest {
+        fakeSftp.folders["/home/alice"] = listOf(file("notes.txt"), file("NOTES.md"), file("z.log"))
+        fakeSftp.folders["/home/alice/sub"] = emptyList()
+        val vm = viewModel()
+        vm.settled { it.browser.path == "/home/alice" }
+
+        vm.execute(SftpAction.SelectAll)
+        vm.execute(SftpAction.SetFilter("note"))
+        val filtered = vm.uiState.value.browser
+        assertEquals(listOf("NOTES.md", "notes.txt"), filtered.visibleEntries().map { it.name })
+        assertEquals(listOf("NOTES.md", "notes.txt"), filtered.selectedFiles().map { it.name })
+        vm.execute(SftpAction.RequestDelete)
+        val confirm = assertIs<SftpDialog.ConfirmDelete>(vm.uiState.value.browser.dialog)
+        assertEquals(listOf("NOTES.md", "notes.txt"), confirm.files.map { it.name })
+        vm.execute(SftpAction.DismissDialog)
+
+        vm.execute(SftpAction.Refresh)
+        assertEquals("note", vm.settled { !it.browser.isLoading }.browser.filter)
+        vm.execute(SftpAction.Navigate("/home/alice/sub"))
+        assertEquals("", vm.settled { it.browser.path == "/home/alice/sub" }.browser.filter)
+    }
+
+    @Test
+    fun `moving the selection walks the list, extends with shift and stops at the ends`() = runTest {
+        val files = listOf(file("a"), file("b"), file("c"), file("d"))
+        fakeSftp.folders["/home/alice"] = files
+        val vm = viewModel()
+        vm.settled { it.browser.path == "/home/alice" }
+        val selectedNames = { vm.uiState.value.browser.selectedFiles().map { it.name } }
+
+        vm.execute(SftpAction.Click(files[1], SftpClickMode.Single))
+        assertEquals(false, vm.uiState.value.browser.revealCursor)
+        vm.execute(SftpAction.MoveSelection(1, extend = true))
+        assertEquals(listOf("b", "c"), selectedNames())
+        assertEquals(true, vm.uiState.value.browser.revealCursor)
+        vm.execute(SftpAction.MoveSelection(1, extend = true))
+        assertEquals(listOf("b", "c", "d"), selectedNames())
+        vm.execute(SftpAction.MoveSelection(-1, extend = true))
+        assertEquals(listOf("b", "c"), selectedNames())
+        vm.execute(SftpAction.MoveSelection(-1))
+        assertEquals(listOf("b"), selectedNames())
+        vm.execute(SftpAction.MoveSelection(-10))
+        assertEquals(listOf("a"), selectedNames())
+        vm.execute(SftpAction.MoveSelection(10))
+        assertEquals(listOf("d"), selectedNames())
+        vm.execute(SftpAction.ClearSelection)
+        assertEquals(emptyList(), selectedNames())
+    }
+
+    @Test
+    fun `with nothing current, a move counts from the end of the list it is leaving`() = runTest {
+        fakeSftp.folders["/home/alice"] = listOf(file("a"), file("b"), file("c"), file("d"))
+        val vm = viewModel()
+        vm.settled { it.browser.path == "/home/alice" }
+        val after = { action: SftpAction ->
+            vm.execute(SftpAction.ClearSelection)
+            vm.execute(action)
+            vm.uiState.value.browser.selectedFiles().map { it.name }
+        }
+
+        assertEquals(listOf("a"), after(SftpAction.MoveSelection(0)))
+        assertEquals(listOf("a"), after(SftpAction.MoveSelection(1)))
+        assertEquals(listOf("d"), after(SftpAction.MoveSelection(-1)))
+        // What Home and End send: the length of the list.
+        assertEquals(listOf("d"), after(SftpAction.MoveSelection(4)))
+        assertEquals(listOf("a"), after(SftpAction.MoveSelection(-4)))
+    }
+
+    @Test
+    fun `going up lands on the folder it left`() = runTest {
+        fakeSftp.folders["/home/alice"] = listOf(file("sub", directory = true), file("x"))
+        fakeSftp.folders["/home/alice/sub"] = emptyList()
+        val vm = viewModel()
+        vm.settled { it.browser.path == "/home/alice" }
+        vm.execute(SftpAction.Navigate("/home/alice/sub"))
+        vm.settled { it.browser.path == "/home/alice/sub" }
+
+        vm.execute(SftpAction.GoUp)
+        val state = vm.settled { it.browser.path == "/home/alice" }.browser
+
+        assertEquals(setOf("/home/alice/sub"), state.selection)
+        assertEquals("/home/alice/sub", state.selectionCursor)
+        assertEquals(true, state.revealCursor)
+    }
+
+    @Test
+    fun `the status bar counts what is on show`() {
+        val entries = listOf(file("a", size = 100), file("sub", directory = true), file(".env"))
+        val state = SftpBrowserState(entries = entries)
+        val summary = { current: SftpBrowserState, selected: List<RemoteFile> ->
+            current.summary(current.visibleEntries(), selected)
+        }
+
+        assertEquals("2 items, 1 hidden", summary(state, emptyList()))
+        assertEquals("3 items", summary(state.copy(showHidden = true), emptyList()))
+        assertEquals("1 of 2 items", summary(state.copy(filter = "A"), emptyList()))
+        assertEquals("1 of 2 selected, 100 B", summary(state, listOf(entries[0])))
+        // The size a server gives a folder means nothing, so it isn't called 0 B either.
+        assertEquals("1 of 2 selected", summary(state, listOf(entries[1])))
+    }
+
+    @Test
+    fun `the transfers header sums up what is under way`() {
+        val running = { done: Long -> SftpTransfer(1, SftpDirection.Upload, "x", SftpTransferStatus.Running, TransferProgress(done, 2048, 0, 1)) }
+        val queued = SftpTransfer(2, SftpDirection.Upload, "y")
+        val failed = SftpTransfer(3, SftpDirection.Upload, "z", SftpTransferStatus.Failed("no"))
+        val done = SftpTransfer(4, SftpDirection.Upload, "w", SftpTransferStatus.Done)
+
+        assertEquals("2 running, 1 waiting", transfersSummary(listOf(running(0), running(0), queued, failed)))
+        assertEquals("All finished", transfersSummary(listOf(done, failed)))
+        assertEquals(0.25f, transfersFraction(listOf(running(1024), running(0), queued, failed)))
+        assertNull(transfersFraction(listOf(queued, done)))
+    }
+
+    @Test
+    fun `rows get an icon from their kind, name and mode`() {
+        val named = { name: String, mode: String -> file(name).copy(permissions = mode.toInt(8)) }
+
+        assertEquals(Icons.Folder, fileIcon(file("backup.tar.gz", directory = true)))
+        assertEquals(Icons.Link, fileIcon(file("current", directory = true).copy(isSymlink = true)))
+        assertEquals(Icons.Archive, fileIcon(named("backup.tar.gz", "644")))
+        assertEquals(Icons.Image, fileIcon(named("PHOTO.PNG", "644")))
+        assertEquals(Icons.Code, fileIcon(named("gradlew", "755")))
+        assertEquals(Icons.File, fileIcon(named("gradlew", "644")))
+    }
+
+    @Test
+    fun `this computer opens with no SSH, no vault and no questions`() = runTest {
+        fakeSftp.folders["/home/alice"] = listOf(file("notes.txt"))
+        val failsIfUsed = service { error("Browsing this computer must not touch SSH.") }
+        val lockedVault = mockk<VaultManager> { every { activeVault } returns MutableStateFlow(null) }
+
+        val vm = SftpBrowserViewModel(tabController, SftpParams.ThisDevice, failsIfUsed, lockedVault, { fakeSftp })
+        val state = vm.settled { it.browser.path == "/home/alice" }
+
+        assertEquals(SftpConnectionState.Connected, state.connection)
+        assertEquals(true, state.browser.isThisDevice)
+        assertEquals(listOf("notes.txt"), state.browser.visibleEntries().map { it.name })
+    }
+
+    @Test
+    fun `a name that only Windows objects to can still be copied when it is already on this computer`() = runTest {
+        val odd = file("a:b.txt")
+        fakeSftp.folders["/home/alice"] = listOf(odd)
+        val vm = SftpBrowserViewModel(tabController, SftpParams.ThisDevice, service { error("unused") }, vaultManager, { fakeSftp })
+        vm.settled { it.browser.path == "/home/alice" }
+
+        vm.execute(SftpAction.Download(listOf(odd), localDir))
+
+        assertEquals(listOf(odd), vm.settled { it.transfers.any { t -> t.status.isFinished } }.let { fakeSftp.downloads.map { d -> d.first } })
+    }
+
+    @Test
+    fun `a picture opens, goes through the others on show, and stops at the ends`() = runTest {
+        val pictures = listOf(file("a.png"), file("b.txt"), file("c.JPG"), file("d.webp"))
+        fakeSftp.folders["/home/alice"] = pictures
+        val vm = viewModel()
+        vm.settled { it.browser.path == "/home/alice" }
+        val shown = { vm.uiState.value.browser.dialog as? SftpDialog.Preview }
+        suspend fun SftpBrowserViewModel.loaded(name: String) = settled {
+            (it.browser.dialog as? SftpDialog.Preview)?.let { p -> p.file.name == name && p.image != null } == true
+        }
+
+        vm.execute(SftpAction.OpenPreview(pictures[0]))
+        vm.loaded("a.png")
+        assertEquals(2, shown()?.image?.width)
+        assertEquals(3, shown()?.image?.height)
+
+        vm.execute(SftpAction.MovePreview(-1))
+        assertEquals("a.png", shown()?.file?.name)
+        vm.execute(SftpAction.MovePreview(1))
+        vm.loaded("c.JPG")
+        assertEquals(setOf("/home/alice/c.JPG"), vm.uiState.value.browser.selection)
+        vm.execute(SftpAction.MovePreview(1))
+        vm.loaded("d.webp")
+        vm.execute(SftpAction.MovePreview(1))
+        assertEquals("d.webp", shown()?.file?.name)
+        assertEquals(listOf("a.png", "c.JPG", "d.webp"), fakeSftp.reads)
+
+        vm.execute(SftpAction.DismissDialog)
+        assertNull(vm.uiState.value.browser.dialog)
+    }
+
+    @Test
+    fun `a picture that arrives after the preview closed stays closed`() = runTest {
+        val picture = file("a.png")
+        fakeSftp.folders["/home/alice"] = listOf(picture)
+        fakeSftp.readGate = CompletableDeferred()
+        val vm = viewModel()
+        vm.settled { it.browser.path == "/home/alice" }
+
+        vm.execute(SftpAction.OpenPreview(picture))
+        assertNull((vm.uiState.value.browser.dialog as SftpDialog.Preview).image)
+        vm.execute(SftpAction.DismissDialog)
+        fakeSftp.readGate!!.complete(Unit)
+
+        assertNull(vm.settled { it.browser.dialog == null }.browser.dialog)
+    }
+
+    @Test
+    fun `a preview that can't load says why instead of closing`() = runTest {
+        val picture = file("a.png")
+        fakeSftp.folders["/home/alice"] = listOf(picture)
+        fakeSftp.readFailure = "a.png is too large to open here."
+        val vm = viewModel()
+        vm.settled { it.browser.path == "/home/alice" }
+
+        vm.execute(SftpAction.OpenPreview(picture))
+
+        val state = vm.settled { (it.browser.dialog as? SftpDialog.Preview)?.error != null }
+        assertEquals("a.png is too large to open here.", (state.browser.dialog as SftpDialog.Preview).error)
+    }
+
+    @Test
+    fun `decoding refuses what isn't a picture, and a huge one before it takes the memory`() {
+        val decoded = decodePreview(testPng(5, 7))
+        assertEquals(5, decoded.width)
+        assertEquals(7, decoded.height)
+
+        assertEquals("This file can't be read as a picture.", assertFailsWith<SftpFailure> { decodePreview(ByteArray(64)) }.message)
+        // A few dozen bytes that claim 60000 × 60000, which would need 14 GB to decode.
+        val bomb = assertFailsWith<SftpFailure> { decodePreview(pngClaiming(60_000, 60_000)) }
+        assertEquals("This picture is too large to preview (60000 × 60000).", bomb.message)
+    }
+
+    @Test
+    fun `decoding shrinks a very big picture but reports its real size`() {
+        val decoded = decodePreview(testPng(5000, 100))
+        assertEquals(5000, decoded.width)
+        assertEquals(4096, decoded.bitmap.width)
+    }
+
+    @Test
+    fun `only formats the decoder reads can be previewed`() {
+        assertTrue(file("a.PNG").canPreview)
+        assertTrue(file("photo.jpeg").canPreview)
+        assertEquals(false, file("drawing.svg").canPreview)
+        assertEquals(false, file("notes.txt").canPreview)
+        assertEquals(false, file("folder.png", directory = true).canPreview)
+    }
+
+    @Test
     fun `status text and formats read well`() {
         assertEquals("512 B", formatSize(512))
         assertEquals("1.5 KB", formatSize(1536))
@@ -474,4 +749,22 @@ class SftpBrowserViewModelTest {
         assertEquals("1.0 KB of 2.0 KB, 1 of 3 files", running.statusText())
         assertEquals(0.5f, running.fraction())
     }
+}
+
+private fun testPng(width: Int, height: Int): ByteArray =
+    Surface.makeRasterN32Premul(width, height).use { surface ->
+        surface.makeImageSnapshot().use { it.encodeToData(EncodedImageFormat.PNG)!!.bytes }
+    }
+
+/** A well-formed PNG of a few dozen bytes that claims to be [width] by [height], with almost no picture behind that. */
+private fun pngClaiming(width: Int, height: Int): ByteArray {
+    fun chunk(type: String, data: ByteArray): ByteArray {
+        val body = type.toByteArray() + data
+        val checksum = CRC32().apply { update(body) }.value.toInt()
+        return ByteBuffer.allocate(4 + body.size + 4).putInt(data.size).put(body).putInt(checksum).array()
+    }
+    val header = ByteBuffer.allocate(13).putInt(width).putInt(height).put(8).put(6).put(0).put(0).put(0).array()
+    val pixels = ByteArrayOutputStream().also { out -> DeflaterOutputStream(out).use { it.write(ByteArray(16)) } }.toByteArray()
+    return byteArrayOf(0x89.toByte(), 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A) +
+        chunk("IHDR", header) + chunk("IDAT", pixels) + chunk("IEND", ByteArray(0))
 }

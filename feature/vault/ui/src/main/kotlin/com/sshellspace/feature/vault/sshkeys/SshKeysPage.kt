@@ -236,7 +236,7 @@ private fun NewKeyMenu(onSelected: (CreationMethod) -> Unit, iconOnly: Boolean) 
             }
         },
         panel = {
-            MenuPanel(width = 200.dp) {
+            MenuPanel(width = 200.dp, onDismiss = { expanded = false }) {
                 CreationMethod.entries.forEach { method ->
                     MenuItem(onClick = { onSelected(method) }) {
                         Text(method.label)

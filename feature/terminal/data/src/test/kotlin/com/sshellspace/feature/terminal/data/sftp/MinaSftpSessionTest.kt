@@ -331,6 +331,23 @@ class MinaSftpSessionTest {
     }
 
     private fun mode(path: Path) = PosixFilePermissions.toString(Files.getPosixFilePermissions(path))
+
+    @Test
+    fun `reading a file stops at the limit, whatever the file claims`() = runBlocking<Unit> {
+        Files.writeString(remoteRoot.resolve("picture.png"), "12345")
+        val file = sftp.list(sftp.home()).files.single { it.name == "picture.png" }
+
+        assertEquals("12345", String(sftp.readBytes(file, 5)))
+        assertTrue("too large" in assertFailsWith<SftpFailure> { sftp.readBytes(file, 4) }.message)
+    }
+
+    @Test
+    fun `reading a folder is refused`() = runBlocking<Unit> {
+        Files.createDirectory(remoteRoot.resolve("folder"))
+        val folder = sftp.list(sftp.home()).files.single { it.name == "folder" }
+
+        assertFailsWith<SftpFailure> { sftp.readBytes(folder, 100) }
+    }
 }
 
 /** A real server can't send these names, so this one is scripted. */

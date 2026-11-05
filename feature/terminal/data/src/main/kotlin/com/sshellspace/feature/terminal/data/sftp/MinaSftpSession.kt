@@ -12,8 +12,6 @@ import com.sshellspace.feature.terminal.domain.isSafeRemoteName
 import com.sshellspace.feature.terminal.domain.joinRemotePath
 import com.sshellspace.feature.terminal.domain.printableRemoteText
 import java.io.IOException
-import java.io.InputStream
-import java.io.OutputStream
 import java.nio.file.AccessDeniedException
 import java.nio.file.CopyOption
 import java.nio.file.FileAlreadyExistsException
@@ -25,7 +23,6 @@ import java.nio.file.Path
 import java.nio.file.SimpleFileVisitor
 import java.nio.file.StandardCopyOption
 import java.nio.file.attribute.BasicFileAttributes
-import java.nio.file.attribute.PosixFilePermission
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
@@ -53,6 +50,13 @@ internal class MinaSftpSession(private val client: SftpClient) : SftpSession {
     }
 
     override suspend fun list(path: String): RemoteListing = sftp(path) { readDirectory(path) }
+
+    override suspend fun readBytes(file: RemoteFile, maxBytes: Long): ByteArray = sftp(file.path) {
+        val attributes = client.stat(file.path)
+        if (!attributes.isRegularFile) throw SftpFailure("${file.displayName} isn't a regular file.")
+        if (attributes.size > maxBytes) throw tooLargeToRead(file.displayName)
+        client.read(file.path).use { it.readLimited(maxBytes, file.displayName) }
+    }
 
     override suspend fun exists(path: String): Boolean = sftp(path) {
         try {
@@ -147,7 +151,7 @@ internal class MinaSftpSession(private val client: SftpClient) : SftpSession {
         val part = Files.createTempFile(target.parent, TEMP_PREFIX, TEMP_SUFFIX)
         try {
             client.read(remote.path).use { input ->
-                Files.newOutputStream(part).use { output -> copy(input, output, progress) }
+                Files.newOutputStream(part).use { output -> input.copyWithProgress(output, progress) }
             }
             applyLocalMode(part, (remote.permissions ?: DEFAULT_FILE_MODE) and DOWNLOAD_MODE_MASK)
             val options = if (replace) arrayOf<CopyOption>(StandardCopyOption.REPLACE_EXISTING) else emptyArray()
@@ -225,24 +229,13 @@ internal class MinaSftpSession(private val client: SftpClient) : SftpSession {
         }
         try {
             Files.newInputStream(local).use { input ->
-                client.write(remote, modes).use { output -> copy(input, output, progress) }
+                client.write(remote, modes).use { output -> input.copyWithProgress(output, progress) }
             }
             progress.fileDone()
         } catch (e: Exception) {
             // Half a new file would look like a whole one. Half a replaced one has nothing better to go back to.
             if (!overwrites) runCatching { client.remove(remote) }
             throw e
-        }
-    }
-
-    private suspend fun copy(input: InputStream, output: OutputStream, progress: ProgressReporter) {
-        val buffer = ByteArray(BUFFER_SIZE)
-        while (true) {
-            currentCoroutineContext().ensureActive()
-            val read = input.read(buffer)
-            if (read < 0) return
-            output.write(buffer, 0, read)
-            progress.add(read)
         }
     }
 
@@ -302,32 +295,6 @@ internal class MinaSftpSession(private val client: SftpClient) : SftpSession {
     }
 
     private fun SftpClient.Attributes.mode(): Int? = (permissions and MODE_MASK).takeIf { it != 0 }
-
-    private fun createLocalDirectory(directory: Path, remoteMode: Int?) {
-        val isNew = !Files.isDirectory(directory)
-        Files.createDirectories(directory)
-        // The owner needs to get in to write the contents. Others get at most what the server gave them to read.
-        if (isNew) applyLocalMode(directory, ((remoteMode ?: DEFAULT_DIRECTORY_MODE) and DOWNLOAD_MODE_MASK) or OWNER_ALL)
-    }
-
-    private fun applyLocalMode(path: Path, mode: Int) {
-        val permissions = PosixFilePermission.entries.filterIndexedTo(mutableSetOf()) { index, _ ->
-            mode and (1 shl (LAST_MODE_BIT - index)) != 0
-        }
-        try {
-            Files.setPosixFilePermissions(path, permissions)
-        } catch (_: UnsupportedOperationException) {
-            // Windows has no POSIX modes.
-        }
-    }
-
-    private fun localMode(path: Path): Int? = try {
-        Files.getPosixFilePermissions(path).fold(0) { mode, permission ->
-            mode or (1 shl (LAST_MODE_BIT - permission.ordinal))
-        }
-    } catch (_: UnsupportedOperationException) {
-        null
-    }
 
     private suspend fun <T> sftp(path: String, block: suspend () -> T): T = withContext(Dispatchers.IO) {
         try {
@@ -391,59 +358,15 @@ internal class MinaSftpSession(private val client: SftpClient) : SftpSession {
         }
     }
 
-    /** Called for every chunk, so it only passes on a few updates a second. */
-    private class ProgressReporter(
-        private val bytesTotal: Long,
-        private val filesTotal: Int,
-        private val onProgress: (TransferProgress) -> Unit,
-    ) {
-        private var bytesDone = 0L
-        private var filesDone = 0
-        private var lastReport = 0L
-
-        init {
-            report()
-        }
-
-        fun add(bytes: Int) {
-            bytesDone += bytes
-            val now = System.nanoTime()
-            if (now - lastReport >= REPORT_INTERVAL_NANOS) report(now)
-        }
-
-        fun fileDone() {
-            filesDone++
-        }
-
-        fun finish() = report()
-
-        private fun report(now: Long = System.nanoTime()) {
-            lastReport = now
-            onProgress(TransferProgress(bytesDone, bytesTotal, filesDone, filesTotal))
-        }
-    }
-
     private companion object {
         /** Past this a hostile server could make a listing use up this app's memory. */
         const val MAX_LISTING_SIZE = 100_000
         const val MAX_LINK_LOOKUPS = 1_000
-        const val MAX_TREE_FILES = 500_000
 
         /** Stops a server that invents folders forever. Real trees run out of path length well before this. */
         const val MAX_DEPTH = 64
-        const val BUFFER_SIZE = 64 * 1024
-        const val REPORT_INTERVAL_NANOS = 100_000_000L
-        const val TEMP_PREFIX = ".sshellspace-"
-        const val TEMP_SUFFIX = ".part"
-        const val LAST_MODE_BIT = 8
 
-        // Written as octal strings since Kotlin has no octal literals.
+        // Written as an octal string since Kotlin has no octal literals.
         val MODE_MASK = "777".toInt(radix = 8)
-        val OWNER_ALL = "700".toInt(radix = 8)
-        val DEFAULT_FILE_MODE = "644".toInt(radix = 8)
-        val DEFAULT_DIRECTORY_MODE = "755".toInt(radix = 8)
-
-        /** Like a umask of 022: a server has no business making files on this computer writable by others. */
-        val DOWNLOAD_MODE_MASK = "755".toInt(radix = 8)
     }
 }

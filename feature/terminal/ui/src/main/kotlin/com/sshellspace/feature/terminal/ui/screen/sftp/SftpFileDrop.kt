@@ -102,7 +102,7 @@ internal fun Modifier.fileDropTarget(
 
 /** Says where a drop will land, since that depends on the folder on show and can't be undone by cancelling. */
 @Composable
-internal fun FileDropOverlay(directory: String) {
+internal fun FileDropOverlay(directory: String, isThisDevice: Boolean) {
     val shape = RoundedCornerShape(10.dp)
     Box(
         modifier = Modifier
@@ -125,7 +125,7 @@ internal fun FileDropOverlay(directory: String) {
         ) {
             UnstyledIcon(imageVector = Icons.Upload, contentDescription = null, tint = Theme[colors][onPrimary])
             Text(
-                "Drop to upload to ${printableRemoteText(directory)}",
+                "Drop to ${if (isThisDevice) "copy" else "upload"} to ${printableRemoteText(directory)}",
                 color = Theme[colors][onPrimary],
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,

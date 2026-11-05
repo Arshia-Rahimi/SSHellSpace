@@ -6,7 +6,9 @@ import com.sshellspace.core.domain.repositories.VaultManager
 import com.sshellspace.core.ui.tabs.TabController
 import com.sshellspace.feature.terminal.domain.AuthChallenge
 import com.sshellspace.feature.terminal.domain.HostKeyPrompt
+import com.sshellspace.feature.terminal.domain.LocalFilesService
 import com.sshellspace.feature.terminal.domain.RemoteFile
+import com.sshellspace.feature.terminal.domain.RemoteListing
 import com.sshellspace.feature.terminal.domain.SecretPrompt
 import com.sshellspace.feature.terminal.domain.SftpFailure
 import com.sshellspace.feature.terminal.domain.SftpSession
@@ -26,6 +28,7 @@ import com.sshellspace.feature.terminal.domain.uniqueFileName
 import java.nio.file.Files
 import java.nio.file.LinkOption
 import kotlin.coroutines.cancellation.CancellationException
+import kotlin.uuid.Uuid
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -48,16 +51,19 @@ internal fun sftpTabTitle(name: String) = "$name (files)"
  * Browses a saved connection's files over SFTP. The tab has its own SSH session, separate from any terminal, so
  * closing the tab ends it along with its transfers. Connection questions work as in the terminal tab: each
  * [SshPrompter] call shows a prompt state and suspends until the user responds.
+ *
+ * With no connection in [params] it browses this computer through [localFiles] instead, with no SSH or questions.
  */
 class SftpBrowserViewModel(
     private val tabController: TabController,
     private val params: SftpParams,
     private val connectionService: SshConnectionService,
     private val vaultManager: VaultManager,
+    private val localFiles: LocalFilesService,
 ) : ViewModel(), SshPrompter {
 
     private val connection = MutableStateFlow<SftpConnectionState>(SftpConnectionState.Connecting(params.title))
-    private val browser = MutableStateFlow(SftpBrowserState())
+    private val browser = MutableStateFlow(SftpBrowserState(isThisDevice = params.connectionId == null))
     private val transfers = MutableStateFlow(emptyList<SftpTransfer>())
 
     val uiState = combine(connection, browser, transfers, ::SftpUiState)
@@ -67,6 +73,7 @@ class SftpBrowserViewModel(
     private var pendingAnswer: CompletableDeferred<Any?>? = null
     private var connectJob: Job? = null
     private var loadJob: Job? = null
+    private var previewJob: Job? = null
     private var ssh: ShellSession.Ssh? = null
     private var sftp: SftpSession? = null
     private var home: String = ""
@@ -88,14 +95,20 @@ class SftpBrowserViewModel(
             SftpAction.Reconnect -> connect()
             is SftpAction.Navigate -> load(action.path)
             is SftpAction.GoToPath -> goToPath(action.text)
-            SftpAction.GoUp -> parentRemotePath(browser.value.path)?.let { load(it) }
+            // Lands on the folder it came out of, so the arrow keys carry on from there.
+            SftpAction.GoUp -> browser.value.path.let { path -> parentRemotePath(path)?.let { load(it, reveal = path) } }
             SftpAction.GoHome -> load(home)
             SftpAction.Refresh -> load(currentFolder(), keepSelection = true)
             SftpAction.ToggleHidden -> browser.update { it.copy(showHidden = !it.showHidden) }
+            is SftpAction.SetFilter -> browser.update { it.copy(filter = action.text) }
             is SftpAction.Sort -> sort(action.column)
             is SftpAction.Click -> click(action.file, action.mode)
+            is SftpAction.MoveSelection -> moveSelection(action.delta, action.extend)
             SftpAction.SelectAll -> browser.update { state ->
                 state.copy(selection = state.visibleEntries().mapTo(mutableSetOf()) { it.path })
+            }
+            SftpAction.ClearSelection -> browser.update {
+                it.copy(selection = emptySet(), selectionAnchor = null, selectionCursor = null)
             }
             SftpAction.DismissNotice -> browser.update { it.copy(notice = null) }
             else -> executeFileAction(action)
@@ -112,12 +125,18 @@ class SftpBrowserViewModel(
             SftpAction.RequestDelete -> browser.value.selectedFiles().takeIf { it.isNotEmpty() }
                 ?.let { showDialog(SftpDialog.ConfirmDelete(it)) }
             is SftpAction.Delete -> delete(action.files)
-            SftpAction.DismissDialog -> showDialog(null)
+            SftpAction.DismissDialog -> {
+                previewJob?.cancel()
+                showDialog(null)
+            }
+            is SftpAction.OpenPreview -> openPreview(action.file)
+            is SftpAction.MovePreview -> movePreview(action.delta)
             is SftpAction.Download -> requestTransfer(PendingTransfer.Download(action.files, action.directory))
             is SftpAction.Upload -> requestTransfer(PendingTransfer.Upload(action.sources, currentFolder()))
             is SftpAction.ResolveConflict -> resolveConflict(action.choice)
             is SftpAction.CancelTransfer -> cancelTransfer(action.id)
             SftpAction.ClearFinishedTransfers -> transfers.update { list -> list.filterNot { it.status.isFinished } }
+            SftpAction.ToggleTransfers -> browser.update { it.copy(transfersCollapsed = !it.transfersCollapsed) }
             else -> Unit
         }
     }
@@ -153,21 +172,39 @@ class SftpBrowserViewModel(
         closeSession()
         connection.value = SftpConnectionState.Connecting(params.title)
         connectJob = viewModelScope.launch {
-            // Connecting needs the saved login from the vault, which can be locked when reconnecting.
-            vaultManager.activeVault.first { it != null }
-            val result = try {
-                connectionService.connect(params.connectionId, this@SftpBrowserViewModel)
-            } catch (e: CancellationException) {
-                // Is an IllegalStateException too, and has to carry on cancelling this coroutine.
-                throw e
-            } catch (_: IllegalStateException) {
-                SshConnectResult.Failed("The vault locked while connecting.")
-            }
-            connection.value = when (result) {
-                is SshConnectResult.Success -> openSftp(result)
-                SshConnectResult.Cancelled -> SftpConnectionState.Cancelled
-                is SshConnectResult.Failed -> SftpConnectionState.Failed(result.message)
-            }
+            val connectionId = params.connectionId
+            connection.value = if (connectionId == null) openThisDevice() else connectToServer(connectionId)
+        }
+    }
+
+    private suspend fun openThisDevice(): SftpConnectionState {
+        val opened = localFiles.open()
+        return try {
+            home = opened.home()
+            sftp = opened
+            load(browser.value.path.ifEmpty { home }, keepSelection = true, fallback = home)
+            SftpConnectionState.Connected
+        } catch (e: SftpFailure) {
+            opened.close()
+            SftpConnectionState.Failed(e.message)
+        }
+    }
+
+    private suspend fun connectToServer(connectionId: Uuid): SftpConnectionState {
+        // Connecting needs the saved login from the vault, which can be locked when reconnecting.
+        vaultManager.activeVault.first { it != null }
+        val result = try {
+            connectionService.connect(connectionId, this@SftpBrowserViewModel)
+        } catch (e: CancellationException) {
+            // Is an IllegalStateException too, and has to carry on cancelling this coroutine.
+            throw e
+        } catch (_: IllegalStateException) {
+            SshConnectResult.Failed("The vault locked while connecting.")
+        }
+        return when (result) {
+            is SshConnectResult.Success -> openSftp(result)
+            SshConnectResult.Cancelled -> SftpConnectionState.Cancelled
+            is SshConnectResult.Failed -> SftpConnectionState.Failed(result.message)
         }
     }
 
@@ -209,13 +246,15 @@ class SftpBrowserViewModel(
     private fun closeSession() {
         val closing = ssh
         loadJob?.cancel()
+        previewJob?.cancel()
         ssh = null
         sftp?.close()
         sftp = null
         closing?.close()
     }
 
-    private fun load(path: String, keepSelection: Boolean = false, fallback: String? = null) {
+    /** @param reveal the row to select and scroll to, when it's in this folder. */
+    private fun load(path: String, keepSelection: Boolean = false, fallback: String? = null, reveal: String? = null) {
         val session = sftp ?: return
         loadJob?.cancel()
         browser.update { it.copy(isLoading = true) }
@@ -223,15 +262,7 @@ class SftpBrowserViewModel(
             try {
                 val listing = session.list(path)
                 browser.update { state ->
-                    val paths = listing.files.mapTo(mutableSetOf()) { it.path }
-                    state.copy(
-                        path = path,
-                        entries = listing.files,
-                        truncated = listing.truncated,
-                        isLoading = false,
-                        selection = if (keepSelection) state.selection.intersect(paths) else emptySet(),
-                        selectionAnchor = state.selectionAnchor.takeIf { keepSelection && it in paths },
-                    )
+                    state.showingListing(path, listing, keepSelection, reveal)
                 }
             } catch (e: SftpFailure) {
                 if (fallback != null && fallback != path) {
@@ -244,13 +275,41 @@ class SftpBrowserViewModel(
         }
     }
 
+    private fun SftpBrowserState.showingListing(
+        path: String,
+        listing: RemoteListing,
+        keepSelection: Boolean,
+        reveal: String?,
+    ): SftpBrowserState {
+        // A server can list a name twice, and the list can't show two rows for one path.
+        val files = listing.files.distinctBy { it.path }
+        val paths = files.mapTo(mutableSetOf()) { it.path }
+        val revealed = reveal?.takeIf { it in paths }
+        val kept = { current: String? -> current.takeIf { keepSelection && it in paths } }
+        return copy(
+            path = path,
+            entries = files,
+            truncated = listing.truncated,
+            isLoading = false,
+            filter = if (path == this.path) filter else "",
+            selection = when {
+                revealed != null -> setOf(revealed)
+                keepSelection -> selection.intersect(paths)
+                else -> emptySet()
+            },
+            selectionAnchor = revealed ?: kept(selectionAnchor),
+            selectionCursor = revealed ?: kept(selectionCursor),
+            revealCursor = revealed != null,
+        )
+    }
+
     private fun goToPath(text: String) {
         val session = sftp ?: return
         val trimmed = text.trim().ifEmpty { return }
         val path = when {
             trimmed == "~" -> home
             trimmed.startsWith("~/") -> joinRemotePath(home, trimmed.removePrefix("~/"))
-            trimmed.startsWith("/") -> trimmed
+            session.isAbsolutePath(trimmed) -> trimmed
             else -> joinRemotePath(currentFolder(), trimmed)
         }
         launchReporting {
@@ -272,19 +331,73 @@ class SftpBrowserViewModel(
     private fun click(file: RemoteFile, mode: SftpClickMode) {
         browser.update { state ->
             when (mode) {
-                SftpClickMode.Single -> state.copy(selection = setOf(file.path), selectionAnchor = file.path)
+                SftpClickMode.Single -> state.selectingOnly(file.path)
                 SftpClickMode.Toggle -> state.copy(
                     selection = if (file.path in state.selection) state.selection - file.path else state.selection + file.path,
                     selectionAnchor = file.path,
+                    selectionCursor = file.path,
                 )
-                SftpClickMode.Range -> {
-                    val paths = state.visibleEntries().map { it.path }
-                    val from = paths.indexOf(state.selectionAnchor).takeIf { it >= 0 } ?: paths.indexOf(file.path)
-                    val to = paths.indexOf(file.path)
-                    state.copy(selection = paths.subList(minOf(from, to), maxOf(from, to) + 1).toSet())
-                }
+                SftpClickMode.Range -> state.selectingRangeTo(file.path, state.visibleEntries().map { it.path })
+            }.copy(revealCursor = false)
+        }
+    }
+
+    private fun moveSelection(delta: Int, extend: Boolean) {
+        browser.update { state ->
+            val paths = state.visibleEntries().map { it.path }
+            if (paths.isEmpty()) return@update state
+            val current = paths.indexOf(state.selectionCursor)
+            // With no cursor, starts just outside the end of the list that it's moving away from.
+            val from = when {
+                current >= 0 -> current
+                delta >= 0 -> -1
+                else -> paths.size
+            }
+            val target = paths[(from + delta).coerceIn(paths.indices)]
+            val moved = if (extend) state.selectingRangeTo(target, paths) else state.selectingOnly(target)
+            moved.copy(revealCursor = true)
+        }
+    }
+
+    private fun openPreview(file: RemoteFile) {
+        val session = sftp ?: return
+        previewJob?.cancel()
+        showDialog(SftpDialog.Preview(file))
+        previewJob = viewModelScope.launch {
+            val loaded = try {
+                val bytes = session.readBytes(file, MAX_PREVIEW_BYTES)
+                SftpDialog.Preview(file, image = withContext(Dispatchers.Default) { decodePreview(bytes) })
+            } catch (e: SftpFailure) {
+                SftpDialog.Preview(file, error = e.message)
+            }
+            // Moved on from or closed meanwhile, in which case this result isn't wanted any more.
+            browser.update { state ->
+                if ((state.dialog as? SftpDialog.Preview)?.file == file) state.copy(dialog = loaded) else state
             }
         }
+    }
+
+    private fun movePreview(delta: Int) {
+        val state = browser.value
+        val current = (state.dialog as? SftpDialog.Preview)?.file ?: return
+        val pictures = state.visibleEntries().filter { it.canPreview }
+        val next = pictures.getOrNull(pictures.indexOfFirst { it.path == current.path } + delta) ?: return
+        // The list follows along, so closing the preview leaves the last picture selected and in view.
+        browser.update { it.selectingOnly(next.path).copy(revealCursor = true) }
+        openPreview(next)
+    }
+
+    private fun SftpBrowserState.selectingOnly(path: String) =
+        copy(selection = setOf(path), selectionAnchor = path, selectionCursor = path)
+
+    private fun SftpBrowserState.selectingRangeTo(path: String, paths: List<String>): SftpBrowserState {
+        val to = paths.indexOf(path)
+        val from = paths.indexOf(selectionAnchor).takeIf { it >= 0 } ?: to
+        return copy(
+            selection = paths.subList(minOf(from, to), maxOf(from, to) + 1).toSet(),
+            selectionAnchor = paths[from],
+            selectionCursor = path,
+        )
     }
 
     /** The folder on show, or home if the first listing failed and nothing is on show yet. */
@@ -377,7 +490,8 @@ class SftpBrowserViewModel(
 
     /** Files with names that aren't safe here can't be downloaded at all. A server chooses those names. */
     private fun withoutUnsafeNames(pending: PendingTransfer): PendingTransfer {
-        if (pending !is PendingTransfer.Download) return pending
+        // Nothing to fear from a name that's already on this computer.
+        if (pending !is PendingTransfer.Download || params.connectionId == null) return pending
         val (safe, unsafe) = pending.files.partition { isSafeLocalName(it.name) }
         if (unsafe.isNotEmpty()) {
             notice("Skipped because the name isn't safe on this computer: " + unsafe.joinToString { it.displayName })
@@ -414,6 +528,8 @@ class SftpBrowserViewModel(
                 val target = pending.directory.resolve(name)
                 enqueue(SftpDirection.Download, file.displayName) { progress ->
                     session.download(file, target, replace, progress)
+                        // On this computer the copy can have landed in the folder on show.
+                        .also { if (params.connectionId == null) load(currentFolder(), keepSelection = true) }
                 }
             }
             is PendingTransfer.Upload -> pending.sources.forEach { source ->

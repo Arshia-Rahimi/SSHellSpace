@@ -1,5 +1,7 @@
 package com.sshellspace.feature.terminal.ui.screen.sftp
 
+import com.sshellspace.feature.terminal.domain.RemoteFile
+import com.sshellspace.feature.terminal.domain.RemoteFileKind
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -30,3 +32,27 @@ internal fun formatMode(mode: Int?): String = mode?.let {
         if (it and (1 shl (MODE_LETTERS.lastIndex - index)) != 0) letter else '-'
     }.joinToString("")
 }.orEmpty()
+
+/** What the status bar says about the folder, given what the list [visible] shows and has [selected]. */
+internal fun SftpBrowserState.summary(visible: List<RemoteFile>, selected: List<RemoteFile>): String {
+    if (selected.isNotEmpty()) {
+        // The size a server gives a folder says nothing about what's in it, so a folder alone has no size to show.
+        val bytes = selected.filter { it.kind == RemoteFileKind.File }.sumOf { it.size }
+        val size = if (bytes > 0) ", ${formatSize(bytes)}" else ""
+        return "${selected.size} of ${visible.size} selected$size"
+    }
+    val hidden = if (showHidden) 0 else entries.count { it.isDotfile }
+    return when {
+        filter.isNotEmpty() -> "${visible.size} of ${entries.size - hidden} items"
+        hidden > 0 -> "${itemCount(visible.size)}, $hidden hidden"
+        else -> itemCount(visible.size)
+    }
+}
+
+private fun itemCount(count: Int) = if (count == 1) "1 item" else "$count items"
+
+/** This computer's own files are copied to and from another folder, rather than downloaded and uploaded. */
+internal val SftpBrowserState.downloadLabel get() = if (isThisDevice) "Copy to…" else "Download…"
+internal val SftpBrowserState.uploadLabel get() = if (isThisDevice) "Copy here" else "Upload"
+internal val SftpBrowserState.uploadFilesLabel get() = if (isThisDevice) "Copy files here…" else "Upload files…"
+internal val SftpBrowserState.uploadFolderLabel get() = if (isThisDevice) "Copy a folder here…" else "Upload a folder…"

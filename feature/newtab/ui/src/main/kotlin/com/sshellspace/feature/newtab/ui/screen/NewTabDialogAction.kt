@@ -11,4 +11,5 @@ sealed interface NewTabDialogAction {
 
     /** Opens a file browser tab connected to the saved [connection]. */
     data class BrowseFiles(val connection: SshConnection) : NewTabDialogAction
+    data object BrowseThisDevice : NewTabDialogAction
 }
