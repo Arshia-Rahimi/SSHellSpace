@@ -7,7 +7,7 @@ import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters
 import org.bouncycastle.crypto.signers.Ed25519Signer
 
 /** The public half of the key `generateUpdateSigningKey` made. Replacing it strands every install that trusts the old one. */
-private const val UPDATE_PUBLIC_KEY = "ubYuXcFv62xovQ8+3QVVzGVOkx4wH5Cj5n53zfKX8WQ="
+private const val UPDATE_PUBLIC_KEY = "ltMRKy86RAFwM9ZdArELx9op7LDy5lyqlUFkCBnUszs="
 
 /**
  * What a release signs. It names the version as well as the file: otherwise a tampered manifest could offer an old, genuine

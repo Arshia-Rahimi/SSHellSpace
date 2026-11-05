@@ -63,7 +63,7 @@ nucleus.application {
         // A macOS update replaces the app from the ZIP. The DMG is only for the first install.
         targetFormats(TargetFormat.Dmg, TargetFormat.Zip, TargetFormat.Nsis, TargetFormat.AppImage)
         packageName = "com.sshellspace"
-        packageVersion = "0.1.0"
+        packageVersion = "1.0.0"
         // From suggestRuntimeModules. A packaged app only gets the JDK modules listed, and a missing one only fails when reached.
         modules("java.instrument", "java.prefs", "java.rmi", "java.security.jgss", "java.sql", "jdk.javadoc", "jdk.management", "jdk.security.auth")
 
