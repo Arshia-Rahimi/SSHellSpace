@@ -69,7 +69,7 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 
 - `CorePreferencesRepository` (theme, color scheme, shortcuts, updates) and `TerminalPreferencesRepository` (default shell) each store one `@Serializable` object as JSON in the SQLDelight preferences table, keyed by its qualified class name.
 - Implementations keep a **single** `stateIn` StateFlow and build updates from `preference.value.copy(...)`. If you create a new `stateIn` per `get()` call, it returns the defaults, not the stored value.
-- The user-facing Settings UI is the **Settings page inside the Vault tab** (`feature/vault/ui/.../settings`). `feature/settings` is currently only a placeholder tab.
+- Settings are split in two (`feature/vault/ui/.../settings`). `GeneralSettingsViewModel` holds everything in the unencrypted app database (appearance, terminal, updates, shortcuts) and touches no vault data. `VaultSettingsViewModel` holds the unlocked vault's own (lock, password, export, delete, auto-lock). The **Settings page inside the Vault tab** shows this vault's section, then the general sections. The unlock screen's gear opens `GeneralSettingsScreen` with the general sections alone, under its own `ViewModelStoreOwner` so leaving it ends a shortcut recording. `feature/settings` is currently only a placeholder tab.
 
 ### Vaults
 
