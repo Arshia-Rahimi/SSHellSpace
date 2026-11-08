@@ -51,6 +51,16 @@ private val ModifierKeys = setOf(
     Key.MetaLeft, Key.MetaRight,
 )
 
+/**
+ * The control character each Ctrl+key sends (Ctrl+A is 0x01, Ctrl+[ is Esc). On macOS, Tao hands BossTerm the typed
+ * text rather than the control character, so Ctrl+C wouldn't interrupt. Ctrl isn't BossTerm's shortcut key there.
+ */
+private val ControlCodes: Map<Key, Byte> = listOf(
+    Key.A, Key.B, Key.C, Key.D, Key.E, Key.F, Key.G, Key.H, Key.I, Key.J, Key.K, Key.L, Key.M,
+    Key.N, Key.O, Key.P, Key.Q, Key.R, Key.S, Key.T, Key.U, Key.V, Key.W, Key.X, Key.Y, Key.Z,
+    Key.LeftBracket, Key.Backslash, Key.RightBracket,
+).mapIndexed { index, key -> key to (index + 1).toByte() }.toMap()
+
 // BossTerm keeps its selection internal.
 private val sessionGetter = runCatching {
     EmbeddableTerminalState::class.java.getMethod("getSession\$ai_rever_bossterm_compose_ui")
@@ -82,6 +92,12 @@ fun BossTerm(
         onExit = onExit,
         state = terminalState,
         modifier = modifier.onPreviewKeyEvent { event ->
+            val controlCode = ControlCodes[event.key]
+                ?.takeIf { isMac && event.isCtrlPressed && !event.isMetaPressed && !event.isAltPressed }
+            if (event.type == KeyEventType.KeyDown && controlCode != null) {
+                terminalState.sendInput(byteArrayOf(controlCode))
+                return@onPreviewKeyEvent true
+            }
             event.type == KeyEventType.KeyDown && (
                 // Tao reports a modifier's own key-down without its flag, so BossTerm takes it for typing and clears
                 // the selection. A modifier alone never sends anything, so BossTerm loses nothing.
