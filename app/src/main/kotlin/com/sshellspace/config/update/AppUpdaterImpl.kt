@@ -80,7 +80,8 @@ internal class AppUpdaterImpl(
     private var available: UpdateInfo? = null
     private var lastAttempt = 0L
 
-    override val currentVersion get() = engine.currentVersion
+    // The engine only knows the numeric version the package was built with, without a label such as "-alpha".
+    override val currentVersion get() = System.getProperty("sshellspace.version") ?: engine.currentVersion
     override val state: StateFlow<AppUpdateState> = mutableState.asStateFlow()
 
     /** Checks whenever one is due, for as long as updates are on. Time is measured by the clock, so sleep doesn't stretch it. */

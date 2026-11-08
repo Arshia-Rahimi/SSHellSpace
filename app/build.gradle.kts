@@ -46,6 +46,8 @@ nucleus.application {
     mainClass = "com.sshellspace.MainKt"
 
     jvmArgs += listOf("-XX:+DisableAttachMechanism", "-XX:-CreateCoredumpOnCrash")
+    // Packages only carry the numeric part of the version, so the full one, label included, is passed for display.
+    jvmArgs += "-Dsshellspace.version=${providers.gradleProperty("appVersion").get()}"
 
     graalvm {
         isEnabled = true
