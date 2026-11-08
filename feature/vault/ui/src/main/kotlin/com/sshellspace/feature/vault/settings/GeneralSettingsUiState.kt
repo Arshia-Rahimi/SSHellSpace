@@ -1,7 +1,6 @@
 package com.sshellspace.feature.vault.settings
 
 import com.sshellspace.core.domain.models.AppUpdateState
-import com.sshellspace.core.domain.models.DEFAULT_AUTO_LOCK_MINUTES
 import com.sshellspace.core.domain.models.DEFAULT_UPDATE_CHECK_INTERVAL_HOURS
 import com.sshellspace.core.domain.models.KeyChord
 import com.sshellspace.core.domain.models.TerminalColors
@@ -11,7 +10,8 @@ import com.sshellspace.core.ui.designsystem.theme.AppColorScheme
 import com.sshellspace.core.ui.shortcuts.AppShortcut
 import com.sshellspace.feature.terminal.domain.models.Shell
 
-data class SettingsPageUiState(
+/** Settings shared by every vault, kept in the unencrypted app database so the unlock screen can change them too. */
+data class GeneralSettingsUiState(
     val themePreference: ThemePreference = ThemePreference.SYSTEM_DEFAULT,
     val colorScheme: AppColorScheme = AppColorScheme.Default,
     val userThemes: List<UserTheme> = emptyList(),
@@ -23,10 +23,6 @@ data class SettingsPageUiState(
     val importedTerminalThemes: Set<String> = emptySet(),
     val terminalThemeImportError: String? = null,
     val themeImportError: String? = null,
-    val vaultName: String? = null,
-    val vaultHasPassword: Boolean = true,
-    val vaultForm: VaultForm = VaultForm(),
-    val autoLockMinutes: Int = DEFAULT_AUTO_LOCK_MINUTES,
     val autoReconnect: Boolean = true,
     val restoreTabs: Boolean = true,
     val keepSessionsWhenLocked: Boolean = true,
@@ -47,17 +43,6 @@ data class UpdateSettings(
     val lastChecked: Long? = null,
     /** How many tabs and port forwards a restart would close, while asking whether to go ahead. */
     val confirmingRestart: Int? = null,
-)
-
-/** A vault action that needs more than one click, open in the Vault section. */
-enum class VaultEdit { ChangePassword, Export, Delete }
-
-data class VaultForm(
-    val edit: VaultEdit? = null,
-    val isBusy: Boolean = false,
-    val error: String? = null,
-    /** Confirms something that finished, such as an export. */
-    val notice: String? = null,
 )
 
 data class ShortcutBinding(

@@ -37,6 +37,7 @@ import androidx.compose.ui.input.key.KeyEventType
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.composeunstyled.Text
 import com.composeunstyled.theme.Theme
@@ -79,22 +80,50 @@ private val UPDATE_CHECK_INTERVALS = listOf(
 )
 private val UPDATE_CHECK_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm")
 
+/** The vault tab's settings: the unlocked vault's own, then the general ones every vault shares. */
 @Composable
 fun SettingsPage() {
-    val viewModel = koinViewModel<SettingsPageViewModel>()
-    val uiState by viewModel.uiState.collectAsState()
-    SettingsPageContent(uiState, viewModel::execute)
+    val vaultViewModel = koinViewModel<VaultSettingsViewModel>()
+    val generalViewModel = koinViewModel<GeneralSettingsViewModel>()
+    val vaultState by vaultViewModel.uiState.collectAsState()
+    val generalState by generalViewModel.uiState.collectAsState()
+    SettingsPageContent(vaultState, vaultViewModel::execute, generalState, generalViewModel::execute)
 }
 
 @Composable
 internal fun SettingsPageContent(
-    uiState: SettingsPageUiState,
-    onAction: (SettingsPageAction) -> Unit,
+    vaultState: VaultSettingsUiState,
+    onVaultAction: (VaultSettingsAction) -> Unit,
+    generalState: GeneralSettingsUiState,
+    onGeneralAction: (GeneralSettingsAction) -> Unit,
+) {
+    SettingsColumn {
+        Text("Settings")
+        vaultState.vaultName?.let { vaultName ->
+            SettingsGroupHeading(
+                title = "This vault",
+                description = "Saved inside \"$vaultName\", so they go wherever it's exported to.",
+            )
+            VaultSettingsSection(vaultName, vaultState, onVaultAction)
+        }
+        SettingsGroupHeading(
+            title = "General",
+            description = "Shared by every vault on this computer. You can also change these from the unlock screen.",
+        )
+        GeneralSettingsSections(generalState, onGeneralAction)
+    }
+}
+
+/** Centers settings at a readable width, scrolling when they don't fit. */
+@Composable
+internal fun SettingsColumn(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit,
 ) {
     val compact = currentWindowClass.isCompact
 
     Column(
-        modifier = Modifier.fillMaxSize()
+        modifier = modifier.fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(horizontal = if (compact) 16.dp else 24.dp, vertical = 16.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -104,62 +133,67 @@ internal fun SettingsPageContent(
             modifier = Modifier.widthIn(max = SettingsMaxWidth).fillMaxWidth(),
             verticalArrangement = Arrangement.spacedBy(if (compact) 16.dp else 24.dp),
         ) {
-            SettingsSections(uiState, onAction)
+            content()
         }
     }
 }
 
 @Composable
-private fun SettingsSections(
-    uiState: SettingsPageUiState,
-    onAction: (SettingsPageAction) -> Unit,
-) {
-    Text("Settings")
+private fun SettingsGroupHeading(title: String, description: String) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(title, fontWeight = FontWeight.SemiBold)
+        Text(description, color = Theme[colors][textSecondary])
+    }
+}
 
-    uiState.vaultName?.let { vaultName ->
-        SettingsSection(
-            title = "Vault",
-            description = "\"$vaultName\" is unlocked." +
-                if (uiState.vaultHasPassword) "" else " It has no password, so it isn't protected.",
-        ) {
-            VaultActions(vaultName, uiState, onAction)
-            ToggleRow(
-                title = "Keep terminals and port forwards running while locked",
-                description = "Locking then only hides them, and they're still there when you unlock. Their output " +
-                    "stays in memory and forwards keep accepting connections. Turn this off to close them on every lock.",
-                checked = uiState.keepSessionsWhenLocked,
-                onCheckedChange = { onAction(SettingsPageAction.SetKeepSessionsWhenLocked(it)) },
+@Composable
+private fun VaultSettingsSection(
+    vaultName: String,
+    uiState: VaultSettingsUiState,
+    onAction: (VaultSettingsAction) -> Unit,
+) {
+    SettingsSection(
+        title = "Vault",
+        description = "\"$vaultName\" is unlocked." +
+            if (uiState.vaultHasPassword) "" else " It has no password, so it isn't protected.",
+    ) {
+        VaultActions(vaultName, uiState, onAction)
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(
+                "Lock this vault when idle or when this computer sleeps. Each vault has its own setting. " +
+                    "Output in a terminal doesn't count as activity.",
+                color = Theme[colors][textSecondary],
             )
-            Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text(
-                    "Lock this vault when idle or when this computer sleeps. Each vault has its own setting. " +
-                        "Output in a terminal doesn't count as activity.",
-                    color = Theme[colors][textSecondary],
-                )
-                FlowRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    AUTO_LOCK_OPTIONS.forEach { minutes ->
-                        OptionButton(
-                            selected = minutes == uiState.autoLockMinutes,
-                            onClick = { onAction(SettingsPageAction.SetAutoLockMinutes(minutes)) },
-                        ) {
-                            Text(if (minutes == 0) "Never" else "$minutes min")
-                        }
+            FlowRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                AUTO_LOCK_OPTIONS.forEach { minutes ->
+                    OptionButton(
+                        selected = minutes == uiState.autoLockMinutes,
+                        onClick = { onAction(VaultSettingsAction.SetAutoLockMinutes(minutes)) },
+                    ) {
+                        Text(if (minutes == 0) "Never" else "$minutes min")
                     }
                 }
             }
         }
     }
+}
 
+/** The settings every vault shares. They touch no vault data, so the unlock screen shows them too. */
+@Composable
+internal fun GeneralSettingsSections(
+    uiState: GeneralSettingsUiState,
+    onAction: (GeneralSettingsAction) -> Unit,
+) {
     SettingsSection(
         title = "Appearance",
         description = "Choose light or dark mode and the accent color used across the app.",
     ) {
         ThemeSelector(
             selected = uiState.themePreference,
-            onSelected = { onAction(SettingsPageAction.SetTheme(it)) },
+            onSelected = { onAction(GeneralSettingsAction.SetTheme(it)) },
         )
         ColorSchemeSelector(uiState, onAction)
     }
@@ -173,18 +207,25 @@ private fun SettingsSections(
             title = "Reconnect dropped SSH sessions",
             description = "Keeps trying for about a minute. Sessions you end yourself, such as with exit, stay closed.",
             checked = uiState.autoReconnect,
-            onCheckedChange = { onAction(SettingsPageAction.SetAutoReconnect(it)) },
+            onCheckedChange = { onAction(GeneralSettingsAction.SetAutoReconnect(it)) },
         )
         ToggleRow(
             title = "Reopen tabs from last time",
-            description = "After restarting the app, reopens this vault's tabs as new sessions.",
+            description = "After restarting the app, reopens a vault's tabs as new sessions when it unlocks.",
             checked = uiState.restoreTabs,
-            onCheckedChange = { onAction(SettingsPageAction.SetRestoreTabs(it)) },
+            onCheckedChange = { onAction(GeneralSettingsAction.SetRestoreTabs(it)) },
+        )
+        ToggleRow(
+            title = "Keep terminals and port forwards running while locked",
+            description = "Locking then only hides them, and they're still there when you unlock. Their output " +
+                "stays in memory and forwards keep accepting connections. Turn this off to close them on every lock.",
+            checked = uiState.keepSessionsWhenLocked,
+            onCheckedChange = { onAction(GeneralSettingsAction.SetKeepSessionsWhenLocked(it)) },
         )
         Dropdown(
             options = uiState.shells,
             selected = uiState.defaultShell,
-            onSelected = { onAction(SettingsPageAction.SetDefaultShell(it)) },
+            onSelected = { onAction(GeneralSettingsAction.SetDefaultShell(it)) },
             modifier = Modifier.widthIn(max = 480.dp),
             optionLabel = { it.label },
         )
@@ -212,7 +253,7 @@ private fun SettingsSections(
 @Composable
 private fun UpdatesSection(
     updates: UpdateSettings,
-    onAction: (SettingsPageAction) -> Unit,
+    onAction: (GeneralSettingsAction) -> Unit,
 ) {
     val status = updates.status
     SettingsSection(
@@ -227,7 +268,7 @@ private fun UpdatesSection(
             title = "Update automatically",
             description = "Checks GitHub for new versions, downloads them, and installs them when you quit.",
             checked = updates.automatic,
-            onCheckedChange = { onAction(SettingsPageAction.Update.SetAutomatic(it)) },
+            onCheckedChange = { onAction(GeneralSettingsAction.Update.SetAutomatic(it)) },
         )
         if (updates.automatic) {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -239,7 +280,7 @@ private fun UpdatesSection(
                     UPDATE_CHECK_INTERVALS.forEach { (hours, label) ->
                         OptionButton(
                             selected = hours == updates.checkIntervalHours,
-                            onClick = { onAction(SettingsPageAction.Update.SetCheckInterval(hours)) },
+                            onClick = { onAction(GeneralSettingsAction.Update.SetCheckInterval(hours)) },
                         ) {
                             Text(label)
                         }
@@ -254,7 +295,7 @@ private fun UpdatesSection(
 @Composable
 private fun UpdateActions(
     updates: UpdateSettings,
-    onAction: (SettingsPageAction) -> Unit,
+    onAction: (GeneralSettingsAction) -> Unit,
 ) {
     val status = updates.status
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -263,17 +304,17 @@ private fun UpdateActions(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             if (status !is AppUpdateState.Checking && status !is AppUpdateState.Downloading) {
-                OptionButton(selected = false, onClick = { onAction(SettingsPageAction.Update.Check) }) {
+                OptionButton(selected = false, onClick = { onAction(GeneralSettingsAction.Update.Check) }) {
                     Text("Check for updates")
                 }
             }
             if (status is AppUpdateState.Available) {
-                OptionButton(selected = true, onClick = { onAction(SettingsPageAction.Update.Download) }) {
+                OptionButton(selected = true, onClick = { onAction(GeneralSettingsAction.Update.Download) }) {
                     Text("Download version ${status.version}")
                 }
             }
             if (status is AppUpdateState.Ready && updates.confirmingRestart == null) {
-                OptionButton(selected = true, onClick = { onAction(SettingsPageAction.Update.Restart) }) {
+                OptionButton(selected = true, onClick = { onAction(GeneralSettingsAction.Update.Restart) }) {
                     Text("Restart to update")
                 }
             }
@@ -290,10 +331,10 @@ private fun UpdateActions(
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                OptionButton(selected = true, onClick = { onAction(SettingsPageAction.Update.ConfirmRestart) }) {
+                OptionButton(selected = true, onClick = { onAction(GeneralSettingsAction.Update.ConfirmRestart) }) {
                     Text("Restart anyway")
                 }
-                OptionButton(selected = false, onClick = { onAction(SettingsPageAction.Update.CancelRestart) }) {
+                OptionButton(selected = false, onClick = { onAction(GeneralSettingsAction.Update.CancelRestart) }) {
                     Text("Cancel")
                 }
             }
@@ -321,8 +362,8 @@ private fun formatUpdateCheckTime(epochMillis: Long): String =
 @Composable
 private fun VaultActions(
     vaultName: String,
-    uiState: SettingsPageUiState,
-    onAction: (SettingsPageAction) -> Unit,
+    uiState: VaultSettingsUiState,
+    onAction: (VaultSettingsAction) -> Unit,
 ) {
     val form = uiState.vaultForm
 
@@ -331,14 +372,14 @@ private fun VaultActions(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            OptionButton(selected = false, onClick = { onAction(SettingsPageAction.LockVault) }) {
+            OptionButton(selected = false, onClick = { onAction(VaultSettingsAction.LockVault) }) {
                 Text("Lock vault")
             }
             OptionButton(
                 selected = form.edit == VaultEdit.ChangePassword,
                 onClick = {
                     val next = VaultEdit.ChangePassword.takeUnless { form.edit == it }
-                    onAction(SettingsPageAction.SetVaultEdit(next))
+                    onAction(VaultSettingsAction.SetVaultEdit(next))
                 },
             ) {
                 Text(if (uiState.vaultHasPassword) "Change password" else "Add a password")
@@ -347,9 +388,9 @@ private fun VaultActions(
                 selected = form.edit == VaultEdit.Export,
                 onClick = {
                     if (uiState.vaultHasPassword) {
-                        onAction(SettingsPageAction.SetVaultEdit(VaultEdit.Export.takeUnless { form.edit == it }))
+                        onAction(VaultSettingsAction.SetVaultEdit(VaultEdit.Export.takeUnless { form.edit == it }))
                     } else {
-                        onAction(SettingsPageAction.ExportVault("") { pickVaultExportFile(vaultName) })
+                        onAction(VaultSettingsAction.ExportVault("") { pickVaultExportFile(vaultName) })
                     }
                 },
             ) {
@@ -358,7 +399,7 @@ private fun VaultActions(
             OptionButton(
                 selected = form.edit == VaultEdit.Delete,
                 onClick = {
-                    onAction(SettingsPageAction.SetVaultEdit(VaultEdit.Delete.takeUnless { form.edit == it }))
+                    onAction(VaultSettingsAction.SetVaultEdit(VaultEdit.Delete.takeUnless { form.edit == it }))
                 },
             ) {
                 Text("Delete vault", color = Theme[colors][error])
@@ -379,13 +420,13 @@ private fun VaultActions(
 private fun ChangeVaultPasswordForm(
     hasPassword: Boolean,
     form: VaultForm,
-    onAction: (SettingsPageAction) -> Unit,
+    onAction: (VaultSettingsAction) -> Unit,
 ) {
     var current by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmation by remember { mutableStateOf("") }
-    val submit = { onAction(SettingsPageAction.ChangeVaultPassword(current, password, confirmation)) }
-    val clearError = { onAction(SettingsPageAction.ClearVaultError) }
+    val submit = { onAction(VaultSettingsAction.ChangeVaultPassword(current, password, confirmation)) }
+    val clearError = { onAction(VaultSettingsAction.ClearVaultError) }
 
     Column(
         modifier = Modifier.widthIn(max = 420.dp),
@@ -434,13 +475,13 @@ private fun ChangeVaultPasswordForm(
 private fun ExportVaultForm(
     vaultName: String,
     form: VaultForm,
-    onAction: (SettingsPageAction) -> Unit,
+    onAction: (VaultSettingsAction) -> Unit,
 ) {
     var password by remember { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
     val submit = { value: String ->
         if (value.isNotEmpty() && !form.isBusy) {
-            onAction(SettingsPageAction.ExportVault(value) { pickVaultExportFile(vaultName) })
+            onAction(VaultSettingsAction.ExportVault(value) { pickVaultExportFile(vaultName) })
         }
     }
     LaunchedEffect(Unit) { focusRequester.requestFocus() }
@@ -454,7 +495,7 @@ private fun ExportVaultForm(
             value = password,
             onValueChange = {
                 password = it
-                onAction(SettingsPageAction.ClearVaultError)
+                onAction(VaultSettingsAction.ClearVaultError)
             },
             label = "Vault password",
             enabled = !form.isBusy,
@@ -475,7 +516,7 @@ private fun DeleteVaultForm(
     vaultName: String,
     hasPassword: Boolean,
     form: VaultForm,
-    onAction: (SettingsPageAction) -> Unit,
+    onAction: (VaultSettingsAction) -> Unit,
 ) {
     var confirmation by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -500,7 +541,7 @@ private fun DeleteVaultForm(
                 value = password,
                 onValueChange = {
                     password = it
-                    onAction(SettingsPageAction.ClearVaultError)
+                    onAction(VaultSettingsAction.ClearVaultError)
                 },
                 label = "Vault password",
                 enabled = !form.isBusy,
@@ -508,7 +549,7 @@ private fun DeleteVaultForm(
             )
         }
         if (confirmation.trim() == vaultName && (!hasPassword || password.isNotEmpty())) {
-            OptionButton(selected = true, onClick = { onAction(SettingsPageAction.DeleteVault(password)) }) {
+            OptionButton(selected = true, onClick = { onAction(VaultSettingsAction.DeleteVault(password)) }) {
                 Text(if (form.isBusy) "Deleting…" else "Delete $vaultName permanently", color = Theme[colors][error])
             }
         }
@@ -530,7 +571,7 @@ private fun ToggleRow(title: String, description: String, checked: Boolean, onCh
 private fun ShortcutRow(
     binding: ShortcutBinding,
     recording: ShortcutRecording?,
-    onAction: (SettingsPageAction) -> Unit,
+    onAction: (GeneralSettingsAction) -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(
@@ -544,7 +585,7 @@ private fun ShortcutRow(
             } else {
                 OptionButton(
                     selected = false,
-                    onClick = { onAction(SettingsPageAction.Shortcut.StartRecording(binding.shortcut)) },
+                    onClick = { onAction(GeneralSettingsAction.Shortcut.StartRecording(binding.shortcut)) },
                 ) {
                     Text(binding.chord.label)
                 }
@@ -552,7 +593,7 @@ private fun ShortcutRow(
             if (!binding.isDefault) {
                 OptionButton(
                     selected = false,
-                    onClick = { onAction(SettingsPageAction.Shortcut.Reset(binding.shortcut)) },
+                    onClick = { onAction(GeneralSettingsAction.Shortcut.Reset(binding.shortcut)) },
                 ) {
                     Text("Reset")
                 }
@@ -565,7 +606,7 @@ private fun ShortcutRow(
 }
 
 @Composable
-private fun ShortcutRecorder(onAction: (SettingsPageAction) -> Unit) {
+private fun ShortcutRecorder(onAction: (GeneralSettingsAction) -> Unit) {
     val focusRequester = remember { FocusRequester() }
     var hadFocus by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(6.dp)
@@ -580,15 +621,15 @@ private fun ShortcutRecorder(onAction: (SettingsPageAction) -> Unit) {
             .focusRequester(focusRequester)
             .onFocusChanged {
                 if (it.isFocused) hadFocus = true
-                else if (hadFocus) onAction(SettingsPageAction.Shortcut.CancelRecording)
+                else if (hadFocus) onAction(GeneralSettingsAction.Shortcut.CancelRecording)
             }
             .focusable()
             .onPreviewKeyEvent { event ->
                 if (event.type != KeyEventType.KeyDown) return@onPreviewKeyEvent true
                 if (event.key == Key.Escape) {
-                    onAction(SettingsPageAction.Shortcut.CancelRecording)
+                    onAction(GeneralSettingsAction.Shortcut.CancelRecording)
                 } else {
-                    event.toKeyChord()?.let { onAction(SettingsPageAction.Shortcut.Record(it)) }
+                    event.toKeyChord()?.let { onAction(GeneralSettingsAction.Shortcut.Record(it)) }
                 }
                 true
             }
@@ -645,8 +686,8 @@ private fun ThemeSelector(
 
 @Composable
 private fun ColorSchemeSelector(
-    uiState: SettingsPageUiState,
-    onAction: (SettingsPageAction) -> Unit,
+    uiState: GeneralSettingsUiState,
+    onAction: (GeneralSettingsAction) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
 
@@ -661,7 +702,7 @@ private fun ColorSchemeSelector(
                     label = scheme.label,
                     swatch = scheme.colors(isDark = true).getValue(primary),
                     selected = uiState.activeUserThemeName == null && scheme == uiState.colorScheme,
-                    onClick = { onAction(SettingsPageAction.SetColorScheme(scheme)) },
+                    onClick = { onAction(GeneralSettingsAction.SetColorScheme(scheme)) },
                 )
             }
             uiState.userThemes.forEach { theme ->
@@ -669,13 +710,13 @@ private fun ColorSchemeSelector(
                     label = theme.name,
                     swatch = theme.colors(isDark = true).getValue(primary),
                     selected = theme.name == uiState.activeUserThemeName,
-                    onClick = { onAction(SettingsPageAction.SetUserTheme(theme.name)) },
+                    onClick = { onAction(GeneralSettingsAction.SetUserTheme(theme.name)) },
                 )
             }
             OptionButton(
                 selected = false,
                 onClick = {
-                    scope.launch { pickThemeFile()?.let { onAction(SettingsPageAction.ImportTheme(it)) } }
+                    scope.launch { pickThemeFile()?.let { onAction(GeneralSettingsAction.ImportTheme(it)) } }
                 },
             ) {
                 Text("Import theme…")
@@ -683,7 +724,7 @@ private fun ColorSchemeSelector(
             uiState.activeUserThemeName?.let { name ->
                 OptionButton(
                     selected = false,
-                    onClick = { onAction(SettingsPageAction.RemoveUserTheme(name)) },
+                    onClick = { onAction(GeneralSettingsAction.RemoveUserTheme(name)) },
                 ) {
                     Text("Remove \"$name\"")
                 }
@@ -719,8 +760,8 @@ private fun ColorSchemeOption(
 
 @Composable
 private fun TerminalThemeSelector(
-    uiState: SettingsPageUiState,
-    onAction: (SettingsPageAction) -> Unit,
+    uiState: GeneralSettingsUiState,
+    onAction: (GeneralSettingsAction) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
     val selectedName = uiState.terminalThemeName?.takeIf { name -> uiState.terminalThemes.any { it.name == name } }
@@ -733,7 +774,7 @@ private fun TerminalThemeSelector(
         ) {
             OptionButton(
                 selected = selectedName == null,
-                onClick = { onAction(SettingsPageAction.SetTerminalTheme(null)) },
+                onClick = { onAction(GeneralSettingsAction.SetTerminalTheme(null)) },
             ) {
                 Text("Follow app theme")
             }
@@ -741,13 +782,13 @@ private fun TerminalThemeSelector(
                 TerminalThemeOption(
                     theme = theme,
                     selected = theme.name == selectedName,
-                    onClick = { onAction(SettingsPageAction.SetTerminalTheme(theme.name)) },
+                    onClick = { onAction(GeneralSettingsAction.SetTerminalTheme(theme.name)) },
                 )
             }
             OptionButton(
                 selected = false,
                 onClick = {
-                    scope.launch { pickThemeFile()?.let { onAction(SettingsPageAction.ImportTerminalTheme(it)) } }
+                    scope.launch { pickThemeFile()?.let { onAction(GeneralSettingsAction.ImportTerminalTheme(it)) } }
                 },
             ) {
                 Text("Import terminal theme…")
@@ -755,7 +796,7 @@ private fun TerminalThemeSelector(
             selectedName?.takeIf { it in uiState.importedTerminalThemes }?.let { name ->
                 OptionButton(
                     selected = false,
-                    onClick = { onAction(SettingsPageAction.RemoveTerminalTheme(name)) },
+                    onClick = { onAction(GeneralSettingsAction.RemoveTerminalTheme(name)) },
                 ) {
                     Text("Remove \"$name\"")
                 }
