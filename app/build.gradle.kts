@@ -56,7 +56,8 @@ nucleus.application {
     nativeDistributions {
         targetFormats(TargetFormat.Dmg, TargetFormat.Zip, TargetFormat.Nsis, TargetFormat.AppImage)
         packageName = "SSHellSpace"
-        packageVersion = "1.0.0"
+        // DMG and NSIS only take numbers, so a label such as "-alpha" stays on the tag and release name.
+        packageVersion = providers.gradleProperty("appVersion").get().substringBefore('-')
         macOS {
             bundleID = "com.sshellspace"
             iconFile.set(project.file("icons/icon.icns"))

@@ -1,4 +1,4 @@
-# Push a v<packageVersion> tag to build all three OSes into a draft release.
+# scripts/release.sh pushes a v<appVersion> tag (gradle.properties) to build all three OSes into a draft release.
 # Publish the draft by hand once every job has uploaded, so no client sees a manifest before its signatures. See CLAUDE.md.
 name: Release
 
@@ -17,11 +17,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
-      - name: Check the tag matches packageVersion
+      - name: Check the tag matches appVersion
         run: |
-          version=$(sed -n 's/.*packageVersion = "\(.*\)".*/\1/p' app/build.gradle.kts)
+          version=$(sed -n 's/^appVersion=//p' gradle.properties | tr -d '\r')
           if [ "v$version" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME doesn't match packageVersion $version"
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match appVersion $version in gradle.properties"
             exit 1
           fi
       - name: Create the draft release
