@@ -57,8 +57,12 @@ nucleus.application {
     nativeDistributions {
         // A macOS update replaces the app from the ZIP. The DMG is only for the first install.
         targetFormats(TargetFormat.Dmg, TargetFormat.Zip, TargetFormat.Nsis, TargetFormat.AppImage)
-        packageName = "com.sshellspace"
+        // The name users see: the macOS menu bar and .app, the Windows install folder, the artifact names.
+        packageName = "SSHellSpace"
         packageVersion = "1.0.0"
+        macOS {
+            bundleID = "com.sshellspace"
+        }
         // From suggestRuntimeModules. A packaged app only gets the JDK modules listed, and a missing one only fails when reached.
         modules("java.instrument", "java.prefs", "java.rmi", "java.security.jgss", "java.sql", "jdk.javadoc", "jdk.management", "jdk.security.auth")
 
