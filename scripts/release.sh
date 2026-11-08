@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# Sets appVersion in gradle.properties, commits it, tags v<version> and pushes the commit and tag together,
-# which starts the release workflow. Usage: scripts/release.sh 1.0.1-alpha
+# Tags the current commit v<appVersion> (gradle.properties) and pushes only that tag, which starts the release
+# workflow. Set appVersion and merge to main first, then run this on main. Usage: scripts/release.sh
 set -euo pipefail
 
 die() {
@@ -8,21 +8,25 @@ die() {
     exit 1
 }
 
-version=${1:-}
-[[ -n $version ]] || die "usage: scripts/release.sh <version>, such as 1.0.1-alpha"
+cd "$(git rev-parse --show-toplevel)"
+
+version=$(sed -n 's/^appVersion=//p' gradle.properties | tr -d '\r')
+[[ -n $version ]] || die "gradle.properties has no appVersion"
 [[ $version =~ ^([0-9]+)\.([0-9]+)\.([0-9]+)(-[0-9A-Za-z.]+)?$ ]] ||
-    die "$version isn't MAJOR.MINOR.PATCH with an optional label, such as 1.0.1-alpha"
+    die "appVersion $version isn't MAJOR.MINOR.PATCH with an optional label, such as 1.0.1-alpha"
 # The NSIS installer's limits.
 ((BASH_REMATCH[1] <= 255 && BASH_REMATCH[2] <= 255 && BASH_REMATCH[3] <= 65535)) ||
     die "Windows needs MAJOR and MINOR at most 255, and PATCH at most 65535"
 numbers=${version%%-*}
 tag=v$version
 
-cd "$(git rev-parse --show-toplevel)"
-branch=$(git symbolic-ref --quiet --short HEAD) || die "check out a branch first"
+# Only main, and only what's already on GitHub's main, so the release is a commit CI has checked.
+[[ $(git symbolic-ref --quiet --short HEAD) == main ]] || die "check out main first"
 git diff --quiet && git diff --cached --quiet || die "commit or stash your changes first"
+git fetch --quiet --tags origin main
+[[ $(git rev-parse HEAD) == $(git rev-parse origin/main) ]] ||
+    die "main doesn't match origin/main: push or pull first"
 
-git fetch --quiet --tags origin
 git rev-parse --quiet --verify "refs/tags/$tag" >/dev/null && die "$tag already exists"
 
 # Packages only carry the numbers, so clients only update when they go up: 1.0.0-alpha then 1.0.0 looks the same.
@@ -30,22 +34,12 @@ latest=$(git tag --list 'v[0-9]*' | sed 's/^v//; s/-.*//' | sort -t. -k1,1n -k2,
 if [[ -n $latest ]]; then
     highest=$(printf '%s\n%s\n' "$latest" "$numbers" | sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1)
     [[ $numbers != "$latest" && $highest == "$numbers" ]] ||
-        die "$numbers must be higher than $latest, the last released version, or clients won't update"
+        die "appVersion $numbers must be higher than $latest, the last released version, or clients won't update"
 fi
 
-current=$(sed -n 's/^appVersion=//p' gradle.properties)
-if [[ $current != "$version" ]]; then
-    sed "s/^appVersion=.*/appVersion=$version/" gradle.properties >gradle.properties.tmp
-    mv gradle.properties.tmp gradle.properties
-    git add gradle.properties
-    git commit --quiet -m "Release $tag"
-fi
 git tag --annotate "$tag" --message "Release $tag"
-
-# Atomic, so the tag never reaches GitHub without the commit that sets its version.
-if ! git push --atomic origin "$branch" "$tag"; then
-    echo "release: the push failed, so nothing was published. To try again later: git push --atomic origin $branch $tag" >&2
-    echo "release: or to undo locally: git tag -d $tag, and drop the release commit if one was made" >&2
-    exit 1
+if ! git push origin "refs/tags/$tag"; then
+    git tag --delete "$tag" >/dev/null
+    die "the push failed, so the tag was removed again. Nothing was published"
 fi
 echo "Pushed $tag. Publish the draft release once all three OSes have uploaded."
