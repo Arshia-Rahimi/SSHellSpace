@@ -45,7 +45,6 @@ dependencies {
 nucleus.application {
     mainClass = "com.sshellspace.MainKt"
 
-    // Stops other programs attaching to the JVM to read decrypted secrets, and crashes leaving them in a core dump.
     jvmArgs += listOf("-XX:+DisableAttachMechanism", "-XX:-CreateCoredumpOnCrash")
 
     graalvm {
@@ -55,18 +54,22 @@ nucleus.application {
     }
 
     nativeDistributions {
-        // A macOS update replaces the app from the ZIP. The DMG is only for the first install.
         targetFormats(TargetFormat.Dmg, TargetFormat.Zip, TargetFormat.Nsis, TargetFormat.AppImage)
-        // The name users see: the macOS menu bar and .app, the Windows install folder, the artifact names.
         packageName = "SSHellSpace"
         packageVersion = "1.0.0"
         macOS {
             bundleID = "com.sshellspace"
+            iconFile.set(project.file("icons/icon.icns"))
         }
-        // From suggestRuntimeModules. A packaged app only gets the JDK modules listed, and a missing one only fails when reached.
+        windows {
+            iconFile.set(project.file("icons/icon.ico"))
+        }
+        linux {
+            iconFile.set(project.file("icons/icon.png"))
+        }
+
         modules("java.instrument", "java.prefs", "java.rmi", "java.security.jgss", "java.sql", "jdk.javadoc", "jdk.management", "jdk.security.auth")
 
-        // Publishing stays manual, so a release's manifests and signatures go up together. See CLAUDE.md.
         publish {
             github {
                 enabled = true
@@ -77,7 +80,6 @@ nucleus.application {
     }
 }
 
-// Bouncy Castle's jar is signed. Its signature doesn't hold for a merged jar, and native-image refuses to load one that fails.
 tasks.withType<org.gradle.jvm.tasks.Jar>().matching { it.name.endsWith("UberJarForCurrentOS") }.configureEach {
     exclude("META-INF/*.SF", "META-INF/*.RSA", "META-INF/*.DSA")
 }
