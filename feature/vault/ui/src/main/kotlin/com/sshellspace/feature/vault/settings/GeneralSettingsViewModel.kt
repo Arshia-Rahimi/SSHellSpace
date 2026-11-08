@@ -4,14 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.sshellspace.core.domain.models.KeyChord
 import com.sshellspace.core.domain.models.TerminalColors
-import com.sshellspace.core.domain.models.VaultException
-import com.sshellspace.core.domain.models.VaultInfo
 import com.sshellspace.core.domain.repositories.AppUpdater
 import com.sshellspace.core.domain.repositories.CorePreferencesRepository
-import com.sshellspace.core.domain.repositories.VaultManager
-import com.sshellspace.core.domain.repositories.VaultPreferencesRepository
 import com.sshellspace.core.ui.designsystem.theme.AppColorScheme
-import com.sshellspace.core.ui.shortcuts.AppShortcut
 import com.sshellspace.core.ui.shortcuts.ShortcutHandler
 import com.sshellspace.core.ui.shortcuts.hasModifier
 import com.sshellspace.feature.terminal.domain.ShellDiscoveryService
@@ -19,8 +14,6 @@ import com.sshellspace.feature.terminal.domain.TerminalPreferencesRepository
 import com.sshellspace.feature.terminal.domain.models.Shell
 import com.sshellspace.feature.terminal.domain.models.UpdateTerminalPreferences
 import com.sshellspace.feature.terminal.ui.screen.emulators.bossterm.terminalThemeChoices
-import com.sshellspace.feature.vault.gate.credentialFrom
-import com.sshellspace.feature.vault.gate.passwordMismatch
 import java.io.File
 import java.io.IOException
 import kotlinx.coroutines.Dispatchers
@@ -40,13 +33,12 @@ private data class TerminalThemeState(
     val importError: String?,
 )
 
-class SettingsPageViewModel(
+/** Settings shared by every vault. Touches no vault data, so it also runs on the unlock screen. */
+class GeneralSettingsViewModel(
     private val corePreferencesRepository: CorePreferencesRepository,
     private val terminalPreferencesRepository: TerminalPreferencesRepository,
     private val shellDiscoveryService: ShellDiscoveryService,
     private val shortcutHandler: ShortcutHandler,
-    private val vaultManager: VaultManager,
-    private val vaultPreferencesRepository: VaultPreferencesRepository,
     private val appUpdater: AppUpdater,
 ) : ViewModel() {
     private val discoveredShells = MutableStateFlow<List<Shell>?>(null)
@@ -54,7 +46,6 @@ class SettingsPageViewModel(
 
     private val themeImportError = MutableStateFlow<String?>(null)
     private val terminalThemeImportError = MutableStateFlow<String?>(null)
-    private val vaultForm = MutableStateFlow(VaultForm())
     private val confirmingRestart = MutableStateFlow<Int?>(null)
 
     private val appearance = combine(
@@ -64,7 +55,7 @@ class SettingsPageViewModel(
         corePreferencesRepository.getActiveUserTheme(),
         themeImportError,
     ) { theme, colorSchemeId, userThemes, activeUserTheme, importError ->
-        SettingsPageUiState(
+        GeneralSettingsUiState(
             themePreference = theme,
             colorScheme = AppColorScheme.fromId(colorSchemeId),
             userThemes = userThemes,
@@ -85,24 +76,6 @@ class SettingsPageViewModel(
         )
     }
 
-    private val appearanceAndVault = combine(
-        appearance,
-        vaultManager.activeVault,
-        vaultPreferencesRepository.getAutoLockMinutes(),
-        vaultForm,
-        terminalThemes,
-    ) { appearance, vault, autoLockMinutes, form, terminalThemes ->
-        appearance.copy(
-            vaultName = vault?.name,
-            vaultHasPassword = vault?.hasPassword ?: true,
-            autoLockMinutes = autoLockMinutes,
-            vaultForm = form,
-            terminalThemes = terminalThemes.choices,
-            importedTerminalThemes = terminalThemes.imported,
-            terminalThemeImportError = terminalThemes.importError,
-        )
-    }
-
     private val updates = combine(
         appUpdater.state,
         corePreferencesRepository.getAutoUpdate(),
@@ -120,12 +93,17 @@ class SettingsPageViewModel(
         )
     }
 
-    private val appearanceVaultAndUpdates = combine(appearanceAndVault, updates) { state, updates ->
-        state.copy(updates = updates)
+    private val appearanceAndUpdates = combine(appearance, terminalThemes, updates) { state, terminalThemes, updates ->
+        state.copy(
+            terminalThemes = terminalThemes.choices,
+            importedTerminalThemes = terminalThemes.imported,
+            terminalThemeImportError = terminalThemes.importError,
+            updates = updates,
+        )
     }
 
     val uiState = combine(
-        appearanceVaultAndUpdates,
+        appearanceAndUpdates,
         terminalPreferencesRepository.get(),
         discoveredShells,
         shortcutHandler.bindings,
@@ -142,7 +120,7 @@ class SettingsPageViewModel(
             shortcuts = bindings.map { (shortcut, chord) -> ShortcutBinding(shortcut, chord) },
             recording = recording,
         )
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), SettingsPageUiState())
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), GeneralSettingsUiState())
 
     init {
         viewModelScope.launch {
@@ -153,137 +131,74 @@ class SettingsPageViewModel(
         }
     }
 
-    fun execute(action: SettingsPageAction) {
+    fun execute(action: GeneralSettingsAction) {
         when (action) {
-            is SettingsPageAction.SetTheme -> viewModelScope.launch {
+            is GeneralSettingsAction.SetTheme -> viewModelScope.launch {
                 corePreferencesRepository.setTheme(action.value)
             }
-            is SettingsPageAction.SetColorScheme -> viewModelScope.launch {
+            is GeneralSettingsAction.SetColorScheme -> viewModelScope.launch {
                 themeImportError.update { null }
                 corePreferencesRepository.setColorScheme(action.value.id)
             }
-            is SettingsPageAction.SetUserTheme -> viewModelScope.launch {
+            is GeneralSettingsAction.SetUserTheme -> viewModelScope.launch {
                 themeImportError.update { null }
                 corePreferencesRepository.setActiveUserTheme(action.name)
             }
-            is SettingsPageAction.ImportTheme -> importTheme(action.path)
-            is SettingsPageAction.RemoveUserTheme -> viewModelScope.launch {
+            is GeneralSettingsAction.ImportTheme -> importTheme(action.path)
+            is GeneralSettingsAction.RemoveUserTheme -> viewModelScope.launch {
                 corePreferencesRepository.deleteUserTheme(action.name)
                 if (terminalPreferencesRepository.get().value.terminalThemeName == action.name) {
                     terminalPreferencesRepository.setTerminalThemeName(null)
                 }
             }
-            is SettingsPageAction.SetTerminalTheme -> viewModelScope.launch {
+            is GeneralSettingsAction.SetTerminalTheme -> viewModelScope.launch {
                 terminalThemeImportError.update { null }
                 terminalPreferencesRepository.setTerminalThemeName(action.name)
             }
-            is SettingsPageAction.ImportTerminalTheme -> importTerminalTheme(action.path)
-            is SettingsPageAction.RemoveTerminalTheme -> viewModelScope.launch {
+            is GeneralSettingsAction.ImportTerminalTheme -> importTerminalTheme(action.path)
+            is GeneralSettingsAction.RemoveTerminalTheme -> viewModelScope.launch {
                 corePreferencesRepository.deleteTerminalTheme(action.name)
                 if (terminalPreferencesRepository.get().value.terminalThemeName == action.name) {
                     terminalPreferencesRepository.setTerminalThemeName(null)
                 }
             }
-            is SettingsPageAction.SetDefaultShell -> viewModelScope.launch {
+            is GeneralSettingsAction.SetDefaultShell -> viewModelScope.launch {
                 terminalPreferencesRepository.set(UpdateTerminalPreferences(defaultShell = action.value))
             }
-
-            SettingsPageAction.LockVault -> viewModelScope.launch { vaultManager.lock() }
-            is SettingsPageAction.SetVaultEdit -> vaultForm.update { VaultForm(edit = action.edit) }
-            SettingsPageAction.ClearVaultError -> vaultForm.update { it.copy(error = null) }
-            is SettingsPageAction.ExportVault -> exportVault(action)
-            is SettingsPageAction.ChangeVaultPassword -> changeVaultPassword(action)
-            is SettingsPageAction.DeleteVault -> runVaultAction { vault ->
-                vaultManager.delete(vault.id, credentialFrom(action.password))
-            }
-            is SettingsPageAction.SetAutoReconnect -> viewModelScope.launch {
+            is GeneralSettingsAction.SetAutoReconnect -> viewModelScope.launch {
                 terminalPreferencesRepository.set(UpdateTerminalPreferences(autoReconnect = action.enabled))
             }
-            is SettingsPageAction.SetKeepSessionsWhenLocked -> viewModelScope.launch {
+            is GeneralSettingsAction.SetKeepSessionsWhenLocked -> viewModelScope.launch {
                 terminalPreferencesRepository.set(UpdateTerminalPreferences(keepSessionsWhenLocked = action.enabled))
             }
-            is SettingsPageAction.SetRestoreTabs -> viewModelScope.launch {
+            is GeneralSettingsAction.SetRestoreTabs -> viewModelScope.launch {
                 terminalPreferencesRepository.set(UpdateTerminalPreferences(restoreTabs = action.enabled))
             }
-            is SettingsPageAction.SetAutoLockMinutes -> viewModelScope.launch {
-                vaultPreferencesRepository.setAutoLockMinutes(action.minutes)
-            }
 
-            is SettingsPageAction.Update.SetAutomatic -> viewModelScope.launch {
+            is GeneralSettingsAction.Update.SetAutomatic -> viewModelScope.launch {
                 corePreferencesRepository.setAutoUpdate(action.enabled)
             }
-            is SettingsPageAction.Update.SetCheckInterval -> viewModelScope.launch {
+            is GeneralSettingsAction.Update.SetCheckInterval -> viewModelScope.launch {
                 corePreferencesRepository.setUpdateCheckIntervalHours(action.hours)
             }
-            SettingsPageAction.Update.Check -> appUpdater.check()
-            SettingsPageAction.Update.Download -> appUpdater.download()
-            SettingsPageAction.Update.Restart -> {
+            GeneralSettingsAction.Update.Check -> appUpdater.check()
+            GeneralSettingsAction.Update.Download -> appUpdater.download()
+            GeneralSettingsAction.Update.Restart -> {
                 val open = appUpdater.openSessionCount()
                 if (open > 0) confirmingRestart.update { open } else appUpdater.restartToInstall()
             }
-            SettingsPageAction.Update.ConfirmRestart -> {
+            GeneralSettingsAction.Update.ConfirmRestart -> {
                 confirmingRestart.update { null }
                 appUpdater.restartToInstall()
             }
-            SettingsPageAction.Update.CancelRestart -> confirmingRestart.update { null }
+            GeneralSettingsAction.Update.CancelRestart -> confirmingRestart.update { null }
 
-            is SettingsPageAction.Shortcut.StartRecording -> setRecording(ShortcutRecording(action.shortcut))
-            is SettingsPageAction.Shortcut.Record -> record(action.chord)
-            SettingsPageAction.Shortcut.CancelRecording -> setRecording(null)
-            is SettingsPageAction.Shortcut.Reset -> viewModelScope.launch {
+            is GeneralSettingsAction.Shortcut.StartRecording -> setRecording(ShortcutRecording(action.shortcut))
+            is GeneralSettingsAction.Shortcut.Record -> record(action.chord)
+            GeneralSettingsAction.Shortcut.CancelRecording -> setRecording(null)
+            is GeneralSettingsAction.Shortcut.Reset -> viewModelScope.launch {
                 shortcutHandler.resetChord(action.shortcut)
             }
-        }
-    }
-
-    private fun exportVault(action: SettingsPageAction.ExportVault) {
-        val credential = credentialFrom(action.password)
-        runVaultAction { vault ->
-            // First, so a mistyped password doesn't send the user through the save dialog for nothing.
-            vaultManager.verifyCredential(vault.id, credential)
-            val path = action.pickDestination() ?: return@runVaultAction
-            vaultManager.export(vault.id, credential, path)
-            vaultForm.update { VaultForm(notice = exportNotice(vault)) }
-        }
-    }
-
-    private fun exportNotice(vault: VaultInfo) = if (vault.hasPassword) {
-        "Exported ${vault.name}. You'll need its password to import it."
-    } else {
-        "Exported ${vault.name}. It has no password, so anyone with that file can read it."
-    }
-
-    private fun changeVaultPassword(action: SettingsPageAction.ChangeVaultPassword) {
-        passwordMismatch(action.password, action.confirmation)?.let { problem ->
-            vaultForm.update { it.copy(error = problem) }
-            return
-        }
-        runVaultAction { vault ->
-            vaultManager.changeCredential(vault.id, credentialFrom(action.current), credentialFrom(action.password))
-            val message = if (action.password.isEmpty()) {
-                "Password removed. Exports you made earlier still open with the old one."
-            } else {
-                "Password changed. Exports you made earlier still open with the old one."
-            }
-            vaultForm.update { VaultForm(notice = message) }
-        }
-    }
-
-    /** Runs an action on the unlocked vault, one at a time, showing progress and any failure. */
-    private fun runVaultAction(block: suspend (VaultInfo) -> Unit) {
-        val vault = vaultManager.activeVault.value ?: return
-        if (vaultForm.value.isBusy) return
-        vaultForm.update { it.copy(isBusy = true, error = null, notice = null) }
-        viewModelScope.launch {
-            val error = try {
-                block(vault)
-                null
-            } catch (e: VaultException) {
-                e.message
-            } catch (e: IOException) {
-                "Couldn't access the file: ${e.message}"
-            }
-            vaultForm.update { it.copy(isBusy = false, error = error) }
         }
     }
 

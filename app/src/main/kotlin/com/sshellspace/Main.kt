@@ -44,8 +44,10 @@ import dev.nucleusframework.application.NucleusBackend
 import dev.nucleusframework.application.nucleusApplication
 import dev.nucleusframework.window.WindowScaffold
 import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.painterResource
 import org.koin.compose.koinInject
 import sshellspace.app.generated.resources.Res
+import sshellspace.app.generated.resources.icon
 import sshellspace.app.generated.resources.title
 
 fun main() {
@@ -63,6 +65,7 @@ fun main() {
             },
             state = rememberWindowState(size = DefaultWindowSize),
             title = Res.string.title.asString(),
+            icon = painterResource(Res.drawable.icon),
             minimumSize = MinWindowSize,
             onPreviewKeyEvent = { event ->
                 autoLock.recordActivity()

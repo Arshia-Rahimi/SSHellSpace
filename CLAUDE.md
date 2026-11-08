@@ -69,7 +69,7 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 
 - `CorePreferencesRepository` (theme, color scheme, shortcuts, updates) and `TerminalPreferencesRepository` (default shell) each store one `@Serializable` object as JSON in the SQLDelight preferences table, keyed by its qualified class name.
 - Implementations keep a **single** `stateIn` StateFlow and build updates from `preference.value.copy(...)`. If you create a new `stateIn` per `get()` call, it returns the defaults, not the stored value.
-- The user-facing Settings UI is the **Settings page inside the Vault tab** (`feature/vault/ui/.../settings`). `feature/settings` is currently only a placeholder tab.
+- Settings are split in two (`feature/vault/ui/.../settings`). `GeneralSettingsViewModel` holds everything in the unencrypted app database (appearance, terminal, updates, shortcuts) and touches no vault data. `VaultSettingsViewModel` holds the unlocked vault's own (lock, password, export, delete, auto-lock). The **Settings page inside the Vault tab** shows this vault's section, then the general sections. The unlock screen's gear opens `GeneralSettingsScreen` with the general sections alone, under its own `ViewModelStoreOwner` so leaving it ends a shortcut recording. `feature/settings` is currently only a placeholder tab.
 
 ### Vaults
 
@@ -157,7 +157,8 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 - The unlock screen shows a new version once one is known (`UpdateHint` in `VaultGateScreen`). Restarting from there warns about open tabs and forwards, since `keepSessionsWhenLocked` leaves them running behind the lock. A failure only shows if the user asked for what failed, so being offline doesn't put an error on every unlock.
 - The last check has its own preferences row, because it's written in the background and `CorePreference` writes start from a copy that can lag behind.
 - The release signing key defaults to `~/.sshellspace/update-signing.key`, or set `-PupdateSigningKey` or `UPDATE_SIGNING_KEY`. Keep it out of the repo and backed up: without it, installed copies can never update again. `generateUpdateSigningKey` only runs if no key exists.
-- **To release:** set `packageVersion` in `app/build.gradle.kts`, then on each OS run `./gradlew :app:packageDmg :app:packageZip` (macOS), `:app:packageNsis` (Windows) or `:app:packageAppImage` (Linux), followed by `:app:signUpdates`. Output is under `app/build/compose/binaries/main`. Upload each artifact, `.blockmap`, `.sig` and manifest to a draft GitHub release tagged `v<packageVersion>`, then publish it when all three OSes are up. Clients only see published releases, so none can find a manifest whose signatures aren't there yet. A version with `-beta` or `-alpha` in it stays on that channel.
+- **To release:** set `appVersion` in `gradle.properties` and merge it to `main`. Then, on `main` matching `origin/main`, run `scripts/release.sh`. It changes no files: it checks `appVersion` and tags the current commit `v<appVersion>`, then pushes only that tag. The tag starts `.github/workflows/release.yml`. Its `check` job confirms the tagged commit is on `main` and matches `appVersion`, then runs `./gradlew check`. Only then does it package all three OSes (`:app:packageDmg :app:packageZip`, `:app:packageNsis`, `:app:packageAppImage`, then `:app:signUpdates`) into a draft release. Publish the draft by hand once all three are up. Clients only see published releases, so none can find a manifest whose signatures aren't there yet. Don't mark it a pre-release on GitHub, or stable clients may not see it.
+- **Version labels such as `-alpha` only go on the tag and release name.** Nucleus refuses anything but numbers for DMG and NSIS, and installed apps report jpackage's numeric version, so the build gives packages only the part of `appVersion` before the `-`. Every client is therefore on the stable channel, and the numbers must go up with every release, labelled or not: `1.0.0-alpha` then `1.0.0` would look like the same version. `release.sh` refuses a version that isn't higher than the last tag.
 - **On macOS, upload only `zip/latest-mac.yml`.** The DMG gets a manifest of the same name, and on GitHub whichever goes up last wins. With the DMG's, updates would only open the DMG for the user to finish. The plugin's manifest merge task only exists for S3.
 
 ### Packaging
@@ -165,7 +166,7 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 - Release signing isn't configured. It needs your own certificates.
 - The nucleus plugin packages the app (`app/build.gradle.kts`): main class `com.sshellspace.MainKt`, Tao backend, and Dmg/Zip/Nsis/AppImage target formats.
 - **Releases use the JVM packaging tasks.** GraalVM is enabled, but `nativeImageCompile` crashes the compiler (`GraalGraphError`) on BossTerm's `ComposeTerminalDisplay`, so the `packageGraalvm*` tasks don't currently work.
-- jpackage on macOS rejects a version whose first number is 0, so packaging there needs `packageVersion` of at least `1.0.0`.
+- jpackage on macOS rejects a version whose first number is 0, so packaging there needs an `appVersion` of at least `1.0.0`.
 - A packaged app only has the JDK modules in `modules(...)`, and a missing one only fails when that code runs. After adding a dependency, re-run `suggestRuntimeModules`.
 
 ## Tests

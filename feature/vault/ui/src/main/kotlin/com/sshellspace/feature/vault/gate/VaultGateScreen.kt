@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -40,6 +41,7 @@ import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
+import com.composeunstyled.AnchorSide
 import com.composeunstyled.Text
 import com.composeunstyled.UnstyledIcon
 import com.composeunstyled.theme.Theme
@@ -47,8 +49,10 @@ import com.sshellspace.core.domain.models.AppUpdateState
 import com.sshellspace.core.domain.models.VaultInfo
 import com.sshellspace.core.ui.designsystem.Icons
 import com.sshellspace.core.ui.designsystem.components.Button
+import com.sshellspace.core.ui.designsystem.components.IconButton
 import com.sshellspace.core.ui.designsystem.components.Switch
 import com.sshellspace.core.ui.designsystem.components.TextField
+import com.sshellspace.core.ui.designsystem.components.Tooltip
 import com.sshellspace.core.ui.designsystem.theme.border
 import com.sshellspace.core.ui.designsystem.theme.colors
 import com.sshellspace.core.ui.designsystem.theme.error
@@ -60,6 +64,7 @@ import com.sshellspace.core.ui.designsystem.theme.surface
 import com.sshellspace.core.ui.designsystem.theme.surfaceElevated
 import com.sshellspace.core.ui.designsystem.theme.textSecondary
 import com.sshellspace.core.ui.designsystem.theme.warning
+import com.sshellspace.feature.vault.settings.GeneralSettingsScreen
 import java.io.File
 import kotlinx.coroutines.launch
 import org.koin.compose.viewmodel.koinViewModel
@@ -67,7 +72,10 @@ import org.koin.compose.viewmodel.koinViewModel
 private val GateMaxWidth = 420.dp
 private val ButtonShape = RoundedCornerShape(6.dp)
 
-/** Shown until a vault is unlocked: pick a vault and authenticate, or create, import, export or delete one. */
+/**
+ * Shown until a vault is unlocked: pick a vault and authenticate, or create or import one. A gear opens the general
+ * settings, which need no vault.
+ */
 @Composable
 fun VaultGateScreen(modifier: Modifier = Modifier) {
     // There's no tab to own this ViewModel yet, and it should go as soon as a vault unlocks.
@@ -78,10 +86,31 @@ fun VaultGateScreen(modifier: Modifier = Modifier) {
     }
     DisposableEffect(owner) { onDispose { owner.viewModelStore.clear() } }
 
+    var showingSettings by remember { mutableStateOf(false) }
+
     CompositionLocalProvider(LocalViewModelStoreOwner provides owner) {
         val viewModel = koinViewModel<VaultGateViewModel>()
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-        VaultGateContent(uiState, viewModel::execute, modifier)
+        if (showingSettings) {
+            GeneralSettingsScreen(onBack = { showingSettings = false }, modifier = modifier)
+        } else {
+            Box(modifier) {
+                VaultGateContent(uiState, viewModel::execute, Modifier.fillMaxSize())
+                if (uiState.mode != VaultGateMode.Loading) {
+                    Box(Modifier.align(Alignment.TopEnd).padding(12.dp)) {
+                        Tooltip(text = "General settings", side = AnchorSide.Bottom) {
+                            IconButton(
+                                onClick = { showingSettings = true },
+                                imageVector = Icons.Settings,
+                                contentDescription = "General settings",
+                                tint = Theme[colors][textSecondary],
+                                modifier = Modifier.size(28.dp).padding(6.dp),
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
