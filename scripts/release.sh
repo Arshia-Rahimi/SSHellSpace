@@ -27,22 +27,16 @@ git fetch --quiet --tags origin main
 [[ $(git rev-parse HEAD) == $(git rev-parse origin/main) ]] ||
     die "main doesn't match origin/main: push or pull first"
 
-# GitHub's tags are what's been released. Local ones can be left over from a release deleted there.
-remote_tags=$(git ls-remote --tags --refs origin 'v[0-9]*' | sed 's|.*refs/tags/||')
-grep -qxF "$tag" <<<"$remote_tags" && die "$tag is already on GitHub"
+git rev-parse --quiet --verify "refs/tags/$tag" >/dev/null && die "$tag already exists"
 
 # Packages only carry the numbers, so clients only update when they go up: 1.0.0-alpha then 1.0.0 looks the same.
-latest=$(sed 's/^v//; s/-.*//' <<<"$remote_tags" | grep . | sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1 || true)
+latest=$(git tag --list 'v[0-9]*' | sed 's/^v//; s/-.*//' | sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1)
 if [[ -n $latest ]]; then
     highest=$(printf '%s\n%s\n' "$latest" "$numbers" | sort -t. -k1,1n -k2,2n -k3,3n | tail -n 1)
     [[ $numbers != "$latest" && $highest == "$numbers" ]] ||
         die "appVersion $numbers must be higher than $latest, the last released version, or clients won't update"
 fi
 
-if git rev-parse --quiet --verify "refs/tags/$tag" >/dev/null; then
-    echo "release: $tag is only in this clone, left from a release deleted on GitHub, so it moves to this commit"
-    git tag --delete "$tag" >/dev/null
-fi
 git tag --annotate "$tag" --message "Release $tag"
 if ! git push origin "refs/tags/$tag"; then
     git tag --delete "$tag" >/dev/null
