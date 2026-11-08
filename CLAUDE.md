@@ -146,6 +146,7 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 ### Terminal
 
 - **BossTerm's defaults are for its own app, not this one.** `EmbeddedTerminalSettings` turns off kitty file reads, AI assistant interception, MCP, the daemon and voice. `handleTerminalLink` only opens http(s) links, because BossTerm would pass link text to `cmd /c start`, `open` or `xdg-open`. Re-check both, and that nothing starts listening on a port, when upgrading BossTerm.
+- **BossTerm reads mouse modifiers off the AWT event**, which Tao doesn't supply, so it never sees Shift on a click. `BossTerm.kt` turns mouse reporting off while Shift is held instead, so Shift+drag still selects in tmux or vim. Tao also reports a modifier's own key-down without its flag, which BossTerm takes for typing and clears the selection, so modifier-only key-downs never reach it. It also swallows Cmd+C with nothing selected, which BossTerm would otherwise type as `c`; that reads the selection reflectively (`getSession$ai_rever_bossterm_compose_ui`), so re-check it when upgrading BossTerm.
 - Terminal emulators implement the `Terminal` interface (`feature/terminal/ui/.../screen/emulators/Terminal.kt`). BossTerm is the concrete emulator. `BossTermSshProcessHandleAdapter` bridges it to Apache MINA sshd (ssh-common/sftp/scp) for remote sessions, and pty4j handles local PTYs.
 
 ### Updates
