@@ -4,9 +4,14 @@ import ai.rever.bossterm.compose.EmbeddableTerminal
 import ai.rever.bossterm.compose.EmbeddableTerminalState
 import ai.rever.bossterm.compose.PlatformServices
 import ai.rever.bossterm.compose.getPlatformServices
+import ai.rever.bossterm.compose.settings.SettingsManager
 import ai.rever.bossterm.compose.settings.TerminalSettings
 import ai.rever.bossterm.compose.tabs.TerminalTab
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -95,7 +100,28 @@ fun BossTerm(
     ApplyTerminalTheme()
 
     val shiftHeld = LocalWindowInfo.current.keyboardModifiers.isShiftPressed
+    val terminalSettings by SettingsManager.instance.settings.collectAsState()
 
+    Box(modifier) {
+        EmbeddedBossTerm(shiftHeld, command, terminalState, initialCommand, onExit, platformServices)
+        // Until the shell has started, BossTerm shows a gray "Connecting to shell..." loader. Starting one is
+        // near-instant (an SSH tab opens its channel beforehand), so the loader would only flash. The terminal's own
+        // background shows instead. Errors still show, since they aren't Initializing.
+        if (terminalState.isInitializing) {
+            Box(Modifier.fillMaxSize().background(terminalSettings.defaultBackgroundColor))
+        }
+    }
+}
+
+@Composable
+private fun EmbeddedBossTerm(
+    shiftHeld: Boolean,
+    command: String,
+    terminalState: EmbeddableTerminalState,
+    initialCommand: String?,
+    onExit: ((Int) -> Unit)?,
+    platformServices: PlatformServices,
+) {
     EmbeddableTerminal(
         settings = if (shiftHeld) ShiftHeldSettings else EmbeddedTerminalSettings,
         onLinkClick = ::handleTerminalLink,
@@ -103,7 +129,7 @@ fun BossTerm(
         initialCommand = initialCommand,
         onExit = onExit,
         state = terminalState,
-        modifier = modifier.onPreviewKeyEvent { event ->
+        modifier = Modifier.fillMaxSize().onPreviewKeyEvent { event ->
             val controlCode = ControlCodes[event.key]
                 ?.takeIf { isMac && event.isCtrlPressed && !event.isMetaPressed && !event.isAltPressed }
             if (event.type == KeyEventType.KeyDown && controlCode != null) {

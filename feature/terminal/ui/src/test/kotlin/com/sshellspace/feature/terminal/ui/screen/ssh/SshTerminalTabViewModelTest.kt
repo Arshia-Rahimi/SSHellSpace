@@ -20,6 +20,7 @@ import com.sshellspace.feature.terminal.domain.models.TerminalPreferences
 import com.sshellspace.feature.terminal.ui.screen.emulators.Terminal
 import io.mockk.every
 import io.mockk.mockk
+import io.mockk.verify
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -60,7 +61,14 @@ class SshTerminalTabViewModelTest {
     private val vaultManager = mockk<VaultManager> { every { activeVault } returns this@SshTerminalTabViewModelTest.activeVault }
 
     private fun viewModel(service: SshConnectionService) =
-        SshTerminalTabViewModel(mockk<TabController>(relaxed = true), params, service, terminalPreferences, vaultManager)
+        SshTerminalTabViewModel(
+            mockk<TabController>(relaxed = true),
+            params,
+            service,
+            terminalPreferences,
+            vaultManager,
+            shellDispatcher = dispatcher,
+        )
 
     /** Reports each terminal's callbacks so a test can end the session the way a real terminal would. */
     private class FakeTerminal(val onExit: (Int) -> Unit) : Terminal {
@@ -94,8 +102,28 @@ class SshTerminalTabViewModelTest {
             service,
             terminalPreferences,
             vaultManager,
-            { _, _, onExit, _ -> FakeTerminal(onExit).also(terminals::add) },
+            { _, _, _, onExit, _ -> FakeTerminal(onExit).also(terminals::add) },
+            dispatcher,
         )
+
+    @Test
+    fun `the shell opens before the terminal shows, and a shell that won't open fails the tab`() = runTest(dispatcher) {
+        val session = mockk<ShellSession.Ssh>(relaxed = true) {
+            every { openShell(any(), any()) } throws IllegalStateException("channel refused")
+        }
+        val connection = SshConnection(params.connectionId, "server", "h", username = "u", auth = SshConnectionAuth.Agent)
+        val terminals = mutableListOf<FakeTerminal>()
+        val vm = viewModelWithFakeTerminals(
+            connectingService(mutableListOf(SshConnectResult.Success(session, connection))),
+            terminals,
+        )
+        testScheduler.advanceUntilIdle()
+
+        val failed = assertIs<SshTerminalState.Failed>(vm.state.value)
+        assertEquals("Connected, but couldn't open a shell: channel refused", failed.message)
+        assertEquals(emptyList(), terminals)
+        verify { session.close() }
+    }
 
     @Test
     fun `a dropped connection counts down and reconnects by itself`() = runTest(dispatcher) {

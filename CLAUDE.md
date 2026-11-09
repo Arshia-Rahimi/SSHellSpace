@@ -123,7 +123,7 @@ SSHellSpace is a Kotlin/JVM desktop SSH client built with Compose Multiplatform 
 - User questions (host key, password, passphrase, 2FA) go through `SshPrompter`. Text a server supplies goes through `fromServer` and is marked as coming from the server, since it could otherwise pose as the app asking for the vault password.
   - `SshTerminalTabViewModel` implements it by showing a prompt state and waiting for the answer.
   - MINA's callbacks are blocking, so `ConnectionContext.ask` uses `runBlocking` on the MINA thread.
-- The SSH tab hands BossTerm a custom `PlatformServices` (`SshPlatformServices`) whose `spawnProcess` opens a shell channel in place of a local PTY.
+- The SSH tab hands BossTerm a custom `PlatformServices` (`SshPlatformServices`) whose `spawnProcess` opens a shell channel in place of a local PTY. `SshTerminalTabViewModel` opens the first channel itself, while the tab still says it's connecting, because BossTerm shows its own gray "Connecting to shell..." loader until `spawnProcess` returns. `BossTerm.kt` also covers that loader with the terminal's background for the frame or two before BossTerm marks itself connected.
 
 ### Port forwarding
 

@@ -4,17 +4,19 @@ import ai.rever.bossterm.compose.EmbeddableTerminalState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import com.sshellspace.feature.terminal.domain.ShellSession
+import com.sshellspace.feature.terminal.domain.SshShellHandle
 import com.sshellspace.feature.terminal.ui.screen.emulators.Terminal
 
-/** A BossTerm terminal attached to an authenticated SSH session. Clearing it closes the session. */
+/** A BossTerm terminal showing [shell], opened on an authenticated SSH session. Clearing it closes the session. */
 class BossTermSshTerminal(
     private val session: ShellSession.Ssh,
+    shell: SshShellHandle,
     private val startupCommand: String?,
     private val onExit: (Int) -> Unit,
     onShellError: (String) -> Unit,
 ) : Terminal {
     private val embeddedTerminalState = EmbeddableTerminalState()
-    private val platformServices = SshPlatformServices(session, onShellError)
+    private val platformServices = SshPlatformServices(session, shell, onShellError)
 
     override fun clear() {
         embeddedTerminalState.dispose()
