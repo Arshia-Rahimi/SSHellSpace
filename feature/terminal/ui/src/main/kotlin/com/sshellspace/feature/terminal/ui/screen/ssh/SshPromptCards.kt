@@ -41,6 +41,7 @@ import com.sshellspace.core.ui.designsystem.theme.primary
 import com.sshellspace.core.ui.designsystem.theme.surface
 import com.sshellspace.core.ui.designsystem.theme.surfaceElevated
 import com.sshellspace.core.ui.designsystem.theme.textSecondary
+import com.sshellspace.core.ui.tabs.LocalTabActive
 import com.sshellspace.feature.terminal.domain.AuthChallenge
 import com.sshellspace.feature.terminal.domain.HostKeyPrompt
 import com.sshellspace.feature.terminal.domain.SecretPrompt
@@ -94,7 +95,9 @@ fun SshSecretCard(prompt: SecretPrompt, onSubmit: (String) -> Unit, onCancel: ()
     // Keyed on the prompt so a retry starts with an empty field.
     var value by remember(prompt) { mutableStateOf("") }
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(prompt) { focusRequester.requestFocus() }
+    // A hidden tab's question waits to take the keyboard until its tab is on show.
+    val active = LocalTabActive.current
+    LaunchedEffect(prompt, active) { if (active) focusRequester.requestFocus() }
 
     Card {
         Text(prompt.title)
@@ -122,7 +125,9 @@ fun SshSecretCard(prompt: SecretPrompt, onSubmit: (String) -> Unit, onCancel: ()
 fun SshChallengeCard(challenge: AuthChallenge, onSubmit: (List<String>) -> Unit, onCancel: () -> Unit) {
     val answers = remember(challenge) { mutableStateListOf(*Array(challenge.prompts.size) { "" }) }
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(challenge) { focusRequester.requestFocus() }
+    // A hidden tab's question waits to take the keyboard until its tab is on show.
+    val active = LocalTabActive.current
+    LaunchedEffect(challenge, active) { if (active) focusRequester.requestFocus() }
     val submit = { onSubmit(answers.toList()) }
 
     Card {

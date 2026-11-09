@@ -1,6 +1,7 @@
 package com.sshellspace.core.domain.repositories
 
 import com.sshellspace.core.domain.models.KeyChord
+import com.sshellspace.core.domain.models.SavedWindow
 import com.sshellspace.core.domain.models.TerminalColors
 import com.sshellspace.core.domain.models.ThemePreference
 import com.sshellspace.core.domain.models.UserTheme
@@ -53,6 +54,10 @@ interface CorePreferencesRepository {
     /** Whether the first-run welcome is over. The first value is the stored one, never a placeholder. */
     fun getWelcomeSeen(): Flow<Boolean>
     suspend fun setWelcomeSeen()
+
+    /** The main window as it was last left, or null if it never was. The first value is the stored one. */
+    fun getWindow(): Flow<SavedWindow?>
+    suspend fun setWindow(window: SavedWindow)
 
     /** User overrides keyed by shortcut id. Shortcuts without an entry use their default chord. */
     fun getShortcuts(): Flow<Map<String, KeyChord>>

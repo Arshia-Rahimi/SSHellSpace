@@ -12,12 +12,15 @@ import com.sshellspace.feature.terminal.domain.ShellSession
 import com.sshellspace.feature.terminal.domain.SshConnectResult
 import com.sshellspace.feature.terminal.domain.SshConnectionService
 import com.sshellspace.feature.terminal.domain.SshPrompter
+import com.sshellspace.feature.terminal.domain.SshShellHandle
 import com.sshellspace.feature.terminal.domain.TerminalPreferencesRepository
 import com.sshellspace.feature.terminal.domain.models.SshTerminalParams
 import com.sshellspace.feature.terminal.ui.screen.emulators.Terminal
 import com.sshellspace.feature.terminal.ui.screen.emulators.bossterm.BossTermSshTerminal
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,6 +29,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 sealed interface SshTerminalState {
     data class Connecting(val title: String) : SshTerminalState
@@ -72,8 +76,10 @@ class SshTerminalTabViewModel(
     private val connectionService: SshConnectionService,
     private val terminalPreferences: TerminalPreferencesRepository,
     private val vaultManager: VaultManager,
-    private val createTerminal: (ShellSession.Ssh, String?, (Int) -> Unit, (String) -> Unit) -> Terminal =
+    private val createTerminal: (ShellSession.Ssh, SshShellHandle, String?, (Int) -> Unit, (String) -> Unit) -> Terminal =
         ::BossTermSshTerminal,
+    /** Where the shell is opened. MINA blocks the thread until the server answers. */
+    private val shellDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel(), SshPrompter {
 
     private val _state = MutableStateFlow<SshTerminalState>(SshTerminalState.Connecting(params.title))
@@ -139,7 +145,7 @@ class SshTerminalTabViewModel(
                 is SshConnectResult.Success -> {
                     tabController.setTitle(result.connection.name)
                     retryAttempt = 0
-                    attachTerminal(result).let(SshTerminalState::Connected)
+                    openShell(result)
                 }
                 SshConnectResult.Cancelled -> {
                     retryAttempt = 0
@@ -156,11 +162,29 @@ class SshTerminalTabViewModel(
         }
     }
 
-    private fun attachTerminal(result: SshConnectResult.Success): Terminal {
+    /**
+     * Opens the shell while this tab still says it's connecting. Left to the terminal, it would happen behind
+     * BossTerm's own loader, since opening a channel takes a few round trips to the server.
+     */
+    private suspend fun openShell(result: SshConnectResult.Success): SshTerminalState {
+        val shell = try {
+            withContext(shellDispatcher) { result.session.openShell() }
+        } catch (e: CancellationException) {
+            result.session.close()
+            throw e
+        } catch (e: Exception) {
+            result.session.close()
+            return SshTerminalState.Failed("Connected, but couldn't open a shell: ${e.message}")
+        }
+        return SshTerminalState.Connected(attachTerminal(result, shell))
+    }
+
+    private fun attachTerminal(result: SshConnectResult.Success, shell: SshShellHandle): Terminal {
         lateinit var attached: Terminal
         // A terminal being replaced reports its own exit late, which mustn't be taken for the new one's.
         attached = createTerminal(
             result.session,
+            shell,
             result.connection.options.startupCommand,
             { exitCode -> if (terminal === attached) onShellExit(exitCode) },
             { message -> if (terminal === attached) onShellFailed(message) },

@@ -10,6 +10,7 @@ import com.sshellspace.core.data.generated.Vault_ssh_keys
 import com.sshellspace.core.domain.models.CorePreference
 import com.sshellspace.core.domain.models.DEFAULT_COLOR_SCHEME_ID
 import com.sshellspace.core.domain.models.KeyChord
+import com.sshellspace.core.domain.models.SavedWindow
 import com.sshellspace.core.domain.models.ThemePreference
 import java.util.Properties
 import kotlin.test.Test
@@ -164,6 +165,24 @@ class CorePreferencesRepositoryImplTest {
         repository.setWelcomeSeen()
 
         assertEquals(emptyList(), datasource.observeAll().first().filter { it.key == CorePreference::class.qualifiedName })
+    }
+
+    @Test
+    fun `the window is saved in a row of its own and read back`() = runTest {
+        assertNull(repository.getWindow().first())
+        val window = SavedWindow(width = 1000f, height = 700f, placement = SavedWindow.Placement.Maximized)
+
+        repository.setWindow(window)
+
+        assertEquals(window, CorePreferencesRepositoryImpl(datasource).getWindow().first())
+        assertEquals(emptyList(), datasource.observeAll().first().filter { it.key == CorePreference::class.qualifiedName })
+    }
+
+    @Test
+    fun `a damaged saved window reads as none`() = runTest {
+        datasource.set("${CorePreference::class.qualifiedName}.window", "not json")
+
+        assertNull(repository.getWindow().first())
     }
 
     private suspend fun awaitTerminalThemeNames(vararg names: String) = withContext(Dispatchers.Default) {

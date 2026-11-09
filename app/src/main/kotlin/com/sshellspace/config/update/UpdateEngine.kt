@@ -1,11 +1,13 @@
 package com.sshellspace.config.update
 
+import dev.nucleusframework.core.runtime.Platform
 import dev.nucleusframework.updater.DownloadProgress
 import dev.nucleusframework.updater.NucleusUpdater
 import dev.nucleusframework.updater.UpdateInfo
 import dev.nucleusframework.updater.UpdateResult
 import dev.nucleusframework.updater.UpdaterConfig
 import dev.nucleusframework.updater.provider.GitHubProvider
+import dev.nucleusframework.updater.provider.UpdateProvider
 import java.io.File
 import java.net.URI
 import java.net.http.HttpClient
@@ -26,6 +28,22 @@ private val PRERELEASE_CHANNEL = Regex("""^[^-]+-(alpha|beta)""", RegexOption.IG
 internal fun updateChannelFor(version: String): String =
     PRERELEASE_CHANNEL.find(version)?.groupValues?.get(1)?.lowercase() ?: "latest"
 
+/**
+ * Looks for a release's files beside the manifest that listed them. [GitHubProvider] would look under `v<manifest version>`,
+ * but the manifest only has the numeric version, so a release tagged `v1.0.1-alpha` would be looked for under `v1.0.1`.
+ */
+internal class ManifestRelativeProvider(private val provider: UpdateProvider) : UpdateProvider by provider {
+    @Volatile
+    private var releaseUrl: String? = null
+
+    // Nucleus resolves this at the start of every check, before asking for any file's address.
+    override fun resolveMetadataUrl(channel: String, platform: Platform, httpClient: HttpClient): String =
+        provider.resolveMetadataUrl(channel, platform, httpClient).also { releaseUrl = it.substringBeforeLast('/') }
+
+    override fun getDownloadUrl(fileName: String, version: String): String =
+        releaseUrl?.let { "$it/$fileName" } ?: provider.getDownloadUrl(fileName, version)
+}
+
 /** The part of updating that talks to Nucleus and the network. */
 internal interface UpdateEngine {
     val currentVersion: String
@@ -42,7 +60,9 @@ internal interface UpdateEngine {
 }
 
 internal class NucleusUpdateEngine(
-    configure: UpdaterConfig.() -> Unit = { provider = GitHubProvider(RELEASES_OWNER, RELEASES_REPO) },
+    configure: UpdaterConfig.() -> Unit = {
+        provider = ManifestRelativeProvider(GitHubProvider(RELEASES_OWNER, RELEASES_REPO))
+    },
 ) : UpdateEngine {
     private val updater = NucleusUpdater {
         configure()

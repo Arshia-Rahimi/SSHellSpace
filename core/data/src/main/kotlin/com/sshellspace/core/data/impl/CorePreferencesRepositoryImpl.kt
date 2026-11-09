@@ -4,6 +4,7 @@ import com.sshellspace.core.common.JsonSerializer
 import com.sshellspace.core.domain.repositories.PreferencesDatasource
 import com.sshellspace.core.domain.models.CorePreference
 import com.sshellspace.core.domain.models.KeyChord
+import com.sshellspace.core.domain.models.SavedWindow
 import com.sshellspace.core.domain.models.TerminalColors
 import com.sshellspace.core.domain.models.ThemePreference
 import com.sshellspace.core.domain.models.UserTheme
@@ -39,6 +40,9 @@ internal class CorePreferencesRepositoryImpl(
 
     // A row of its own for the same reason: it's written at startup, possibly before the row above has loaded.
     private val welcomeSeenKey = "$key.welcomeSeen"
+
+    // A row of its own: it's written whenever the window is resized, and read before the row above has loaded.
+    private val windowKey = "$key.window"
 
     override fun getTheme() = preference
         .map { it.themePreference }
@@ -141,6 +145,18 @@ internal class CorePreferencesRepositoryImpl(
 
     override suspend fun setWelcomeSeen() {
         datasource.set(welcomeSeenKey, true.toString())
+    }
+
+    // Not a StateFlow, for the same reason as the welcome: the window is sized from the first value.
+    override fun getWindow(): Flow<SavedWindow?> = datasource.observeAll()
+        .map { rows ->
+            rows.firstOrNull { it.key == windowKey }?.value?.let {
+                runCatching { JsonSerializer.decodeFromString(SavedWindow.serializer(), it) }.getOrNull()
+            }
+        }
+
+    override suspend fun setWindow(window: SavedWindow) {
+        datasource.set(windowKey, JsonSerializer.encodeToString(SavedWindow.serializer(), window))
     }
 
     override fun getShortcuts() = preference
