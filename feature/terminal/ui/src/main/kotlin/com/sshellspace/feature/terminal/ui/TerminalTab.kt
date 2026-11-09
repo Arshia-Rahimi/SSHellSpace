@@ -25,6 +25,7 @@ val TerminalTabFactory = TabItemFactory<TerminalParams> { parameters ->
         type = TerminalTab,
         initialTitle = parameters.shell.name,
         initialIcon = Icons.Terminal,
+        keepAlive = true,
         contentProvider = { item ->
             val viewModel: TerminalTabViewModel = koinViewModel {
                 parametersOf(item as TabController, parameters.shell)
@@ -41,6 +42,7 @@ val SshTerminalTabFactory = TabItemFactory<SshTerminalParams> { parameters ->
         type = SshTerminalTab,
         initialTitle = parameters.title,
         initialIcon = Icons.Host,
+        keepAlive = true,
         contentProvider = { item ->
             val viewModel: SshTerminalTabViewModel = koinViewModel {
                 parametersOf(item as TabController, parameters)

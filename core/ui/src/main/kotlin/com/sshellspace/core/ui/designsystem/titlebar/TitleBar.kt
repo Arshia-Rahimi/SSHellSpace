@@ -2,9 +2,12 @@ package com.sshellspace.core.ui.designsystem.titlebar
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -45,6 +48,10 @@ fun DecoratedWindowScope.TitleBar(
     onLockVault: () -> Unit,
     onExit: () -> Unit,
     onCreateNewTab: () -> Unit,
+    /** A downloaded version waiting to be installed, or null when there's none. */
+    readyUpdate: String? = null,
+    openSessionCount: () -> Int = { 0 },
+    onRestartToUpdate: () -> Unit = {},
 ) {
     val tabManager = koinInject<TabManager>()
     val shortcuts = koinInject<ShortcutHandler>()
@@ -91,9 +98,20 @@ fun DecoratedWindowScope.TitleBar(
             onMove = tabManager::moveTab,
             onNewTab = onCreateNewTab,
             // Keeps a space to drag the window by, even with so many tabs that they fill the strip.
-            modifier = Modifier.weight(1f).fillMaxHeight().padding(end = WindowDragGap),
+            // Overlaps the vault tab's flare the way the open tabs overlap each other's.
+            modifier = Modifier.weight(1f).fillMaxHeight().offset(x = -TabOverlap).padding(end = WindowDragGap),
             interactiveModifier = Modifier.noWindowDrag(),
         )
+
+        readyUpdate?.let { version ->
+            UpdateButton(
+                version = version,
+                openSessionCount = openSessionCount,
+                onRestart = onRestartToUpdate,
+                modifier = Modifier.noWindowDrag(),
+            )
+            Spacer(Modifier.width(10.dp))
+        }
     }
 }
 

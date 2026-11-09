@@ -27,6 +27,11 @@ class TabItem(
     initialTitle: String,
     tabId: TabId = generateTabId(),
     initialIcon: ImageVector? = null,
+    /**
+     * Keeps the content composed, though hidden, while another tab is on show, once it has been shown. For content that
+     * is costly or disruptive to rebuild, like a terminal, which would resize and make the shell redraw.
+     */
+    val keepAlive: Boolean = false,
 ) : TabController {
     val tab: Tab = Tab(tabId)
 

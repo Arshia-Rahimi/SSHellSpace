@@ -99,13 +99,25 @@ private val TabCornerRadius = 8.dp
 
 /** How far the selected tab's foot curves out into the strip, which joins it to the page below. */
 private val TabFlare = 8.dp
+
+/** The space between two tabs' bodies. */
+private val TabGap = 4.dp
+
+/**
+ * How much each tab overlaps the next, as in a browser. A tab's flare is blank unless it's selected, so without this
+ * two flares would sit side by side between every pair of tabs.
+ */
+internal val TabOverlap = TabFlare * 2 - TabGap
 private const val SLIDE_MILLIS = 160
 private val EdgeScrollZone = 32.dp
 private const val EDGE_SCROLL_PIXELS_PER_FRAME = 8f
 
-/** Each open tab's width: shared evenly like a browser's, scrolling only once they reach their minimum. */
+/**
+ * How far apart open tabs start: shared evenly like a browser's, scrolling only once they reach their minimum. Each tab
+ * is [TabOverlap] wider than this, so the last one's flare also has to fit.
+ */
 internal fun tabSlotWidth(available: Dp, count: Int): Dp =
-    if (count == 0) TabMaxWidth else (available / count).coerceIn(TabMinWidth, TabMaxWidth)
+    if (count == 0) TabMaxWidth else ((available - TabOverlap) / count).coerceIn(TabMinWidth, TabMaxWidth)
 
 /** Where a dragged tab's left edge sits. Stays among the open tabs, so it can't slide under what's beside the strip. */
 internal fun draggedTabPosition(contentX: Float, grabOffset: Float, count: Int, slot: Float): Float =
@@ -145,7 +157,7 @@ internal fun TabStrip(
         verticalAlignment = Alignment.CenterVertically,
     ) {
         BoxWithConstraints(modifier = Modifier.weight(1f, fill = false).fillMaxHeight()) {
-            val slot = heldSlot?.takeIf { it * tabs.size <= maxWidth } ?: tabSlotWidth(maxWidth, tabs.size)
+            val slot = heldSlot?.takeIf { it * tabs.size + TabOverlap <= maxWidth } ?: tabSlotWidth(maxWidth, tabs.size)
             DraggableTabs(
                 tabs = tabs,
                 selectedId = selectedId,
@@ -165,7 +177,7 @@ internal fun TabStrip(
                 icon = Icons.Plus,
                 contentDescription = Res.string.new_tab.asString(),
                 onClick = onNewTab,
-                modifier = interactiveModifier.padding(start = 4.dp, top = TabStripTopPadding),
+                modifier = interactiveModifier.padding(top = TabStripTopPadding),
                 size = 28.dp,
                 iconSize = 16.dp,
             )
@@ -211,7 +223,7 @@ private fun DraggableTabs(
         val index = tabs.indexOfFirst { it.tab.id == selectedId }
         if (index < 0 || drag != null) return@LaunchedEffect
         val left = (index * slotPx).toInt()
-        val right = left + slotPx.toInt()
+        val right = left + (slotPx + with(density) { TabOverlap.toPx() }).toInt()
         val viewport = scroll.viewportSize
         if (left < scroll.value) scroll.animateScrollTo(left)
         if (right > scroll.value + viewport) scroll.animateScrollTo(right - viewport)
@@ -273,7 +285,7 @@ private fun DraggableTabs(
             }
             .horizontalScroll(scroll),
     ) {
-        Box(modifier = Modifier.width(slot * tabs.size).fillMaxHeight()) {
+        Box(modifier = Modifier.width(slot * tabs.size + TabOverlap).fillMaxHeight()) {
             tabs.forEachIndexed { index, item ->
                 val id = item.tab.id
                 key(id) {
@@ -297,7 +309,7 @@ private fun DraggableTabs(
                                 } ?: slid
                                 IntOffset(x.roundToInt(), 0)
                             }
-                            .width(slot)
+                            .width(slot + TabOverlap)
                             .fillMaxHeight()
                             .semantics {
                                 role = Role.Tab
@@ -418,7 +430,8 @@ private fun BrowserTab(
             Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(bottom = 4.dp)
+                    // Midway between this tab's body and the next one's, which overlaps this tab's flare.
+                    .padding(end = TabFlare - TabGap / 2, bottom = 4.dp)
                     .width(1.dp)
                     .height(16.dp)
                     .background(Theme[colors][separator]),

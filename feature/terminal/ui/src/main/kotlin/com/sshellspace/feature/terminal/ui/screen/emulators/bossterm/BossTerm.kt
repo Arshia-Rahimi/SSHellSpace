@@ -7,6 +7,10 @@ import ai.rever.bossterm.compose.getPlatformServices
 import ai.rever.bossterm.compose.settings.TerminalSettings
 import ai.rever.bossterm.compose.tabs.TerminalTab
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.key.Key
 import androidx.compose.ui.input.key.KeyEventType
@@ -21,6 +25,7 @@ import androidx.compose.ui.input.pointer.isShiftPressed
 import androidx.compose.ui.platform.LocalWindowInfo
 import com.sshellspace.core.domain.models.OS
 import com.sshellspace.core.domain.models.getOs
+import com.sshellspace.core.ui.tabs.LocalTabActive
 
 /**
  * BossTerm's defaults assume its own full app. Here, kitty file transfers would let anything printed in the terminal,
@@ -80,6 +85,13 @@ fun BossTerm(
     onExit: ((Int) -> Unit)? = null,
     platformServices: PlatformServices = getPlatformServices(),
 ) {
+    // BossTerm takes the keyboard when it first appears, so in a tab kept alive while hidden, such as an SSH session
+    // that connects in the background, it waits until its tab is on show.
+    val active = LocalTabActive.current
+    var shown by remember { mutableStateOf(active) }
+    if (active) shown = true
+    if (!shown) return
+
     ApplyTerminalTheme()
 
     val shiftHeld = LocalWindowInfo.current.keyboardModifiers.isShiftPressed

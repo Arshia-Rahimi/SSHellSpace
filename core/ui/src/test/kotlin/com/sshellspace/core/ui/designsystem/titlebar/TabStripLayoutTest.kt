@@ -9,7 +9,7 @@ class TabStripLayoutTest {
     @Test
     fun `tabs share the space between their minimum and maximum`() {
         assertEquals(220.dp, tabSlotWidth(1000.dp, 2))
-        assertEquals(150.dp, tabSlotWidth(600.dp, 4))
+        assertEquals(147.dp, tabSlotWidth(600.dp, 4))
         assertEquals(104.dp, tabSlotWidth(600.dp, 20))
     }
 

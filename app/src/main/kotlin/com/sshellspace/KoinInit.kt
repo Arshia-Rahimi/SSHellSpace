@@ -27,18 +27,18 @@ import com.sshellspace.feature.terminal.domain.PortForwardingService
 import com.sshellspace.feature.terminal.ui.TerminalUiModule
 import com.sshellspace.feature.vault.VaultUiModule
 import com.sshellspace.feature.vault.data.VaultDataModule
+import org.koin.core.Koin
 import org.koin.core.context.startKoin
 import org.koin.dsl.bind
 import org.koin.dsl.module
 import org.koin.plugin.module.dsl.create
 
-fun initKoin() {
+fun initKoin(): Koin =
     startKoin { modules(AppModule) }.koin.apply {
         registerShortcuts()
         registerVaultLock()
         registerAppUpdates()
     }
-}
 
 val AppModule = module {
     includes(
