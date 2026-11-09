@@ -63,6 +63,8 @@ import sshellspace.app.generated.resources.icon
 import sshellspace.app.generated.resources.title
 
 fun main() {
+    System.setProperty("nucleus.tao.trackpadPanEvents", "false")
+
     val savedWindow = initKoin().savedWindow()
 
     nucleusApplication(backend = NucleusBackend.Tao) {
