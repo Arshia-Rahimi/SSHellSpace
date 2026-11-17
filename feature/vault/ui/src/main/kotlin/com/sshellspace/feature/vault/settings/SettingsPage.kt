@@ -59,6 +59,7 @@ import com.sshellspace.core.ui.designsystem.theme.surfaceElevated
 import com.sshellspace.core.ui.designsystem.theme.textSecondary
 import com.sshellspace.core.ui.designsystem.theme.toColor
 import com.sshellspace.core.ui.shortcuts.label
+import com.sshellspace.feature.terminal.ui.screen.emulators.label
 import com.sshellspace.core.ui.shortcuts.toKeyChord
 import com.sshellspace.feature.vault.gate.NewPasswordFields
 import com.sshellspace.feature.vault.gate.PasswordField
@@ -200,9 +201,20 @@ internal fun GeneralSettingsSections(
 
     SettingsSection(
         title = "Terminal",
-        description = "The terminal's colors, and the shell that new local terminal tabs start with.",
+        description = "The terminal's colors, and the emulator and shell that new terminal tabs start with.",
     ) {
         TerminalThemeSelector(uiState, onAction)
+        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text("Terminal emulator", color = Theme[colors][textSecondary])
+            Dropdown(
+                options = uiState.terminalEmulators,
+                selected = uiState.terminalEmulator,
+                onSelected = { onAction(GeneralSettingsAction.SetTerminalEmulator(it)) },
+                modifier = Modifier.widthIn(max = 480.dp),
+                optionLabel = { it.label },
+            )
+            Text("Tabs already open keep the emulator they started with.", color = Theme[colors][textSecondary])
+        }
         ToggleRow(
             title = "Reconnect dropped SSH sessions",
             description = "Keeps trying for about a minute. Sessions you end yourself, such as with exit, stay closed.",

@@ -17,6 +17,10 @@ dependencyResolutionManagement {
             content { includeGroupByRegex("androidx\\..*") }
         }
         mavenCentral()
+        // JediTerm is only published to JetBrains' IntelliJ dependencies repository.
+        maven("https://packages.jetbrains.team/maven/p/ij/intellij-dependencies") {
+            content { includeGroup("org.jetbrains.jediterm") }
+        }
     }
 }
 

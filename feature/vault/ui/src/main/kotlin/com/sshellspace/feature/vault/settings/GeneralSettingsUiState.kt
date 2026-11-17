@@ -9,6 +9,8 @@ import com.sshellspace.core.domain.models.UserTheme
 import com.sshellspace.core.ui.designsystem.theme.AppColorScheme
 import com.sshellspace.core.ui.shortcuts.AppShortcut
 import com.sshellspace.feature.terminal.domain.models.Shell
+import com.sshellspace.feature.terminal.domain.models.TerminalEmulator
+import com.sshellspace.feature.terminal.domain.models.TerminalPreferences
 
 /** Settings shared by every vault, kept in the unencrypted app database so the unlock screen can change them too. */
 data class GeneralSettingsUiState(
@@ -26,6 +28,9 @@ data class GeneralSettingsUiState(
     val autoReconnect: Boolean = true,
     val restoreTabs: Boolean = true,
     val keepSessionsWhenLocked: Boolean = true,
+    /** The emulator new terminal tabs use. Open tabs keep the one they started with. */
+    val terminalEmulator: TerminalEmulator = TerminalPreferences().defaultTerminalEmulator,
+    val terminalEmulators: List<TerminalEmulator> = TerminalEmulator.entries,
     val shells: List<Shell> = listOf(SYSTEM_DEFAULT_SHELL),
     val defaultShell: Shell = SYSTEM_DEFAULT_SHELL,
     val isDiscoveringShells: Boolean = true,

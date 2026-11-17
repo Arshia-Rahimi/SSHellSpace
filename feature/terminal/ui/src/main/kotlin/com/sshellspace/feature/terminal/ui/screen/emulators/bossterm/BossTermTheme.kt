@@ -5,7 +5,10 @@ import ai.rever.bossterm.compose.settings.theme.ThemeManager
 import ai.rever.bossterm.compose.util.ColorUtils
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.graphics.Color
@@ -87,12 +90,22 @@ private val LightAnsi = NeutralAnsi(
  */
 @Composable
 internal fun ApplyTerminalTheme() {
+    val terminalColors by terminalColors()
+    LaunchedEffect(terminalColors) {
+        withContext(Dispatchers.IO) { applyToBossTerm(terminalColors) }
+    }
+}
+
+/** The colors the terminal shows, which follow the terminal settings and the app theme as they change. */
+@Composable
+internal fun terminalColors(): State<TerminalColors> {
     val corePreferences = koinInject<CorePreferencesRepository>()
     val terminalPreferences = koinInject<TerminalPreferencesRepository>()
     val tokens = Theme[colors]
-    val appColors by rememberUpdatedState(deriveTerminalColors(AppTokens.associateWith { tokens[it] }))
+    val derived = deriveTerminalColors(AppTokens.associateWith { tokens[it] })
+    val appColors by rememberUpdatedState(derived)
 
-    LaunchedEffect(Unit) {
+    val flow = remember {
         combine(
             corePreferences.getTerminalThemes(),
             corePreferences.getUserThemes(),
@@ -102,10 +115,9 @@ internal fun ApplyTerminalTheme() {
         ) { imported, userThemes, activeTheme, preferences, followed ->
             val choices = terminalThemeChoices(imported, userThemes)
             resolveTerminalColors(preferences.terminalThemeName, choices, activeTheme, followed)
-        }
-            .distinctUntilChanged()
-            .collect { withContext(Dispatchers.IO) { applyToBossTerm(it) } }
+        }.distinctUntilChanged()
     }
+    return flow.collectAsState(derived)
 }
 
 /**

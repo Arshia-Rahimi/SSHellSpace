@@ -21,6 +21,7 @@ import com.sshellspace.feature.terminal.ui.screen.emulators.Terminal
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
+import io.mockk.verifyOrder
 import kotlin.test.AfterTest
 import kotlin.test.BeforeTest
 import kotlin.test.Test
@@ -73,6 +74,7 @@ class SshTerminalTabViewModelTest {
     /** Reports each terminal's callbacks so a test can end the session the way a real terminal would. */
     private class FakeTerminal(val onExit: (Int) -> Unit) : Terminal {
         val sent = mutableListOf<Pair<String, Boolean>>()
+        override val title = MutableStateFlow<String?>(null)
         override fun clear() = Unit
         override fun sendText(text: String, pressEnter: Boolean) {
             sent += text to pressEnter
@@ -95,9 +97,13 @@ class SshTerminalTabViewModelTest {
         SshConnection(params.connectionId, "server", "h", username = "u", auth = SshConnectionAuth.Agent),
     )
 
-    private fun viewModelWithFakeTerminals(service: SshConnectionService, terminals: MutableList<FakeTerminal>) =
+    private fun viewModelWithFakeTerminals(
+        service: SshConnectionService,
+        terminals: MutableList<FakeTerminal>,
+        tabController: TabController = mockk(relaxed = true),
+    ) =
         SshTerminalTabViewModel(
-            mockk<TabController>(relaxed = true),
+            tabController,
             params,
             service,
             terminalPreferences,
@@ -172,6 +178,25 @@ class SshTerminalTabViewModelTest {
         testScheduler.advanceUntilIdle()
 
         assertEquals(SshTerminalState.Failed("The vault locked while connecting."), vm.state.value)
+    }
+
+    @Test
+    fun `the program's title goes on the tab until its terminal goes`() = runTest(dispatcher) {
+        val terminals = mutableListOf<FakeTerminal>()
+        val tabController = mockk<TabController>(relaxed = true)
+        viewModelWithFakeTerminals(connectingService(mutableListOf(success())), terminals, tabController)
+        testScheduler.advanceUntilIdle()
+
+        terminals.single().title.value = "vim notes.txt"
+        testScheduler.advanceUntilIdle()
+        verify { tabController.setTitle("vim notes.txt") }
+
+        terminals.single().onExit(0)
+        testScheduler.advanceUntilIdle()
+        verifyOrder {
+            tabController.setTitle("vim notes.txt")
+            tabController.setTitle("server")
+        }
     }
 
     @Test

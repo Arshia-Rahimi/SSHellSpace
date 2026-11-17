@@ -34,7 +34,7 @@ internal fun handleTerminalLink(link: HyperlinkInfo, browse: (URI) -> Unit = ::o
     return link.patternId != OPEN_TARGET_PATTERN
 }
 
-private fun openInBrowser(uri: URI) {
+internal fun openInBrowser(uri: URI) {
     // Opening a browser can block for a while, and this is called from a click handler.
     thread(isDaemon = true) {
         try {

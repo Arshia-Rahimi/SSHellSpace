@@ -114,6 +114,7 @@ class GeneralSettingsViewModel(
             autoReconnect = terminalPrefs.autoReconnect,
             restoreTabs = terminalPrefs.restoreTabs,
             keepSessionsWhenLocked = terminalPrefs.keepSessionsWhenLocked,
+            terminalEmulator = terminalPrefs.defaultTerminalEmulator,
             shells = listOf(SYSTEM_DEFAULT_SHELL) + shells.orEmpty(),
             defaultShell = terminalPrefs.defaultShell,
             isDiscoveringShells = shells == null,
@@ -161,6 +162,9 @@ class GeneralSettingsViewModel(
                 if (terminalPreferencesRepository.get().value.terminalThemeName == action.name) {
                     terminalPreferencesRepository.setTerminalThemeName(null)
                 }
+            }
+            is GeneralSettingsAction.SetTerminalEmulator -> viewModelScope.launch {
+                terminalPreferencesRepository.set(UpdateTerminalPreferences(defaultTerminalEmulator = action.value))
             }
             is GeneralSettingsAction.SetDefaultShell -> viewModelScope.launch {
                 terminalPreferencesRepository.set(UpdateTerminalPreferences(defaultShell = action.value))
