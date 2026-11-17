@@ -25,7 +25,10 @@ private class FakeProcess : ShellProcess {
         written += String(bytes, Charsets.UTF_8)
     }
 
-    override suspend fun resize(columns: Int, rows: Int) = Unit
+    val sizes = CopyOnWriteArrayList<Pair<Int, Int>>()
+    override suspend fun resize(columns: Int, rows: Int) {
+        sizes += columns to rows
+    }
     override suspend fun waitForExit(): Int = exit.await()
     override suspend fun close() {
         output.trySend(null)
@@ -193,5 +196,13 @@ class JediTermSessionTest {
 
         process.output.trySend("\u001b[2 q")
         waitUntil { !session.cursorBlinks }
+    }
+
+    @Test
+    fun `a resize reaches the program`() {
+        val session = start()
+        session.resize(132, 50)
+        waitUntil { process.sizes.lastOrNull() == (132 to 50) }
+        session.locked { assertEquals(132, session.textBuffer.width) }
     }
 }

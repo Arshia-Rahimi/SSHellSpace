@@ -368,8 +368,9 @@ internal class JediTermSession(
             _title.value = printableRemoteText(windowTitle).trim().take(MAX_TITLE_CHARS).ifEmpty { null }
         }
 
+        // Inside Display a bare `selection` is this method, as a property.
         override fun getSelection(): TerminalSelection? =
-            selection?.let { TerminalSelection(Point(it.start.x, it.start.y), Point(it.end.x, it.end.y)) }
+            this@JediTermSession.selection?.let { TerminalSelection(Point(it.start.x, it.start.y), Point(it.end.x, it.end.y)) }
 
         override fun terminalMouseModeSet(mouseMode: MouseMode) {
             this.mouseMode = mouseMode

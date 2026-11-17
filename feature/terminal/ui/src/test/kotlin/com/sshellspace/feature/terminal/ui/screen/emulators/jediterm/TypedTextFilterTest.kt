@@ -36,4 +36,14 @@ class TypedTextFilterTest {
         now += 1_000_000_000L
         assertTrue(filter.accept(Source.InputMethod, "é"))
     }
+
+    @Test
+    fun `text arriving all three ways is sent once, and a repeated key still types twice`() {
+        assertTrue(filter.accept(Source.KeyDown, "a"))
+        assertFalse(filter.accept(Source.KeyTyped, "a"))
+        assertFalse(filter.accept(Source.InputMethod, "a"))
+        assertTrue(filter.accept(Source.KeyDown, "a"))
+        assertFalse(filter.accept(Source.KeyTyped, "a"))
+        assertFalse(filter.accept(Source.InputMethod, "a"))
+    }
 }

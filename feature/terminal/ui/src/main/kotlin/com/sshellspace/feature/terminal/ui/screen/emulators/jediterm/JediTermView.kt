@@ -111,7 +111,7 @@ internal fun JediTermView(session: JediTermSession, modifier: Modifier = Modifie
             .onPreviewKeyEvent { event ->
                 when (val action = keyAction(event, session::codeForKey)) {
                     is KeyAction.Send -> session.type(action.bytes)
-                    is KeyAction.Type -> if (typedText.accept(TypedTextFilter.Source.KeyTyped, action.text)) {
+                    is KeyAction.Type -> if (typedText.accept(action.source, action.text)) {
                         session.type(action.text)
                     }
                     KeyAction.Copy -> copy()

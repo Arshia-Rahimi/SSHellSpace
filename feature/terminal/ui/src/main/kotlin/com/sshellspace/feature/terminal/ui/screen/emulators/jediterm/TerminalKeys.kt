@@ -29,7 +29,7 @@ internal sealed interface KeyAction {
     data class Send(val bytes: ByteArray) : KeyAction
 
     /** Text typed with the key, which may also arrive from the input method. */
-    data class Type(val text: String) : KeyAction
+    data class Type(val text: String, val source: TypedTextFilter.Source) : KeyAction
     data object Copy : KeyAction
     data object Paste : KeyAction
 
@@ -91,13 +91,11 @@ internal fun keyAction(event: KeyEvent, codeForKey: (Int, Int) -> ByteArray?): K
         val control = ControlCodes[event.key] ?: return KeyAction.Pass
         return KeyAction.Send(if (event.isAltPressed) byteArrayOf(ESC, control) else byteArrayOf(control))
     }
+    val text = printableText(event) ?: return KeyAction.Ignore
     // Option on a Mac types accented letters and symbols, so it only works as Meta elsewhere.
-    if (event.isAltPressed && !isMac) {
-        val text = printableText(event) ?: return KeyAction.Ignore
-        return KeyAction.Send(byteArrayOf(ESC) + text.toByteArray(Charsets.UTF_8))
-    }
-    // Text arrives as a key-typed event or from the input method, after any dead key or composing has combined it.
-    return KeyAction.Ignore
+    if (event.isAltPressed && !isMac) return KeyAction.Send(byteArrayOf(ESC) + text.toByteArray(Charsets.UTF_8))
+    // A dead key has no text yet; what it combines into arrives as a key-typed event or from the input method.
+    return KeyAction.Type(text, TypedTextFilter.Source.KeyDown)
 }
 
 /**
@@ -106,7 +104,7 @@ internal fun keyAction(event: KeyEvent, codeForKey: (Int, Int) -> ByteArray?): K
  */
 private fun typedAction(event: KeyEvent): KeyAction {
     if (event.isCtrlPressed || event.isMetaPressed || event.isAltPressed && !isMac) return KeyAction.Ignore
-    return printableText(event)?.let { KeyAction.Type(it) } ?: KeyAction.Ignore
+    return printableText(event)?.let { KeyAction.Type(it, TypedTextFilter.Source.KeyTyped) } ?: KeyAction.Ignore
 }
 
 private fun printableText(event: KeyEvent): String? {
@@ -116,14 +114,14 @@ private fun printableText(event: KeyEvent): String? {
 }
 
 /**
- * Typed text can reach the terminal twice under Tao: as a key-typed event, and from the input method while the
- * terminal has an input session. Text that arrives one way shortly after the same text arrived the other way has
- * already been sent.
+ * Typed text can reach the terminal up to three times under Tao: with the key press, as a key-typed event, and from
+ * the input method while the terminal has an input session. Text that arrives one way shortly after the same text
+ * arrived another way has already been sent.
  */
 internal class TypedTextFilter(private val clock: () -> Long = System::nanoTime) {
-    enum class Source { KeyTyped, InputMethod }
+    enum class Source { KeyDown, KeyTyped, InputMethod }
 
-    private data class Arrival(val source: Source, val text: String, val time: Long)
+    private class Arrival(val text: String, val time: Long, val seenBy: MutableSet<Source>)
 
     private val recent = ArrayDeque<Arrival>()
 
@@ -131,12 +129,12 @@ internal class TypedTextFilter(private val clock: () -> Long = System::nanoTime)
     fun accept(source: Source, text: String): Boolean {
         val now = clock()
         while (recent.isNotEmpty() && now - recent.first().time > DUPLICATE_WINDOW_NANOS) recent.removeFirst()
-        val duplicate = recent.firstOrNull { it.source != source && it.text == text }
-        if (duplicate != null) {
-            recent.remove(duplicate)
+        val earlier = recent.firstOrNull { it.text == text && source !in it.seenBy }
+        if (earlier != null) {
+            earlier.seenBy += source
             return false
         }
-        recent.addLast(Arrival(source, text, now))
+        recent.addLast(Arrival(text, now, mutableSetOf(source)))
         return true
     }
 }
