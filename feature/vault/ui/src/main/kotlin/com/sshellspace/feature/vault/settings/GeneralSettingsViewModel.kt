@@ -41,7 +41,7 @@ class GeneralSettingsViewModel(
     private val shellDiscoveryService: ShellDiscoveryService,
     private val shortcutHandler: ShortcutHandler,
     private val appUpdater: AppUpdater,
-    /** Where installed shells are looked for. Tests pass their own, since resuming from another thread breaks theirs. */
+    /** Where shells are looked for and theme files read. Tests pass their own: resuming from another thread breaks theirs. */
     private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
     private val discoveredShells = MutableStateFlow<List<Shell>?>(null)
@@ -238,7 +238,7 @@ class GeneralSettingsViewModel(
         }
     }
 
-    private suspend fun readThemeFile(path: String): String = withContext(Dispatchers.IO) {
+    private suspend fun readThemeFile(path: String): String = withContext(ioDispatcher) {
         val file = File(path)
         if (file.length() > MAX_THEME_FILE_BYTES) throw IOException("it's too large to be a theme")
         file.readText()
