@@ -18,6 +18,7 @@ compose-icons = "2.2.1"
 compose-unstyled = "2.10.2"
 pty4j = "0.14.0"
 bossterm = "1.2.184"
+jediterm = "3.76"
 lifecycle = "2.11.0"
 mina = "2.20.1"
 bouncy-castle = "1.86"
@@ -82,6 +83,8 @@ nucleus-updater = { module = "dev.nucleusframework:nucleus.updater-runtime", ver
 #bossterm
 bossterm-compose = { module = "com.risaboss:bossterm-compose", version.ref = "bossterm"}
 bossterm-core = { module = "com.risaboss:bossterm-core", version.ref = "bossterm"}
+#jediterm
+jediterm-core = { module = "org.jetbrains.jediterm:jediterm-core", version.ref = "jediterm" }
 #mina
 mina-common = { module = "org.apache.sshd:sshd-common", version.ref = "mina" }
 mina-sftp = { module = "org.apache.sshd:sshd-sftp", version.ref = "mina" }

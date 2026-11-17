@@ -5,6 +5,7 @@ import com.sshellspace.feature.terminal.domain.SshShellHandle
 import com.sshellspace.feature.terminal.domain.models.Shell
 import com.sshellspace.feature.terminal.domain.models.TerminalEmulator
 import com.sshellspace.feature.terminal.ui.screen.emulators.bossterm.BossTermFactory
+import com.sshellspace.feature.terminal.ui.screen.emulators.jediterm.JediTermFactory
 
 /** Makes the terminals of one [TerminalEmulator], so the tabs don't depend on which one the user picked. */
 interface TerminalFactory {
@@ -29,9 +30,11 @@ interface TerminalFactory {
 val TerminalEmulator.factory: TerminalFactory
     get() = when (this) {
         TerminalEmulator.BossTerm -> BossTermFactory
+        TerminalEmulator.JediTerm -> JediTermFactory
     }
 
 val TerminalEmulator.label: String
     get() = when (this) {
         TerminalEmulator.BossTerm -> "BossTerm"
+        TerminalEmulator.JediTerm -> "JediTerm"
     }
