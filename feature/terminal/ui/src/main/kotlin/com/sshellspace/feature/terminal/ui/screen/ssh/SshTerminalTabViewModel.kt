@@ -94,6 +94,7 @@ class SshTerminalTabViewModel(
     private var connectJob: Job? = null
     private var retryJob: Job? = null
     private var terminal: Terminal? = null
+    private var titleJob: Job? = null
 
     /** How many automatic attempts have run since the connection dropped. 0 when none are under way. */
     private var retryAttempt = 0
@@ -195,6 +196,9 @@ class SshTerminalTabViewModel(
         )
         terminal = attached
         tabController.setTextInput(attached::sendText)
+        titleJob = viewModelScope.launch {
+            attached.title.collect { tabController.setTitle(it ?: result.connection.name) }
+        }
         return attached
     }
 
@@ -269,6 +273,9 @@ class SshTerminalTabViewModel(
 
     private fun releaseTerminal() {
         tabController.setTextInput(null)
+        titleJob?.cancel()
+        // The program that set the title has gone with the terminal.
+        if (terminal?.title?.value != null) tabController.setTitle(params.title)
         terminal?.clear()
         terminal = null
     }

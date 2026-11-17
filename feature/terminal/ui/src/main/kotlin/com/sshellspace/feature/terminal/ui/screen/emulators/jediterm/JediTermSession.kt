@@ -10,6 +10,7 @@ import com.jediterm.core.compatibility.Point
 import com.jediterm.core.input.MouseEvent
 import com.jediterm.core.util.TermSize
 import com.jediterm.terminal.CursorShape
+import com.jediterm.terminal.HyperlinkStyle
 import com.jediterm.terminal.RequestOrigin
 import com.jediterm.terminal.TerminalColor
 import com.jediterm.terminal.TerminalDisplay
@@ -26,7 +27,14 @@ import com.jediterm.terminal.model.SelectionUtil
 import com.jediterm.terminal.model.StyleState
 import com.jediterm.terminal.model.TerminalSelection
 import com.jediterm.terminal.model.TerminalTextBuffer
+import com.jediterm.terminal.model.hyperlinks.LinkInfo
+import com.jediterm.terminal.model.hyperlinks.LinkResult
+import com.jediterm.terminal.model.hyperlinks.LinkResultItem
+import com.sshellspace.feature.terminal.domain.printableRemoteText
+import com.sshellspace.feature.terminal.ui.screen.emulators.bossterm.browserUri
+import com.sshellspace.feature.terminal.ui.screen.emulators.bossterm.openInBrowser
 import java.io.IOException
+import java.net.URI
 import kotlin.concurrent.thread
 import kotlin.math.max
 import kotlin.math.min
@@ -38,6 +46,8 @@ import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
@@ -45,6 +55,7 @@ private const val MAX_HISTORY_LINES = 10_000
 private const val INITIAL_COLUMNS = 80
 private const val INITIAL_ROWS = 24
 private const val ESC = '\u001b'
+private const val MAX_TITLE_CHARS = 120
 
 /** A cell on the screen or in the scrollback: [y] counts lines from the top of the screen, negative in history. */
 internal data class Cell(val x: Int, val y: Int)
@@ -76,6 +87,7 @@ internal class JediTermSession(
     private val process: ShellProcess,
     private val startupCommand: String? = null,
     private val onExit: ((Int) -> Unit)? = null,
+    private val openLink: (URI) -> Unit = ::openInBrowser,
 ) {
     /** The colors in use, which the view keeps up to date. The emulator reads them to answer color queries. */
     @Volatile
@@ -123,6 +135,14 @@ internal class JediTermSession(
     val isCursorVisible: Boolean get() = display.showsCursor
     val cursorShape: CursorShape? get() = display.shape
 
+    /** Whether the cursor blinks: unless the program asked for a steady one, as xterm's default cursor does. */
+    val cursorBlinks: Boolean get() = display.shape?.isBlinking ?: true
+
+    private val _title = MutableStateFlow<String?>(null)
+
+    /** The title the program set, such as vim's file name, made safe to show. Null when it set none. */
+    val title: StateFlow<String?> = _title
+
     /** Whether the program has asked for mouse events, as tmux and vim do with mouse support on. */
     val isMouseReporting: Boolean get() = display.mouseMode != MouseMode.MOUSE_REPORTING_NONE
     val isUsingAlternateBuffer: Boolean get() = textBuffer.isUsingAlternateBuffer
@@ -133,6 +153,10 @@ internal class JediTermSession(
             override fun sendString(string: String, userInput: Boolean) = send(string.toByteArray(Charsets.UTF_8))
         })
         textBuffer.addModelListener { markChanged() }
+        // OSC 8 links. Only web links are kept, for the same reason as clicked text: see handleTerminalLink.
+        terminal.setUrlHyperlinkFilter { uri ->
+            browserUri(uri)?.let { target -> LinkResult(LinkResultItem(0, uri.length, LinkInfo { openLink(target) })) }
+        }
         scope.launch {
             try {
                 for (bytes in input) process.write(bytes)
@@ -198,6 +222,11 @@ internal class JediTermSession(
     /** Scrolls the view [lines] further into the scrollback, or back towards the screen when negative. */
     fun scrollBy(lines: Int) {
         scrollOffset = (scrollOffset + lines).coerceIn(0, textBuffer.historyLinesCount)
+    }
+
+    /** The OSC 8 link on [cell], if the program printed one there. */
+    fun linkAt(cell: Cell): LinkInfo? = locked {
+        (textBuffer.getLine(cell.y).getStyleAt(cell.x) as? HyperlinkStyle)?.linkInfo
     }
 
     fun selectedText(): String? {
@@ -335,6 +364,8 @@ internal class JediTermSession(
 
         override fun setWindowTitle(windowTitle: String) {
             title = windowTitle
+            // A server sets this, so it can't bring control or direction characters into the tab strip.
+            _title.value = printableRemoteText(windowTitle).trim().take(MAX_TITLE_CHARS).ifEmpty { null }
         }
 
         override fun getSelection(): TerminalSelection? =

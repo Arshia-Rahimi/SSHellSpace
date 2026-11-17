@@ -7,6 +7,7 @@ import com.sshellspace.feature.terminal.domain.SshShellHandle
 import com.sshellspace.feature.terminal.domain.models.Shell
 import com.sshellspace.feature.terminal.ui.screen.emulators.Terminal
 import com.sshellspace.feature.terminal.ui.screen.emulators.TerminalFactory
+import kotlinx.coroutines.flow.StateFlow
 
 /** A terminal drawn by JediTerm's emulator. Clearing it ends the program it shows. */
 internal class JediTermTerminal(private val session: JediTermSession) : Terminal {
@@ -19,6 +20,8 @@ internal class JediTermTerminal(private val session: JediTermSession) : Terminal
 
     @Composable
     override fun content(modifier: Modifier) = JediTermView(session, modifier)
+
+    override val title: StateFlow<String?> get() = session.title
 }
 
 internal object JediTermFactory : TerminalFactory {

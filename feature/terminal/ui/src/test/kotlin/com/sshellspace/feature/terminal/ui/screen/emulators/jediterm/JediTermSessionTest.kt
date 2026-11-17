@@ -1,5 +1,6 @@
 package com.sshellspace.feature.terminal.ui.screen.emulators.jediterm
 
+import java.net.URI
 import java.util.Base64
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.TimeUnit
@@ -41,8 +42,10 @@ class JediTermSessionTest {
         session?.close()
     }
 
+    private val opened = CopyOnWriteArrayList<URI>()
+
     private fun start(startupCommand: String? = null, onExit: ((Int) -> Unit)? = null) =
-        JediTermSession(process, startupCommand, onExit).also { session = it }
+        JediTermSession(process, startupCommand, onExit, openLink = { opened += it }).also { session = it }
 
     private fun waitUntil(condition: () -> Boolean) {
         val deadline = System.nanoTime() + TimeUnit.MILLISECONDS.toNanos(WAIT_MILLIS)
@@ -159,5 +162,36 @@ class JediTermSessionTest {
 
         assertEquals("line\nsec", session.selectedText())
         assertEquals(Selection(Cell(0, 1), Cell(6, 1)), session.wordAt(Cell(2, 1)))
+    }
+
+    @Test
+    fun `the program's title is kept, without characters that could disguise it`() {
+        val session = start()
+        process.output.trySend("\u001b]2;vim \u202Etxt.exe\u0007")
+
+        waitUntil { session.title.value != null }
+        assertEquals("vim \uFFFDtxt.exe", session.title.value)
+    }
+
+    @Test
+    fun `an OSC 8 web link opens when clicked, and other schemes aren't links`() {
+        val session = start()
+        process.output.trySend("\u001b]8;;https://example.com/docs\u0007docs\u001b]8;;\u0007 ")
+        process.output.trySend("\u001b]8;;file:///etc/passwd\u0007file\u001b]8;;\u0007")
+        waitUntil { session.screenLine(0) == "docs file" }
+
+        session.linkAt(Cell(1, 0))?.navigate()
+
+        assertEquals(listOf(URI("https://example.com/docs")), opened.toList())
+        assertEquals(null, session.linkAt(Cell(6, 0)))
+    }
+
+    @Test
+    fun `the cursor blinks unless the program asks for a steady one`() {
+        val session = start()
+        assertTrue(session.cursorBlinks)
+
+        process.output.trySend("\u001b[2 q")
+        waitUntil { !session.cursorBlinks }
     }
 }

@@ -25,31 +25,44 @@ import kotlin.math.roundToInt
 
 private const val SCROLLBACK_LINES_PER_STEP = 3
 private const val MULTI_CLICK_MILLIS = 400L
+private const val AUTO_SCROLL_MILLIS = 50L
 private val UrlPattern = Regex("""https?://[^\s<>"'`]+""")
 private val isMac = getOs() == OS.MacOS
 
-/** Where the pointer is: the cell under it, and the cell boundary nearest it, which is where a selection starts. */
-private data class PointerCell(val column: Int, val row: Int, val boundary: Int)
+/**
+ * Where the pointer is: the cell under it, and the cell boundary nearest it, which is where a selection starts.
+ * [edge] is -1 above the terminal, 1 below it and 0 over it.
+ */
+private data class PointerCell(val column: Int, val row: Int, val boundary: Int, val edge: Int = 0)
 
 /**
  * The terminal's mouse handling. While the program asks for the mouse, as tmux and vim do with mouse support on,
  * clicks, drags and the wheel go to it, and holding Shift selects text instead. Otherwise dragging selects (a double
- * click selects a word, a triple click a line), the wheel scrolls back through the output, and Cmd-click (Ctrl-click
- * off macOS) opens a web link.
+ * click selects a word, a triple click a line, and dragging past the top or bottom scrolls), the wheel scrolls back
+ * through the output, the middle button calls [onMiddleClick], and Cmd-click (Ctrl-click off macOS) opens a web link.
  */
 internal fun Modifier.terminalPointer(
     session: JediTermSession,
     fonts: TerminalFonts,
     keyboardModifiers: () -> PointerKeyboardModifiers,
     onPress: () -> Unit,
+    onMiddleClick: () -> Unit,
 ): Modifier = pointerInput(session, fonts) {
-    val pointer = PointerState(session)
+    val pointer = PointerState(session, onMiddleClick)
     awaitPointerEventScope {
         while (true) {
-            val event = awaitPointerEvent()
-            val change = event.changes.firstOrNull() ?: continue
             val columns = (size.width / fonts.cellWidth).toInt().coerceAtLeast(1)
             val rows = (size.height / fonts.cellHeight).toInt().coerceAtLeast(1)
+            // A selection dragged past the top or bottom keeps scrolling while the pointer stays there.
+            val event = if (pointer.isDraggingPastEdge) {
+                withTimeoutOrNull(AUTO_SCROLL_MILLIS) { awaitPointerEvent() } ?: run {
+                    pointer.autoScroll(rows)
+                    null
+                }
+            } else {
+                awaitPointerEvent()
+            }
+            val change = event?.changes?.firstOrNull() ?: continue
             val cell = cellAt(change.position, fonts, columns, rows)
             val keys = keyboardModifiers()
             when (event.type) {
@@ -71,9 +84,14 @@ private fun cellAt(position: Offset, fonts: TerminalFonts, columns: Int, rows: I
     column = (position.x / fonts.cellWidth).toInt().coerceIn(0, columns - 1),
     row = (position.y / fonts.cellHeight).toInt().coerceIn(0, rows - 1),
     boundary = (position.x / fonts.cellWidth).roundToInt().coerceIn(0, columns),
+    edge = when {
+        position.y < 0 -> -1
+        position.y >= rows * fonts.cellHeight -> 1
+        else -> 0
+    },
 )
 
-private class PointerState(private val session: JediTermSession) {
+private class PointerState(private val session: JediTermSession, private val onMiddleClick: () -> Unit) {
     /** The button whose press went to the program, so its drags and release go there too. */
     private var reportedButton = MouseButtonCodes.NONE
     private var anchor: Cell? = null
@@ -81,6 +99,18 @@ private class PointerState(private val session: JediTermSession) {
     private var lastClickTime = 0L
     private var lastClickCell: PointerCell? = null
     private var scrollRemainder = 0f
+    private var lastDragCell: PointerCell? = null
+
+    val isDraggingPastEdge: Boolean get() = anchor != null && (lastDragCell?.edge ?: 0) != 0
+
+    /** Scrolls a line towards the edge the selection was dragged past, and extends the selection with it. */
+    fun autoScroll(rows: Int) {
+        val selectionAnchor = anchor ?: return
+        val cell = lastDragCell ?: return
+        session.scrollBy(-cell.edge)
+        val row = if (cell.edge < 0) 0 else rows - 1
+        session.selection = Selection(selectionAnchor, Cell(cell.boundary, row - session.scrollOffset))
+    }
 
     @OptIn(ExperimentalComposeUiApi::class)
     fun press(event: PointerEvent, cell: PointerCell, keys: PointerKeyboardModifiers, columns: Int) {
@@ -89,6 +119,10 @@ private class PointerState(private val session: JediTermSession) {
             session.mouse(cell.column, cell.row, MouseEvent(MouseEvent.Type.PRESSED, button, flagsOf(keys)))
         ) {
             reportedButton = button
+            return
+        }
+        if (event.button == PointerButton.Tertiary) {
+            onMiddleClick()
             return
         }
         if (event.button != PointerButton.Primary) return
@@ -115,8 +149,10 @@ private class PointerState(private val session: JediTermSession) {
                 cell.row,
                 MouseEvent(MouseEvent.Type.DRAGGED, reportedButton, flagsOf(keys)),
             )
-            selectionAnchor != null ->
+            selectionAnchor != null -> {
+                lastDragCell = cell
                 session.selection = Selection(selectionAnchor, Cell(cell.boundary, cell.row - session.scrollOffset))
+            }
             isReporting(keys) -> session.mouse(
                 cell.column,
                 cell.row,
@@ -131,6 +167,7 @@ private class PointerState(private val session: JediTermSession) {
             reportedButton = MouseButtonCodes.NONE
         }
         anchor = null
+        lastDragCell = null
     }
 
     /**
@@ -156,6 +193,10 @@ private class PointerState(private val session: JediTermSession) {
 
     private fun openLinkAt(cell: PointerCell): Boolean {
         val line = cell.row - session.scrollOffset
+        session.linkAt(Cell(cell.column, line))?.let { link ->
+            link.navigate()
+            return true
+        }
         val text = session.locked { session.textBuffer.getLine(line).text }
         val url = UrlPattern.findAll(text).firstOrNull { cell.column in it.range }?.value?.trimEnd('.', ',', ')', ';')
         val uri = url?.let(::browserUri) ?: return false

@@ -19,12 +19,17 @@ private const val ESC: Byte = 0x1b
 private const val CTRL_SPACE: Byte = 0
 private const val CTRL_CARET: Byte = 0x1e
 private const val CTRL_UNDERSCORE: Byte = 0x1f
+private const val CHAR_UNDEFINED = 0xFFFF
+private const val DUPLICATE_WINDOW_NANOS = 150_000_000L
 
 private val isMac = getOs() == OS.MacOS
 
 /** What a key press in the terminal does. */
 internal sealed interface KeyAction {
     data class Send(val bytes: ByteArray) : KeyAction
+
+    /** Text typed with the key, which may also arrive from the input method. */
+    data class Type(val text: String) : KeyAction
     data object Copy : KeyAction
     data object Paste : KeyAction
 
@@ -73,6 +78,7 @@ private val ControlCodes: Map<Key, Byte> = listOf(
  * Elsewhere Ctrl+Shift+C and Ctrl+Shift+V do, since Ctrl+C has to interrupt.
  */
 internal fun keyAction(event: KeyEvent, codeForKey: (Int, Int) -> ByteArray?): KeyAction {
+    if (event.type == KeyEventType.Unknown) return typedAction(event)
     if (event.type != KeyEventType.KeyDown) return KeyAction.Ignore
     if (event.key in ModifierKeys) return KeyAction.Ignore
     clipboardAction(event)?.let { return it }
@@ -85,11 +91,54 @@ internal fun keyAction(event: KeyEvent, codeForKey: (Int, Int) -> ByteArray?): K
         val control = ControlCodes[event.key] ?: return KeyAction.Pass
         return KeyAction.Send(if (event.isAltPressed) byteArrayOf(ESC, control) else byteArrayOf(control))
     }
-    val codePoint = event.utf16CodePoint
-    if (codePoint <= 0 || Character.isISOControl(codePoint)) return KeyAction.Ignore
-    val text = String(Character.toChars(codePoint)).toByteArray(Charsets.UTF_8)
     // Option on a Mac types accented letters and symbols, so it only works as Meta elsewhere.
-    return KeyAction.Send(if (event.isAltPressed && !isMac) byteArrayOf(ESC) + text else text)
+    if (event.isAltPressed && !isMac) {
+        val text = printableText(event) ?: return KeyAction.Ignore
+        return KeyAction.Send(byteArrayOf(ESC) + text.toByteArray(Charsets.UTF_8))
+    }
+    // Text arrives as a key-typed event or from the input method, after any dead key or composing has combined it.
+    return KeyAction.Ignore
+}
+
+/**
+ * A key-typed event: the text a key, a dead key sequence or the input method produced. Not while Ctrl, Cmd or (off
+ * macOS) Alt is held, since the key press already sent what those mean.
+ */
+private fun typedAction(event: KeyEvent): KeyAction {
+    if (event.isCtrlPressed || event.isMetaPressed || event.isAltPressed && !isMac) return KeyAction.Ignore
+    return printableText(event)?.let { KeyAction.Type(it) } ?: KeyAction.Ignore
+}
+
+private fun printableText(event: KeyEvent): String? {
+    val codePoint = event.utf16CodePoint
+    if (codePoint <= 0 || Character.isISOControl(codePoint) || codePoint == CHAR_UNDEFINED) return null
+    return String(Character.toChars(codePoint))
+}
+
+/**
+ * Typed text can reach the terminal twice under Tao: as a key-typed event, and from the input method while the
+ * terminal has an input session. Text that arrives one way shortly after the same text arrived the other way has
+ * already been sent.
+ */
+internal class TypedTextFilter(private val clock: () -> Long = System::nanoTime) {
+    enum class Source { KeyTyped, InputMethod }
+
+    private data class Arrival(val source: Source, val text: String, val time: Long)
+
+    private val recent = ArrayDeque<Arrival>()
+
+    /** Whether [text] from [source] should be sent. */
+    fun accept(source: Source, text: String): Boolean {
+        val now = clock()
+        while (recent.isNotEmpty() && now - recent.first().time > DUPLICATE_WINDOW_NANOS) recent.removeFirst()
+        val duplicate = recent.firstOrNull { it.source != source && it.text == text }
+        if (duplicate != null) {
+            recent.remove(duplicate)
+            return false
+        }
+        recent.addLast(Arrival(source, text, now))
+        return true
+    }
 }
 
 private fun clipboardAction(event: KeyEvent): KeyAction? {

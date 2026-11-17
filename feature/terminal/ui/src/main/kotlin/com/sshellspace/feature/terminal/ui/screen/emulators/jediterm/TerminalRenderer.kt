@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import com.jediterm.terminal.CursorShape
+import com.jediterm.terminal.HyperlinkStyle
 import com.jediterm.terminal.TextStyle
 import com.jediterm.terminal.model.TerminalLine
 import com.jediterm.terminal.util.CharUtils
@@ -31,7 +32,19 @@ internal class TerminalRenderer(private val fonts: TerminalFonts) {
     private var runColor = Color.Unspecified
     private var runFont: Font? = null
 
-    fun draw(scope: DrawScope, session: JediTermSession, palette: TerminalPalette, focused: Boolean) = with(scope) {
+    /**
+     * Draws the screen, with the cursor when [cursorOn] (it blinks off otherwise) and what the input method is
+     * [composing] over the cursor.
+     */
+    @Suppress("LongParameterList")
+    fun draw(
+        scope: DrawScope,
+        session: JediTermSession,
+        palette: TerminalPalette,
+        focused: Boolean,
+        cursorOn: Boolean,
+        composing: String,
+    ) = with(scope) {
         drawRect(palette.background)
         val rows = (size.height / fonts.cellHeight).toInt() + 1
         session.locked {
@@ -44,8 +57,12 @@ internal class TerminalRenderer(private val fonts: TerminalFonts) {
                 drawLine(buffer.getLine(index), index, row * fonts.cellHeight, palette, selection)
             }
             val cursorRow = session.cursorY + offset
-            if (session.isCursorVisible && cursorRow in 0 until rows && session.cursorY < buffer.height) {
-                drawCursor(session, buffer.getLine(session.cursorY), cursorRow, palette, focused)
+            if (cursorRow in 0 until rows && session.cursorY < buffer.height) {
+                when {
+                    composing.isNotEmpty() -> drawComposing(composing, session.cursorX, cursorRow, palette)
+                    session.isCursorVisible && cursorOn ->
+                        drawCursor(session, buffer.getLine(session.cursorY), cursorRow, palette, focused)
+                }
             }
         }
     }
@@ -64,7 +81,8 @@ internal class TerminalRenderer(private val fonts: TerminalFonts) {
             val style = entry.style
             val colors = palette.colorsOf(style)
             val font = fonts.font(style.hasOption(TextStyle.Option.BOLD), style.hasOption(TextStyle.Option.ITALIC))
-            val underlined = style.hasOption(TextStyle.Option.UNDERLINED)
+            // OSC 8 links are underlined, so a link looks like one whatever its text says.
+            val underlined = style.hasOption(TextStyle.Option.UNDERLINED) || style is HyperlinkStyle
             val text = entry.text
             var i = 0
             while (i < text.length) {
@@ -138,6 +156,27 @@ internal class TerminalRenderer(private val fonts: TerminalFonts) {
             Offset(cell * fonts.cellWidth, baseline + fonts.underlineOffset),
             Size(fonts.cellWidth, fonts.underlineThickness),
         )
+    }
+
+    /** Text the input method hasn't committed yet, underlined over the cells it will take. */
+    private fun DrawScope.drawComposing(text: String, column: Int, row: Int, palette: TerminalPalette) {
+        val canvas = drawContext.canvas.nativeCanvas
+        val top = row * fonts.cellHeight
+        val baseline = top + fonts.ascent
+        var cell = column
+        var index = 0
+        while (index < text.length) {
+            val codePoint = text.codePointAt(index)
+            val width = if (CharUtils.isDoubleWidthCharacter(codePoint, false)) 2 else 1
+            val left = cell * fonts.cellWidth
+            drawRect(palette.background, Offset(left, top), Size(width * fonts.cellWidth, fonts.cellHeight))
+            paint.color = palette.foreground.toArgb()
+            val font = fonts.fontFor(codePoint, bold = false, italic = false) ?: fonts.font(bold = false, italic = false)
+            canvas.drawString(String(Character.toChars(codePoint)), left, baseline, font, paint)
+            repeat(width) { drawUnderline(cell + it, baseline, palette.cursor) }
+            cell += width
+            index += Character.charCount(codePoint)
+        }
     }
 
     private fun DrawScope.drawCursor(
