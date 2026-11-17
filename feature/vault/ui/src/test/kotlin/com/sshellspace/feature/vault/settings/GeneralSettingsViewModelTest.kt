@@ -60,8 +60,10 @@ class GeneralSettingsViewModelTest {
         every { bindings } returns MutableStateFlow(emptyMap())
     }
 
+    private val dispatcher = UnconfinedTestDispatcher()
+
     @BeforeTest
-    fun setUp() = Dispatchers.setMain(UnconfinedTestDispatcher())
+    fun setUp() = Dispatchers.setMain(dispatcher)
 
     @AfterTest
     fun tearDown() = Dispatchers.resetMain()
@@ -72,6 +74,7 @@ class GeneralSettingsViewModelTest {
         mockk<ShellDiscoveryService>(relaxed = true),
         shortcutHandler,
         appUpdater,
+        ioDispatcher = dispatcher,
     )
 
     @Test
