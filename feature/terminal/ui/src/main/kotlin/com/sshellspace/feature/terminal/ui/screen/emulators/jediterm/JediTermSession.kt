@@ -8,6 +8,8 @@ import androidx.compose.ui.graphics.toArgb
 import com.jediterm.core.Color as JediColor
 import com.jediterm.core.compatibility.Point
 import com.jediterm.core.input.MouseEvent
+import com.jediterm.core.input.InputEvent
+import com.jediterm.core.input.KeyEvent as VK
 import com.jediterm.core.util.TermSize
 import com.jediterm.terminal.CursorShape
 import com.jediterm.terminal.HyperlinkStyle
@@ -56,6 +58,7 @@ private const val INITIAL_COLUMNS = 80
 private const val INITIAL_ROWS = 24
 private const val ESC = '\u001b'
 private const val MAX_TITLE_CHARS = 120
+private const val TAB: Byte = 0x09
 
 /** A cell on the screen or in the scrollback: [y] counts lines from the top of the screen, negative in history. */
 internal data class Cell(val x: Int, val y: Int)
@@ -194,7 +197,18 @@ internal class JediTermSession(
     fun type(text: String) = type(text.toByteArray(Charsets.UTF_8))
 
     /** The escape sequence a special key sends in the current mode, such as an arrow key in vim. */
-    fun codeForKey(keyCode: Int, modifiers: Int): ByteArray? = terminal.getCodeForKey(keyCode, modifiers)
+    fun codeForKey(keyCode: Int, modifiers: Int): ByteArray? =
+        terminal.getCodeForKey(keyCode, modifiers) ?: plainKeyCode(keyCode, modifiers)
+
+    // JediTerm's Swing UI sends Esc and Tab as typed characters, so its encoder has no code for them.
+    private fun plainKeyCode(keyCode: Int, modifiers: Int): ByteArray? {
+        val code = when (keyCode) {
+            VK.VK_ESCAPE -> ESC.code.toByte()
+            VK.VK_TAB -> TAB
+            else -> return null
+        }
+        return if (modifiers and InputEvent.ALT_DOWN_MASK != 0) byteArrayOf(ESC.code.toByte(), code) else byteArrayOf(code)
+    }
 
     /**
      * Sends [text] as a paste. Line breaks become Enter, as typed. When the program asked for bracketed paste, as

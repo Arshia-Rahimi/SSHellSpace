@@ -205,4 +205,18 @@ class JediTermSessionTest {
         waitUntil { process.sizes.lastOrNull() == (132 to 50) }
         session.locked { assertEquals(132, session.textBuffer.width) }
     }
+
+    @Test
+    fun `escape and tab have codes, which JediTerm's own encoder lacks`() {
+        val session = start()
+        val vk = com.jediterm.core.input.KeyEvent::class.java
+        val missing = vk.fields.filter { it.name.startsWith("VK_") }
+            .filter { session.codeForKey(it.getInt(null), 0) == null }
+            .map { it.name }
+        assertEquals(emptyList(), missing)
+        assertEquals("\u001b", session.codeForKey(com.jediterm.core.input.KeyEvent.VK_ESCAPE, 0)?.decodeToString())
+        assertEquals("\t", session.codeForKey(com.jediterm.core.input.KeyEvent.VK_TAB, 0)?.decodeToString())
+        val alt = com.jediterm.core.input.InputEvent.ALT_DOWN_MASK
+        assertEquals("\u001b\u001b", session.codeForKey(com.jediterm.core.input.KeyEvent.VK_ESCAPE, alt)?.decodeToString())
+    }
 }
