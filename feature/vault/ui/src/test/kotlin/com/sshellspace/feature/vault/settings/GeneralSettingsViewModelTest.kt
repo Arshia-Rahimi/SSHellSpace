@@ -153,7 +153,7 @@ class GeneralSettingsViewModelTest {
     fun `the terminal emulator is shown and saved`() = runTest {
         val viewModel = viewModel()
 
-        assertEquals(TerminalEmulator.BossTerm, viewModel.uiState.value.terminalEmulator)
+        assertEquals(TerminalEmulator.JediTerm, viewModel.uiState.value.terminalEmulator)
         viewModel.execute(GeneralSettingsAction.SetTerminalEmulator(TerminalEmulator.BossTerm))
 
         coVerify { terminalPreferences.set(UpdateTerminalPreferences(defaultTerminalEmulator = TerminalEmulator.BossTerm)) }
