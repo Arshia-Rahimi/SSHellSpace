@@ -16,7 +16,7 @@ import com.sshellspace.feature.terminal.domain.SshShellHandle
 import com.sshellspace.feature.terminal.domain.TerminalPreferencesRepository
 import com.sshellspace.feature.terminal.domain.models.SshTerminalParams
 import com.sshellspace.feature.terminal.ui.screen.emulators.Terminal
-import com.sshellspace.feature.terminal.ui.screen.emulators.bossterm.BossTermSshTerminal
+import com.sshellspace.feature.terminal.ui.screen.emulators.factory
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineDispatcher
@@ -76,8 +76,12 @@ class SshTerminalTabViewModel(
     private val connectionService: SshConnectionService,
     private val terminalPreferences: TerminalPreferencesRepository,
     private val vaultManager: VaultManager,
+    /** Uses the emulator picked in Settings at each (re)connect. */
     private val createTerminal: (ShellSession.Ssh, SshShellHandle, String?, (Int) -> Unit, (String) -> Unit) -> Terminal =
-        ::BossTermSshTerminal,
+        { session, shell, startupCommand, onExit, onShellError ->
+            terminalPreferences.get().value.defaultTerminalEmulator.factory
+                .ssh(session, shell, startupCommand, onExit, onShellError)
+        },
     /** Where the shell is opened. MINA blocks the thread until the server answers. */
     private val shellDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel(), SshPrompter {

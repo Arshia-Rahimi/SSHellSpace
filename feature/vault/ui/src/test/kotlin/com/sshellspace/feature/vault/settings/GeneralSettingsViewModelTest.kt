@@ -10,6 +10,8 @@ import com.sshellspace.core.ui.shortcuts.ShortcutHandler
 import com.sshellspace.feature.terminal.domain.ShellDiscoveryService
 import com.sshellspace.feature.terminal.domain.TerminalPreferencesRepository
 import com.sshellspace.feature.terminal.domain.models.TerminalPreferences
+import com.sshellspace.feature.terminal.domain.models.UpdateTerminalPreferences
+import com.sshellspace.feature.terminal.domain.models.TerminalEmulator
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -145,6 +147,16 @@ class GeneralSettingsViewModelTest {
         val error = viewModel.uiState.first { it.terminalThemeImportError != null }.terminalThemeImportError.orEmpty()
         assertContains(error, "no red color")
         coVerify(exactly = 0) { terminalPreferences.setTerminalThemeName(any()) }
+    }
+
+    @Test
+    fun `the terminal emulator is shown and saved`() = runTest {
+        val viewModel = viewModel()
+
+        assertEquals(TerminalEmulator.BossTerm, viewModel.uiState.value.terminalEmulator)
+        viewModel.execute(GeneralSettingsAction.SetTerminalEmulator(TerminalEmulator.BossTerm))
+
+        coVerify { terminalPreferences.set(UpdateTerminalPreferences(defaultTerminalEmulator = TerminalEmulator.BossTerm)) }
     }
 
     @Test

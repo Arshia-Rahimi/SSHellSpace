@@ -5,6 +5,7 @@ import com.sshellspace.core.domain.models.ThemePreference
 import com.sshellspace.core.ui.designsystem.theme.AppColorScheme
 import com.sshellspace.core.ui.shortcuts.AppShortcut
 import com.sshellspace.feature.terminal.domain.models.Shell
+import com.sshellspace.feature.terminal.domain.models.TerminalEmulator
 
 sealed interface GeneralSettingsAction {
     data class SetTheme(val value: ThemePreference) : GeneralSettingsAction
@@ -19,6 +20,7 @@ sealed interface GeneralSettingsAction {
     /** Imports terminal colors from the file at [path] and switches the terminal to them. */
     data class ImportTerminalTheme(val path: String) : GeneralSettingsAction
     data class RemoveTerminalTheme(val name: String) : GeneralSettingsAction
+    data class SetTerminalEmulator(val value: TerminalEmulator) : GeneralSettingsAction
     data class SetDefaultShell(val value: Shell) : GeneralSettingsAction
     data class SetAutoReconnect(val enabled: Boolean) : GeneralSettingsAction
     data class SetRestoreTabs(val enabled: Boolean) : GeneralSettingsAction

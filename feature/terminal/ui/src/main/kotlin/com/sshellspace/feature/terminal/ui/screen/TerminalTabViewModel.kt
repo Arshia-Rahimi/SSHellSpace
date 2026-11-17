@@ -5,7 +5,7 @@ import com.sshellspace.core.ui.tabs.TabController
 import com.sshellspace.feature.terminal.domain.TerminalPreferencesRepository
 import com.sshellspace.feature.terminal.domain.models.Shell
 import com.sshellspace.feature.terminal.ui.screen.emulators.Terminal
-import com.sshellspace.feature.terminal.ui.screen.emulators.bossterm.BossTermTerminal
+import com.sshellspace.feature.terminal.ui.screen.emulators.factory
 
 class TerminalTabViewModel(
     private val tabController: TabController,
@@ -14,7 +14,8 @@ class TerminalTabViewModel(
 ) : ViewModel() {
     private val terminalPrefs = terminalPreferencesRepository.get().value
 
-    val terminal: Terminal = BossTermTerminal(shell)
+    // Picked once: changing the setting only affects tabs opened afterwards.
+    val terminal: Terminal = terminalPrefs.defaultTerminalEmulator.factory.local(shell)
 
     init {
         tabController.setTextInput(terminal::sendText)
