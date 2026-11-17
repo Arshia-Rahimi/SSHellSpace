@@ -16,6 +16,7 @@ import com.sshellspace.feature.terminal.domain.models.UpdateTerminalPreferences
 import com.sshellspace.feature.terminal.ui.screen.emulators.bossterm.terminalThemeChoices
 import java.io.File
 import java.io.IOException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -40,6 +41,8 @@ class GeneralSettingsViewModel(
     private val shellDiscoveryService: ShellDiscoveryService,
     private val shortcutHandler: ShortcutHandler,
     private val appUpdater: AppUpdater,
+    /** Where installed shells are looked for. Tests pass their own, since resuming from another thread breaks theirs. */
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO,
 ) : ViewModel() {
     private val discoveredShells = MutableStateFlow<List<Shell>?>(null)
     private val recording = MutableStateFlow<ShortcutRecording?>(null)
@@ -125,7 +128,7 @@ class GeneralSettingsViewModel(
 
     init {
         viewModelScope.launch {
-            val shells = withContext(Dispatchers.IO) {
+            val shells = withContext(ioDispatcher) {
                 runCatching { shellDiscoveryService.discover() }.getOrDefault(emptyList())
             }
             discoveredShells.update { shells }
