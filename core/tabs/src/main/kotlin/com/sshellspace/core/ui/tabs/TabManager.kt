@@ -9,6 +9,9 @@ interface TabManager {
     fun setCurrentTab(id: TabId)
     fun closeTab(id: TabId)
 
+    /** Selects the tab [step] places from the current one in strip order, wrapping around at either end. */
+    fun cycleTab(step: Int)
+
     /** Moves an open tab to [toIndex] among the open tabs. */
     fun moveTab(id: TabId, toIndex: Int)
 

@@ -22,6 +22,16 @@ enum class AppShortcut(
         label = "Quick connect and snippets",
         defaultChord = primaryChord(Key.K, shift = true),
     ),
+    NextTab(
+        id = "next_tab",
+        label = "Next tab",
+        defaultChord = KeyChord(keyCode = Key.Tab.keyCode, ctrl = true),
+    ),
+    PreviousTab(
+        id = "previous_tab",
+        label = "Previous tab",
+        defaultChord = KeyChord(keyCode = Key.Tab.keyCode, ctrl = true, shift = true),
+    ),
     LockVault(
         id = "lock_vault",
         label = "Lock vault",
