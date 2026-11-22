@@ -75,6 +75,15 @@ class TabManagerImpl(
         }
     }
 
+    override fun cycleTab(step: Int) {
+        _tabsState.update { state ->
+            val order = state.fixedTab + state.tabs
+            val current = order.indexOfFirst { it.tab.id == state.currentTabId }
+            if (current == -1) return@update state
+            state.copy(currentTabId = order[(current + step).mod(order.size)].tab.id)
+        }
+    }
+
     override fun moveTab(id: TabId, toIndex: Int) {
         _tabsState.update { state ->
             val from = state.tabs.indexOfFirst { it.tab.id == id }

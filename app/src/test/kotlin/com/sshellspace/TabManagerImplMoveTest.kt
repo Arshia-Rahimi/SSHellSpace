@@ -49,4 +49,20 @@ class TabManagerImplMoveTest {
 
         assertEquals(open, ids())
     }
+
+    @Test
+    fun `cycling goes through the vault tab and the open tabs in strip order, wrapping at both ends`() {
+        val (a, b, c) = openThree()
+
+        manager.cycleTab(1)
+        assertEquals("fixed", manager.tabsState().value.currentTabId)
+        manager.cycleTab(1)
+        assertEquals(a, manager.tabsState().value.currentTabId)
+
+        manager.cycleTab(-1)
+        manager.cycleTab(-1)
+        assertEquals(c, manager.tabsState().value.currentTabId)
+        manager.cycleTab(-1)
+        assertEquals(b, manager.tabsState().value.currentTabId)
+    }
 }

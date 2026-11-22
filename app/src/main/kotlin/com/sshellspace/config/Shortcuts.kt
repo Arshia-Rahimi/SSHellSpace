@@ -38,6 +38,8 @@ fun Koin.registerShortcuts() {
     shortcutHandler.register(AppShortcut.QuickConnect) {
         QuickConnectDialogEvent.emit()
     }
+    shortcutHandler.register(AppShortcut.NextTab) { tabManager.cycleTab(1) }
+    shortcutHandler.register(AppShortcut.PreviousTab) { tabManager.cycleTab(-1) }
     shortcutHandler.register(AppShortcut.LockVault) {
         shortcutScope.launch { vaultManager.lock() }
     }
